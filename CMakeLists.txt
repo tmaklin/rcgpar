@@ -70,13 +70,19 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/openmp_config.hpp.in ${CMAKE_B
 include_directories(${CMAKE_SOURCE_DIR}/include
 ${CMAKE_BINARY_DIR}/include)
 
+## Libraries
+add_library(rcgomp
+  ${CMAKE_SOURCE_DIR}/src/rcg.cpp
+  ${CMAKE_SOURCE_DIR}/src/Matrix.cpp)
+
 ## Executables
 add_executable(rcg-test
-${CMAKE_SOURCE_DIR}/src/test.cpp
-${CMAKE_SOURCE_DIR}/src/rcg.cpp
-${CMAKE_SOURCE_DIR}/src/Matrix.cpp)
+  ${CMAKE_SOURCE_DIR}/src/test.cpp)
+
+target_link_libraries(rcg-test rcgomp)
 
 # Link libraries
 if (OPENMP_FOUND)
+  target_link_libraries(rcgomp OpenMP::OpenMP_CXX)
   target_link_libraries(rcg-test OpenMP::OpenMP_CXX)
 endif()
