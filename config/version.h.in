@@ -1,0 +1,10 @@
+#ifndef RCGMPI_VERSION_HPP
+#define RCGMPI_VERSION_HPP
+// *DON'T MODIFY MANUALLY*, CMake automatically updates this file!
+// Defines variables containing the build version and timestamp
+
+#define RCGMPI_BUILD_VERSION "@_BUILD_VERSION@"
+#define RCGMPI_BUILD_TIMESTAMP "@_BUILD_TIMESTAMP@"
+
+#endif
+
