@@ -81,10 +81,10 @@ add_executable(rcg-omp-test
   ${CMAKE_SOURCE_DIR}/src/test_util.cpp
   ${CMAKE_SOURCE_DIR}/src/test_omp.cpp)
 
-target_link_libraries(rcg-test rcgomp)
+target_link_libraries(rcg-omp-test rcgomp)
 
 # Link libraries
 if (OPENMP_FOUND)
   target_link_libraries(rcgomp OpenMP::OpenMP_CXX)
-  target_link_libraries(rcg-test OpenMP::OpenMP_CXX)
+  target_link_libraries(rcg-omp-test OpenMP::OpenMP_CXX)
 endif()
