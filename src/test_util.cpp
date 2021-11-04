@@ -1,15 +1,8 @@
-#include "rcg.hpp"
-
-#include <vector>
-#include <cmath>
-#include <iostream>
+#include "test_util.hpp"
 
 #include <fstream>
-#include <cmath>
+#include <string>
 #include <sstream>
-
-#include "version.h"
-#include "Matrix.hpp"
 
 std::vector<double> mixture_components(const Matrix<double> &probs, const std::vector<double> &log_times_observed, const uint32_t n_times_total) {
   std::vector<double> thetas(probs.get_rows(), 0.0);
@@ -45,35 +38,3 @@ void read_test_data(Matrix<double> &log_lls, std::vector<double> &log_times_obse
     }
 }
 
-int main() {
-    std::cerr << "rcg-MPI-" << RCGMPI_BUILD_VERSION << std::endl;
-
-#if defined(RCGMPI_OPENMP_SUPPORT) && (RCGMPI_OPENMP_SUPPORT) == 1
-    omp_set_num_threads(4);
-#endif
-
-
-    uint16_t n_rows = 78;
-    uint16_t n_cols = 4;
-    uint32_t n_times_total = 0;
-
-    std::vector<double> log_times_observed;
-    Matrix<double> log_lls;
-    read_test_data(log_lls, log_times_observed, n_times_total);
-
-    std::vector<double> alpha0(n_cols, 1.0);
-    double tol = 1e-8;
-    uint16_t max_iters = 5000;
-    std::cerr << log_times_observed.size() << std::endl;
-    std::cerr << log_lls.get_rows() << 'x' << log_lls.get_cols() << std::endl;
-
-    const Matrix<double> &res = rcg_optl_mat(log_lls, log_times_observed, alpha0, tol, max_iters);
-    const std::vector<double> &thetas = mixture_components(res, log_times_observed, n_times_total);
-
-    for (uint16_t i = 0; i < n_cols; ++i) {
-	std::cerr << i << '\t' << thetas.at(i) << '\n';
-    }
-    std::cerr << std::endl;
-
-    return 0;
-}

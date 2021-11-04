@@ -77,8 +77,9 @@ add_library(rcgomp
   ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
 
 ## Executables
-add_executable(rcg-test
-  ${CMAKE_SOURCE_DIR}/src/test.cpp)
+add_executable(rcg-omp-test
+  ${CMAKE_SOURCE_DIR}/src/test_util.cpp
+  ${CMAKE_SOURCE_DIR}/src/test_omp.cpp)
 
 target_link_libraries(rcg-test rcgomp)
 
