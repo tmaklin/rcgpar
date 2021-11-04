@@ -73,7 +73,7 @@ ${CMAKE_BINARY_DIR}/include)
 ## Libraries
 add_library(rcgomp
   ${CMAKE_SOURCE_DIR}/src/rcg.cpp
-  ${CMAKE_SOURCE_DIR}/src/rcg_util_omp.cpp
+  ${CMAKE_SOURCE_DIR}/src/rcg_omp.cpp
   ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
 
 ## Executables
