@@ -23,18 +23,6 @@ Matrix<T>::Matrix(unsigned _rows, unsigned _cols, const T& _initial) {
     cols = _cols;
 }
 
-// Copy constructor
-template<typename T>
-Matrix<T>::Matrix(const Matrix<T>& rhs) {
-    mat = rhs.mat;
-    rows = rhs.get_rows();
-    cols = rhs.get_cols();
-}
-
-// (Virtual) Destructor
-template<typename T>
-Matrix<T>::~Matrix() {}
-
 // Resize a matrix
 template<typename T>
 void Matrix<T>::resize(const uint32_t new_rows, const uint32_t new_cols, const T initial) {
@@ -51,7 +39,6 @@ void Matrix<T>::resize(const uint32_t new_rows, const uint32_t new_cols, const T
 	cols = new_cols;
     }
 }
-
 
 // Assignment Operator
 template<typename T>
@@ -155,14 +142,6 @@ Matrix<T> Matrix<T>::operator*(const Matrix<T>& rhs) const {
     }
 
     return result;
-}
-
-// In-place matrix-matrix left multiplication
-template<typename T>
-Matrix<T>& Matrix<T>::operator*=(const Matrix<T>& rhs) {
-    Matrix result = (*this) * rhs;
-    (*this) = result;
-    return *this;
 }
 
 // Transpose matrix
@@ -286,24 +265,6 @@ std::vector<double> Matrix<T>::operator*(const std::vector<long unsigned>& rhs) 
     return result;
 }
 
-// Access individual elements
-template<typename T>
-T& Matrix<T>::operator()(unsigned row, unsigned col) {
-    return this->mat[row][col];
-}
-
-// Access individual elements (const)
-template<typename T>
-const T& Matrix<T>::operator()(unsigned row, unsigned col) const {
-    return this->mat[row][col];
-}
-
-// Access rows
-template<typename T>
-const std::vector<T>& Matrix<T>::get_row(unsigned row_id) const {
-    return this->mat[row_id];
-} 
-
 // Access cols
 template<typename T>
 const std::vector<T>& Matrix<T>::get_col(unsigned col_id) const {
@@ -314,35 +275,5 @@ const std::vector<T>& Matrix<T>::get_col(unsigned col_id) const {
     }
     return col;
 } 
-
-// LogSumExp a Matrix column
-template <typename T>
-T Matrix<T>::log_sum_exp_col(unsigned col_id) const {
-    // Note: this function accesses the elements rather inefficiently so
-    // it shouldn't be parallellised here. However, the caller can
-    // parallellize logsumexping multiple cols.
-    T max_elem = 0;
-    T sum = 0;
-    for (unsigned i = 0; i < this->rows; ++i) {
-	max_elem = (this->mat[i][col_id] > max_elem ? this->mat[i][col_id] : max_elem);
-    }
-
-    for (unsigned i = 0; i < this->rows; ++i) {
-	sum += std::exp(this->mat[i][col_id] - max_elem);
-    }
-    return max_elem + std::log(sum);
-}
-
-// Get the number of rows of the matrix
-template<typename T>
-unsigned Matrix<T>::get_rows() const {
-    return this->rows;
-}
-
-// Get the number of columns of the matrix
-template<typename T>
-unsigned Matrix<T>::get_cols() const {
-    return this->cols;
-}
 
 #endif
