@@ -17,11 +17,11 @@
 
 template <typename T> class Matrix {
 private:
+public:
     std::vector<T> mat;
     unsigned rows;
     unsigned cols;
 
-public:
     Matrix() = default;
     // Parameter constructor
     Matrix(unsigned _rows, unsigned _cols, const T& _initial);
@@ -31,8 +31,6 @@ public:
 	rows = rhs.get_rows();
 	cols = rhs.get_cols();
     }
-    // (Virtual) Destructor
-    virtual ~Matrix() {};
 
     // Resize a matrix
     void resize(const uint32_t new_rows, const uint32_t new_cols, const T initial);
