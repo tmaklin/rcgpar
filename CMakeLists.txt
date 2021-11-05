@@ -33,6 +33,9 @@ else()
   set(RCGMPI_OPENMP_SUPPORT 0)
 endif()
 
+find_package(MPI)
+include_directories(MPI_C_INCLUDE_DIRS)
+
 ## Set C++11 support depending on cmake version
 if (${CMAKE_MAJOR_VERSION} GREATER 2 AND ${CMAKE_MINOR_VERSION} GREATER 0)
   set (CMAKE_CXX_STANDARD 11)
@@ -80,8 +83,12 @@ add_library(rcgomp
 add_executable(rcg-omp-test
   ${CMAKE_SOURCE_DIR}/src/test_util.cpp
   ${CMAKE_SOURCE_DIR}/src/test_omp.cpp)
+add_executable(rcg-mpi-test
+  ${CMAKE_SOURCE_DIR}/src/test_util.cpp
+  ${CMAKE_SOURCE_DIR}/src/test_mpi.cpp)
 
 target_link_libraries(rcg-omp-test rcgomp)
+target_link_libraries(rcg-mpi-test rcgomp)
 
 # Link libraries
 if (OPENMP_FOUND)
