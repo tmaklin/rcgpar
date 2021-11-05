@@ -17,7 +17,7 @@
 
 template <typename T> class Matrix {
 private:
-    std::vector<std::vector<T> > mat;
+    std::vector<T> mat;
     unsigned rows;
     unsigned cols;
 
@@ -70,19 +70,19 @@ public:
 
     // Access individual elements
     T& operator()(unsigned row, unsigned col) {
-	return this->mat[row][col];
+	return this->mat[row*this->cols + col];
     }
     // Access individual elements (const)
     const T& operator()(unsigned row, unsigned col) const {
-	return this->mat[row][col];
+	return this->mat[row*this->cols + col];
     }
 
     // Access rows
-    const std::vector<T>& get_row(unsigned row_id) const {
-	return this->mat[row_id];
-    }
+    // const std::vector<T>& get_row(unsigned row_id) const {
+    // 	return this->mat[row_id];
+    // }
     // Access columns
-    const std::vector<T>& get_col(unsigned col_id) const;
+    // const std::vector<T>& get_col(unsigned col_id) const;
 
     // LogSumExp a Matrix column
     T log_sum_exp_col(unsigned col_id) const {
@@ -92,11 +92,11 @@ public:
 	T max_elem = 0;
 	T sum = 0;
 	for (unsigned i = 0; i < this->rows; ++i) {
-	    max_elem = (this->mat[i][col_id] > max_elem ? this->mat[i][col_id] : max_elem);
+	    max_elem = (this->operator()(i, col_id) > max_elem ? this->operator()(i, col_id) : max_elem);
 	}
 	
 	for (unsigned i = 0; i < this->rows; ++i) {
-	    sum += std::exp(this->mat[i][col_id] - max_elem);
+	    sum += std::exp(this->operator()(i, col_id) - max_elem);
 	}
 	return max_elem + std::log(sum);
     }
