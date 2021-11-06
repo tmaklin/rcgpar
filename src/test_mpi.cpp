@@ -1,7 +1,6 @@
 #include <mpi.h>
 
 #include <vector>
-#include <cmath>
 #include <iostream>
 
 #include "Matrix.hpp"
@@ -52,9 +51,9 @@ int main(int argc, char* argv[]) {
     MPI_Datatype types[nItems] = {MPI_DOUBLE, MPI_UNSIGNED, MPI_UNSIGNED};
     MPI_Datatype MPI_MatrixDouble_Type;
     MPI_Aint offsets[nItems];
-    offsets[0] = offsetof(Matrix<double>, mat);
-    offsets[1] = offsetof(Matrix<double>, rows);
-    offsets[2] = offsetof(Matrix<double>, cols);
+    offsets[0] = Matrix<double>::mat_offset();
+    offsets[1] = Matrix<double>::rows_offset();
+    offsets[2] = Matrix<double>::cols_offset();
 
     MPI_Type_create_struct(nItems, blocklengths, offsets, types, &MPI_MatrixDouble_Type);
     MPI_Type_commit(&MPI_MatrixDouble_Type);
@@ -63,8 +62,7 @@ int main(int argc, char* argv[]) {
 	log_lls.resize(n_cols, n_rows, 0.0);
     }
 
-    MPI_Bcast(&log_lls.mat.front(), 1, MPI_MatrixDouble_Type, 0, MPI_COMM_WORLD);
-    std::cerr << log_lls(2, 6) << std::endl;;
+    MPI_Bcast(&log_lls.front(), 1, MPI_MatrixDouble_Type, 0, MPI_COMM_WORLD);
 
     const Matrix<double> &res = rcg_optl_mat(log_lls, log_times_observed, alpha0, tol, max_iters);
     const std::vector<double> &thetas = mixture_components(res, log_times_observed, n_times_total);

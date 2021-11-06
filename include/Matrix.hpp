@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <cmath>
+#include <cstddef>
 
 // Basic matrix structure and operations
 // Implementation was done following the instructions at
@@ -17,11 +18,11 @@
 
 template <typename T> class Matrix {
 private:
-public:
     std::vector<T> mat;
     unsigned rows;
     unsigned cols;
 
+public:
     Matrix() = default;
     // Parameter constructor
     Matrix(unsigned _rows, unsigned _cols, const T& _initial);
@@ -106,9 +107,18 @@ public:
     Matrix<T> transpose() const;
 
     // Get the number of rows of the matrix
-    unsigned get_rows() const { return this->rows; }
+    inline unsigned get_rows() const { return this->rows; }
     // Get the number of columns of the matrix
-    unsigned get_cols() const { return this->cols; }
+    inline unsigned get_cols() const { return this->cols; }
+
+    // Get position of first element in this->mat
+    const T& front() const { return this->mat.front(); }
+    T& front() { return this->mat.front(); }
+
+    // Get offsets of private vars
+    static size_t mat_offset() { return offsetof(Matrix<double>, mat); };
+    static size_t rows_offset() { return offsetof(Matrix<double>, rows); };
+    static size_t cols_offset() { return offsetof(Matrix<double>, cols); };
 };
 
 #include "../src/Matrix_omp.cpp"
