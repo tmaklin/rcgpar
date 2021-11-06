@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
 
     MPI_Bcast(&log_lls.front(), 1, MPI_MatrixDouble_Type, 0, MPI_COMM_WORLD);
 
-    const Matrix<double> &res = rcg_optl_mat(log_lls, log_times_observed, alpha0, tol, max_iters);
+    const Matrix<double> &res = rcg_optl_mpi(log_lls, log_times_observed, alpha0, tol, max_iters);
     const std::vector<double> &thetas = mixture_components(res, log_times_observed, n_times_total);
 
     for (uint16_t i = 0; i < n_cols; ++i) {

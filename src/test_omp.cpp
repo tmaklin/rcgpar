@@ -25,7 +25,7 @@ int main() {
     double tol = 1e-8;
     uint16_t max_iters = 5000;
 
-    const Matrix<double> &res = rcg_optl_mat(log_lls, log_times_observed, alpha0, tol, max_iters);
+    const Matrix<double> &res = rcg_optl_omp(log_lls, log_times_observed, alpha0, tol, max_iters);
     const std::vector<double> &thetas = mixture_components(res, log_times_observed, n_times_total);
 
     for (uint16_t i = 0; i < n_cols; ++i) {

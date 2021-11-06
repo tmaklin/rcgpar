@@ -1,17 +1,17 @@
 // Riemannian conjugate gradient for parameter estimation.
 //
-// This file contains the rcg_optl_mat function. Configure
-// rcg_util.hpp appropriately to choose the parallellization scheme.
+// This file contains the rcg_optl_mat function for MPI calls.
 
 #include "rcg.hpp"
+
+#include <mpi.h>
 
 #include <cmath>
 #include <iostream>
 
 #include "rcg_util.hpp"
-#include "openmp_config.hpp"
 
-Matrix<double> rcg_optl_mat(const Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t maxiters) {
+Matrix<double> rcg_optl_mpi(const Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t maxiters) {
     uint16_t n_rows = logl.get_rows();
     uint32_t n_cols = log_times_observed.size();
     Matrix<double> gamma_Z(n_rows, n_cols, std::log(1.0/(double)n_rows)); // where gamma_Z is init at 1.0
