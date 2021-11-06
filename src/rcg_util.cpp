@@ -68,7 +68,7 @@ double mixt_negnatgrad(const Matrix<double> &gamma_Z, const std::vector<double> 
 	    colsums[j] += dL_dphi(i, j) * std::exp(gamma_Z(i, j));
 	}
     }
-  
+
     double newnorm = 0.0;
 #pragma omp parallel for schedule(static) reduction(+:newnorm)
     for (uint16_t i = 0; i < n_rows; ++i) {
@@ -117,7 +117,7 @@ double calc_bound_const(const std::vector<double> &log_times_observed, const std
 	bound_const += alpha0[i];
 	bound_const += std::lgamma(alpha0[i]);
     }
-  
+
     bound_const = -std::lgamma(bound_const);
     return bound_const;
 }

@@ -76,7 +76,12 @@ ${CMAKE_BINARY_DIR}/include)
 ## Libraries
 add_library(rcgomp
   ${CMAKE_SOURCE_DIR}/src/rcg.cpp
-  ${CMAKE_SOURCE_DIR}/src/rcg_omp.cpp
+  ${CMAKE_SOURCE_DIR}/src/rcg_util.cpp
+  ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
+
+add_library(rcgmpi
+  ${CMAKE_SOURCE_DIR}/src/rcg.cpp
+  ${CMAKE_SOURCE_DIR}/src/rcg_util.cpp
   ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
 
 ## Executables
@@ -88,7 +93,7 @@ add_executable(rcg-mpi-test
   ${CMAKE_SOURCE_DIR}/src/test_mpi.cpp)
 
 target_link_libraries(rcg-omp-test rcgomp)
-target_link_libraries(rcg-mpi-test rcgomp)
+target_link_libraries(rcg-mpi-test rcgmpi)
 
 # Link libraries
 if (OPENMP_FOUND)
