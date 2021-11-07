@@ -63,11 +63,6 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
     MPI_Allreduce(&N_k_partial.front(), &N_k.front(), n_groups, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     add_alpha0_to_Nk(alpha0, N_k);
 
-    Matrix<double> gamma_Z;
-    if (rank == 0) {
-	gamma_Z = Matrix<double>(n_groups, n_obs, std::log(1.0/(double)n_groups)); // where gamma_Z is init at 1.0
-    }
-
     for (uint16_t k = 0; k < maxiters; ++k) {
 	double newnorm;
 	double newnorm_partial = mixt_negnatgrad(gamma_Z_partial, N_k, logl, step_partial);
@@ -126,17 +121,11 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
 	    // Logsumexp 3
 	    logsumexp(gamma_Z_partial, oldm_partial);
 	    std::cerr << std::endl;
-	    for (uint16_t i = 0; i < n_groups; ++i) {
-		MPI_Gather(&gamma_Z_partial.front() + i*n_obs_per_task, n_obs_per_task, MPI_DOUBLE, &gamma_Z.front() + i*n_obs, n_obs_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	    }
-	    return(gamma_Z);
+	    return(gamma_Z_partial);
 	}
     }
     // Logsumexp 3
     logsumexp(gamma_Z_partial, oldm_partial);
     std::cerr << std::endl;
-    for (uint16_t i = 0; i < n_groups; ++i) {
-	MPI_Gather(&gamma_Z_partial.front() + i*n_obs_per_task, n_obs_per_task, MPI_DOUBLE, &gamma_Z.front() + i*n_obs, n_obs_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    }
-    return(gamma_Z);
+    return(gamma_Z_partial);
 }
