@@ -23,6 +23,7 @@ if(CMAKE_BUILD_TYPE MATCHES Release)
 endif()
 
 ## Check dependencies
+### OpenMP
 find_package(OpenMP)
 if (OPENMP_FOUND)
   set(RCGMPI_OPENMP_SUPPORT 1)
@@ -32,9 +33,15 @@ if (OPENMP_FOUND)
 else()
   set(RCGMPI_OPENMP_SUPPORT 0)
 endif()
-
+## Check dependencies
+### MPI
 find_package(MPI)
-include_directories(MPI_C_INCLUDE_DIRS)
+if (MPI_FOUND)
+  set(RCGMPI_MPI_SUPPORT 1)
+  include_directories(MPI_C_INCLUDE_DIRS)
+else()
+  set(RCGMPI_OPENMP_SUPPORT 0)
+endif()
 
 ## Set C++11 support depending on cmake version
 if (${CMAKE_MAJOR_VERSION} GREATER 2 AND ${CMAKE_MINOR_VERSION} GREATER 0)
@@ -66,37 +73,46 @@ string(TIMESTAMP _BUILD_TIMESTAMP)
 
 ## Generate a version.h file containing build version and timestamp
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/version.h.in ${CMAKE_BINARY_DIR}/include/version.h @ONLY)
-## Configure OpenMP if it supported on the system.
+## Configure OpenMP if it's supported on the system.
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/openmp_config.hpp.in ${CMAKE_BINARY_DIR}/include/openmp_config.hpp @ONLY)
+## Configure MPI if it's supported on the system.
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/mpi_config.hpp.in ${CMAKE_BINARY_DIR}/include/mpi_config.hpp @ONLY)
 
 ## Includes
 include_directories(${CMAKE_SOURCE_DIR}/include
 ${CMAKE_BINARY_DIR}/include)
 
-## Libraries
-add_library(rcgomp
-  ${CMAKE_SOURCE_DIR}/src/rcg_omp.cpp
-  ${CMAKE_SOURCE_DIR}/src/rcg_util.cpp
-  ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
+## Libraries and executables
+if (OPENMP_FOUND)
+  ### OpenMP parallellized rcg
+  add_library(rcgomp
+    ${CMAKE_SOURCE_DIR}/src/rcg_omp.cpp
+    ${CMAKE_SOURCE_DIR}/src/rcg_util.cpp
+    ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
+  ## OpenMP integration test
+  add_executable(rcg-omp-test
+    ${CMAKE_SOURCE_DIR}/src/test_util.cpp
+    ${CMAKE_SOURCE_DIR}/src/test_omp.cpp)
+  target_link_libraries(rcg-omp-test rcgomp)
+endif()
 
-add_library(rcgmpi
-  ${CMAKE_SOURCE_DIR}/src/rcg_mpi.cpp
-  ${CMAKE_SOURCE_DIR}/src/rcg_util.cpp
-  ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
-
-## Executables
-add_executable(rcg-omp-test
-  ${CMAKE_SOURCE_DIR}/src/test_util.cpp
-  ${CMAKE_SOURCE_DIR}/src/test_omp.cpp)
-add_executable(rcg-mpi-test
-  ${CMAKE_SOURCE_DIR}/src/test_util.cpp
-  ${CMAKE_SOURCE_DIR}/src/test_mpi.cpp)
-
-target_link_libraries(rcg-omp-test rcgomp)
-target_link_libraries(rcg-mpi-test rcgmpi)
+if (MPI_FOUND)
+  ### MPI parallellized rcg
+  add_library(rcgmpi
+    ${CMAKE_SOURCE_DIR}/src/rcg_mpi.cpp
+    ${CMAKE_SOURCE_DIR}/src/rcg_util.cpp
+    ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
+  ### MPI integration test
+  add_executable(rcg-mpi-test
+    ${CMAKE_SOURCE_DIR}/src/test_util.cpp
+    ${CMAKE_SOURCE_DIR}/src/test_mpi.cpp)
+  target_link_libraries(rcg-mpi-test rcgmpi)
+endif()
 
 # Link libraries
 if (OPENMP_FOUND)
   target_link_libraries(rcgomp OpenMP::OpenMP_CXX)
-  target_link_libraries(rcgmpi OpenMP::OpenMP_CXX)
+  if (MPI_FOUND)
+    target_link_libraries(rcgmpi OpenMP::OpenMP_CXX) ## Hybrid parallellization
+  endif()
 endif()
