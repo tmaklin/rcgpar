@@ -30,8 +30,8 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
     uint32_t n_values_per_task = n_obs_per_task*n_groups;
 
     // Scatter the log likelihoods and log counts
-    std::vector<double> log_times_observed(n_obs/ntasks);
-    MPI_Scatter(&log_times_observed_full.front(), n_obs/ntasks, MPI_DOUBLE, &log_times_observed.front(), n_obs/ntasks, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    std::vector<double> log_times_observed(n_obs_per_task);
+    MPI_Scatter(&log_times_observed_full.front(), n_obs_per_task, MPI_DOUBLE, &log_times_observed.front(), n_obs_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     Matrix<double> logl(n_groups, n_obs_per_task, 0.0);
     MPI_Scatter(&logl_full.front(), n_values_per_task, MPI_DOUBLE, &logl.front(), n_values_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
