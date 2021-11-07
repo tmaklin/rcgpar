@@ -1,10 +1,10 @@
-#ifndef RCGMPI_VERSION_HPP
-#define RCGMPI_VERSION_HPP
+#ifndef RCGPAR_VERSION_HPP
+#define RCGPAR_VERSION_HPP
 // *DON'T MODIFY MANUALLY*, CMake automatically updates this file!
 // Defines variables containing the build version and timestamp
 
-#define RCGMPI_BUILD_VERSION "@_BUILD_VERSION@"
-#define RCGMPI_BUILD_TIMESTAMP "@_BUILD_TIMESTAMP@"
+#define RCGPAR_BUILD_VERSION "@_BUILD_VERSION@"
+#define RCGPAR_BUILD_TIMESTAMP "@_BUILD_TIMESTAMP@"
 
 #endif
 

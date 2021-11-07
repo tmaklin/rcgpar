@@ -1,5 +1,5 @@
-#ifndef RCGMPI_MATRIX_HPP
-#define RCGMPI_MATRIX_HPP
+#ifndef RCGPAR_MATRIX_HPP
+#define RCGPAR_MATRIX_HPP
 
 #include <vector>
 #include <cmath>

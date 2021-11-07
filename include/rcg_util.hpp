@@ -1,5 +1,5 @@
-#ifndef RCGMPI_RCG_UTIL_HPP
-#define RCGMPI_RCG_UTIL_HPP
+#ifndef RCGPAR_RCG_UTIL_HPP
+#define RCGPAR_RCG_UTIL_HPP
 
 #include <vector>
 

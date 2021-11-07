@@ -26,21 +26,21 @@ endif()
 ### OpenMP
 find_package(OpenMP)
 if (OPENMP_FOUND)
-  set(RCGMPI_OPENMP_SUPPORT 1)
+  set(RCGPAR_OPENMP_SUPPORT 1)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_PARALLEL")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -D_GLIBCXX_PARALLEL")
   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -D_GLIBCXX_PARALLEL")
 else()
-  set(RCGMPI_OPENMP_SUPPORT 0)
+  set(RCGPAR_OPENMP_SUPPORT 0)
 endif()
 ## Check dependencies
 ### MPI
 find_package(MPI)
 if (MPI_FOUND)
-  set(RCGMPI_MPI_SUPPORT 1)
+  set(RCGPAR_MPI_SUPPORT 1)
   include_directories(MPI_C_INCLUDE_DIRS)
 else()
-  set(RCGMPI_OPENMP_SUPPORT 0)
+  set(RCGPAR_OPENMP_SUPPORT 0)
 endif()
 
 ## Set C++11 support depending on cmake version

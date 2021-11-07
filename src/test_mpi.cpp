@@ -11,7 +11,7 @@
 #include "openmp_config.hpp"
 
 int main(int argc, char* argv[]) {
-#if defined(RCGMPI_OPENMP_SUPPORT) && (RCGMPI_OPENMP_SUPPORT) == 1
+#if defined(RCGPAR_OPENMP_SUPPORT) && (RCGPAR_OPENMP_SUPPORT) == 1
     omp_set_num_threads(2);
 #endif
 
@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
 
     if (rank == 0) {
 	// Only root reads in data.
-	std::cerr << "rcg-MPI" << RCGMPI_BUILD_VERSION << std::endl;
+	std::cerr << "rcgpar-MPI-test" << RCGPAR_BUILD_VERSION << std::endl;
 	read_test_data(log_lls, log_times_observed, n_times_total);
 	n_groups = log_lls.get_rows();
 	n_obs = log_times_observed.size();

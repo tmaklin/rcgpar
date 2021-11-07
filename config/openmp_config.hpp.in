@@ -1,9 +1,9 @@
-#ifndef RCGMPI_OPENMP_CONFIG_HPP
-#define RCGMPI_OPENMP_CONFIG_HPP
+#ifndef RCGPAR_OPENMP_CONFIG_HPP
+#define RCGPAR_OPENMP_CONFIG_HPP
 
-#define RCGMPI_OPENMP_SUPPORT @RCGMPI_OPENMP_SUPPORT@
+#define RCGPAR_OPENMP_SUPPORT @RCGPAR_OPENMP_SUPPORT@
 
-#if defined(RCGMPI_OPENMP_SUPPORT) && (RCGMPI_OPENMP_SUPPORT) == 1
+#if defined(RCGPAR_OPENMP_SUPPORT) && (RCGPAR_OPENMP_SUPPORT) == 1
 #include <omp.h>
 #include <algorithm>
 #pragma omp declare reduction(vec_double_plus : std::vector<double> :	\

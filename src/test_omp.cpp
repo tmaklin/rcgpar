@@ -9,8 +9,8 @@
 #include "openmp_config.hpp"
 
 int main() {
-    std::cerr << "rcg-OMP-" << RCGMPI_BUILD_VERSION << std::endl;
-#if defined(RCGMPI_OPENMP_SUPPORT) && (RCGMPI_OPENMP_SUPPORT) == 1
+    std::cerr << "rcgpar-OpenMP-test" << RCGPAR_BUILD_VERSION << std::endl;
+#if defined(RCGPAR_OPENMP_SUPPORT) && (RCGPAR_OPENMP_SUPPORT) == 1
     omp_set_num_threads(4);
 #endif
     uint16_t n_groups = 4;

@@ -3,8 +3,8 @@
 // Functions in this file run either single-threaded or parallellized
 // with OpenMP.
 
-#ifndef RCGMPI_MATRIX_CPP
-#define RCGMPI_MATRIX_CPP
+#ifndef RCGPAR_MATRIX_CPP
+#define RCGPAR_MATRIX_CPP
 #include "Matrix.hpp"
 
 #include <cmath>
