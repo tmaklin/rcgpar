@@ -4,6 +4,7 @@
 #include <vector>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 
 // Basic matrix structure and operations
 // Implementation was done following the instructions at
