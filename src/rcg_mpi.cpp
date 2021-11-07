@@ -33,9 +33,9 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
     MPI_Scatter(&log_times_observed_full.front(), n_obs_per_task, MPI_DOUBLE, &log_times_observed.front(), n_obs_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     // log likelihoods
-    Matrix<double> logl(n_groups, n_obs_per_task, 0.0);
+    Matrix<double> logl_partial(n_groups, n_obs_per_task, 0.0);
     for (uint16_t i = 0; i < n_groups; ++i) {
-	MPI_Scatter(&logl_full.front() + i*n_obs, n_obs_per_task, MPI_DOUBLE, &logl.front() + i*n_obs_per_task, n_obs_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Scatter(&logl_full.front() + i*n_obs, n_obs_per_task, MPI_DOUBLE, &logl_partial.front() + i*n_obs_per_task, n_obs_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     }
 
     // Initialize variables.
@@ -65,7 +65,7 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
 
     for (uint16_t k = 0; k < maxiters; ++k) {
 	double newnorm;
-	double newnorm_partial = mixt_negnatgrad(gamma_Z_partial, N_k, logl, step_partial);
+	double newnorm_partial = mixt_negnatgrad(gamma_Z_partial, N_k, logl_partial, step_partial);
 	MPI_Allreduce(&newnorm_partial, &newnorm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 	double beta_FR = newnorm/oldnorm;
 	oldnorm = newnorm;
@@ -89,7 +89,7 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
     
 	long double oldbound = bound;
 	long double bound_partial = 0.0;
-  	ELBO_rcg_mat(logl, gamma_Z_partial, log_times_observed, alpha0, N_k, bound_partial);
+  	ELBO_rcg_mat(logl_partial, gamma_Z_partial, log_times_observed, alpha0, N_k, bound_partial);
 	MPI_Allreduce(&bound_partial, &bound, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 	bound += bound_const;
 
@@ -108,7 +108,7 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
 	    add_alpha0_to_Nk(alpha0, N_k);
 
 	    bound_partial = 0.0;
-	    ELBO_rcg_mat(logl, gamma_Z_partial, log_times_observed, alpha0, N_k, bound_partial);
+	    ELBO_rcg_mat(logl_partial, gamma_Z_partial, log_times_observed, alpha0, N_k, bound_partial);
 	    MPI_Allreduce(&bound_partial, &bound, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 	    bound += bound_const;
 	} else {
