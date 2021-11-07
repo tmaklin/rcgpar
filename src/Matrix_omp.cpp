@@ -19,6 +19,19 @@ Matrix<T>::Matrix(uint32_t _rows, uint32_t _cols, const T& _initial) {
     rows = _rows;
     cols = _cols;
 }
+// Copy constructor from 2D vector
+template<typename T>
+Matrix<T>::Matrix(const std::vector<std::vector<T>> &rhs) {
+    rows = rhs.size();
+    cols = rhs.at(0).size();
+    mat.resize(rows*cols);
+#pragma omp parallel for schedule(static)
+    for (uint32_t i = 0; i < rows; ++i) {
+	for (uint32_t j = 0; j < cols; ++j) {
+	    this->operator()(i, j) = rhs[i][j];
+	}
+    }
+}
 
 // Resize a matrix
 template<typename T>

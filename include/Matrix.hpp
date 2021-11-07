@@ -34,6 +34,14 @@ public:
 	rows = rhs.get_rows();
 	cols = rhs.get_cols();
     }
+    // Copy constructor from contiguous 2D vector
+    Matrix(const std::vector<T> &rhs, const uint32_t _rows, const uint32_t _cols) {
+	mat = rhs;
+	rows = _rows;
+	cols = _cols;
+    }
+    // Copy constructor from 2D vector
+    Matrix(const std::vector<std::vector<T>> &rhs);
 
     // Resize a matrix
     void resize(const uint32_t new_rows, const uint32_t new_cols, const T initial);
