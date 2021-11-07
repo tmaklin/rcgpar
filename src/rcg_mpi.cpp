@@ -14,8 +14,8 @@
 
 Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double> &log_times_observed_full, const std::vector<double> &alpha0, const double &tol, uint16_t maxiters) {
     int ntasks,rank;
-    int rc = MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
-    rc = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     uint16_t n_groups = alpha0.size();
     uint32_t n_obs;
@@ -26,7 +26,6 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
 
     // Subdimensions for the processes
     uint32_t n_obs_per_task = n_obs/ntasks;
-    uint32_t n_values_per_task = n_obs_per_task*n_groups;
 
     // Scatter the log likelihoods and log counts
     // log counts
