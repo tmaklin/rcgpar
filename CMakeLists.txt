@@ -98,5 +98,5 @@ target_link_libraries(rcg-mpi-test rcgmpi)
 # Link libraries
 if (OPENMP_FOUND)
   target_link_libraries(rcgomp OpenMP::OpenMP_CXX)
-  target_link_libraries(rcg-omp-test OpenMP::OpenMP_CXX)
+  target_link_libraries(rcgmpi OpenMP::OpenMP_CXX)
 endif()

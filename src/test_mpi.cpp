@@ -8,8 +8,12 @@
 #include "test_util.hpp"
 
 #include "version.h"
+#include "openmp_config.hpp"
 
 int main(int argc, char* argv[]) {
+#if defined(RCGMPI_OPENMP_SUPPORT) && (RCGMPI_OPENMP_SUPPORT) == 1
+    omp_set_num_threads(2);
+#endif
 
     int rc = MPI_Init(&argc, &argv);
     if (rc != MPI_SUCCESS) {
