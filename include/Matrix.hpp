@@ -115,6 +115,9 @@ public:
     const T& front() const { return this->mat.front(); }
     T& front() { return this->mat.front(); }
 
+    // Get the data matrix
+    const T& data() const { return this->mat; }
+
     // Get offsets of private vars
     static size_t mat_offset() { return offsetof(Matrix<double>, mat); };
     static size_t rows_offset() { return offsetof(Matrix<double>, rows); };

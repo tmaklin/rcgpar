@@ -11,71 +11,136 @@
 
 #include "rcg_util.hpp"
 
-Matrix<double> rcg_optl_mpi(const Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t maxiters) {
-    uint16_t n_rows = logl.get_rows();
-    uint32_t n_cols = log_times_observed.size();
-    Matrix<double> gamma_Z(n_rows, n_cols, std::log(1.0/(double)n_rows)); // where gamma_Z is init at 1.0
-    Matrix<double> oldstep(n_rows, n_cols, 0.0);
-    Matrix<double> step(n_rows, n_cols, 0.0);
+Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double> &log_times_observed_full, const std::vector<double> &alpha0, const double &tol, uint16_t maxiters) {
+    int ntasks,rank;
+    int rc = MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
+    rc = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    uint16_t n_rows;
+    uint32_t n_cols;
+    if (rank == 0) {
+	n_rows = logl_full.get_rows();
+	n_cols = log_times_observed_full.size();
+    }
+    MPI_Bcast(&n_rows, 1, MPI_UINT16_T, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&n_cols, 1, MPI_UINT32_T, 0, MPI_COMM_WORLD);
+
+    // Subdimensions for the processes
+    uint16_t n_cols_partial = n_cols/ntasks;
+    uint32_t n_items_partial = n_cols_partial*n_rows;
+
+    // Scatter the log likelihoods and log counts
+    std::vector<double> log_times_observed(n_cols/ntasks);
+    MPI_Scatter(&log_times_observed_full.front(), n_cols/ntasks, MPI_DOUBLE, &log_times_observed.front(), n_cols/ntasks, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    Matrix<double> logl(n_rows, n_cols_partial, 0.0);
+    MPI_Scatter(&logl_full.front(), n_items_partial, MPI_DOUBLE, &logl.front(), n_items_partial, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    // Initialize variables.
+    Matrix<double> gamma_Z_partial = Matrix<double>(n_rows, n_cols_partial, std::log(1.0/(double)n_rows));
+    Matrix<double> step_partial(n_rows, n_cols_partial, 0.0);
+
+    // Oldstep, oldm, and oldnorm are needed to revert the gradient descent step in some special cases.
+    Matrix<double> oldstep_partial(n_rows, n_cols_partial, 0.0);
     std::vector<double> oldm(n_cols, 0.0);
     double oldnorm = 1.0;
+
+    // ELBO variables
     long double bound = -100000.0;
+    double bound_const;
+    if (rank == 0) {
+	bound_const = calc_bound_const(log_times_observed, alpha0);
+    }
+    MPI_Bcast(&bound_const, 1, MPI_LONG_DOUBLE, 0, MPI_COMM_WORLD);
     bool didreset = false;
 
-    double bound_const = calc_bound_const(log_times_observed, alpha0);
-
+    // // gamma_Z %*% exp(log_times_observed), store result in N_k.
     std::vector<double> N_k(alpha0.size());
-    gamma_Z.exp_right_multiply(log_times_observed, N_k);
+    gamma_Z_partial.exp_right_multiply(log_times_observed, N_k);
     add_alpha0_to_Nk(alpha0, N_k);
-  
+
+    Matrix<double> gamma_Z;
+    if (rank == 0) {
+	gamma_Z = Matrix<double>(n_rows, n_cols, std::log(1.0/(double)n_rows)); // where gamma_Z is init at 1.0
+    }
+
+    double newnorm = 0.0;
     for (uint16_t k = 0; k < maxiters; ++k) {
-	double newnorm = mixt_negnatgrad(gamma_Z, N_k, logl, step);
+	double newnorm_partial = mixt_negnatgrad(gamma_Z_partial, N_k, logl, step_partial);
+	MPI_Allreduce(&newnorm_partial, &newnorm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
 	double beta_FR = newnorm/oldnorm;
 	oldnorm = newnorm;
     
 	if (didreset) {
-	    oldstep *= 0.0;
+	    oldstep_partial *= 0.0;
 	} else if (beta_FR > 0) {
-	    oldstep *= beta_FR;
-	    step += oldstep;
+	    oldstep_partial *= beta_FR;
+	    step_partial += oldstep_partial;
 	}
 	didreset = false;
 
-	gamma_Z += step;
-	logsumexp(gamma_Z, oldm);
-	gamma_Z.exp_right_multiply(log_times_observed, N_k);
+	gamma_Z_partial += step_partial;
 
+	// Logsumexp 1
+	MPI_Gather(&gamma_Z_partial.front(), n_items_partial, MPI_DOUBLE, &gamma_Z.front(), n_items_partial, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	if (rank == 0) {
+	    logsumexp(gamma_Z, oldm);
+	}
+	MPI_Scatter(&gamma_Z.front(), n_items_partial, MPI_DOUBLE, &gamma_Z_partial.front(), n_items_partial, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&oldm.front(), n_cols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+	gamma_Z_partial.exp_right_multiply(log_times_observed, N_k);
 	add_alpha0_to_Nk(alpha0, N_k);
     
 	long double oldbound = bound;
-	bound = bound_const;
-	ELBO_rcg_mat(logl, gamma_Z, log_times_observed, alpha0, N_k, bound);
+	long double bound_partial = 0.0;
+  	ELBO_rcg_mat(logl, gamma_Z_partial, log_times_observed, alpha0, N_k, bound_partial);
+	MPI_Allreduce(&bound_partial, &bound, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	bound += bound_const;
     
 	if (bound < oldbound) {
 	    didreset = true;
-	    revert_step(gamma_Z, oldm);
+	    revert_step(gamma_Z_partial, oldm);
 	    if (beta_FR > 0) {
-		gamma_Z -= oldstep;
+		gamma_Z_partial -= oldstep_partial;
 	    }
-	    logsumexp(gamma_Z);
-	    gamma_Z.exp_right_multiply(log_times_observed, N_k);
+
+	    // Logsumexp 2
+	    MPI_Gather(&gamma_Z_partial.front(), n_items_partial, MPI_DOUBLE, &gamma_Z.front(), n_items_partial, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	    if (rank == 0) {
+		logsumexp(gamma_Z, oldm);
+	    }
+	    MPI_Scatter(&gamma_Z.front(), n_items_partial, MPI_DOUBLE, &gamma_Z_partial.front(), n_items_partial, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	    MPI_Bcast(&oldm.front(), n_cols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+	    gamma_Z_partial.exp_right_multiply(log_times_observed, N_k);
 	    add_alpha0_to_Nk(alpha0, N_k);
 
-	    bound = bound_const;
-	    ELBO_rcg_mat(logl, gamma_Z, log_times_observed, alpha0, N_k, bound);
+	    bound_partial = 0.0;
+	    ELBO_rcg_mat(logl, gamma_Z_partial, log_times_observed, alpha0, N_k, bound_partial);
+	    MPI_Allreduce(&bound_partial, &bound, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	    bound += bound_const;
 	} else {
-	    oldstep = step;
+	    oldstep_partial = step_partial;
 	}
-	if (k % 5 == 0) {
+	if (k % 5 == 0 && rank == 0) {
 	    std::cerr << "  " <<  "iter: " << k << ", bound: " << bound << ", |g|: " << newnorm << '\n';
 	}
 	if (bound - oldbound < tol && !didreset) {
-	    logsumexp(gamma_Z);
+	    // Logsumexp 3
+	    MPI_Gather(&gamma_Z_partial.front(), n_items_partial, MPI_DOUBLE, &gamma_Z.front(), n_items_partial, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	    if (rank == 0) {
+		logsumexp(gamma_Z, oldm);
+	    }
 	    std::cerr << std::endl;
 	    return(gamma_Z);
 	}
     }
-    logsumexp(gamma_Z);
+    // Logsumexp 3
+    MPI_Gather(&gamma_Z_partial.front(), n_items_partial, MPI_DOUBLE, &gamma_Z.front(), n_items_partial, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    if (rank == 0) {
+	logsumexp(gamma_Z, oldm);
+    }
     std::cerr << std::endl;
     return(gamma_Z);
 }
