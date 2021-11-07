@@ -20,13 +20,13 @@
 template <typename T> class Matrix {
 private:
     std::vector<T> mat;
-    unsigned rows;
-    unsigned cols;
+    uint32_t rows;
+    uint32_t cols;
 
 public:
     Matrix() = default;
     // Parameter constructor
-    Matrix(unsigned _rows, unsigned _cols, const T& _initial);
+    Matrix(uint32_t _rows, uint32_t _cols, const T& _initial);
     // Copy constructor
     Matrix(const Matrix<T>& rhs) {
 	mat = rhs.mat;
@@ -69,11 +69,11 @@ public:
     void exp_right_multiply(const std::vector<T>& rhs, std::vector<T>& result) const;
 
     // Access individual elements
-    T& operator()(unsigned row, unsigned col) {
+    T& operator()(uint32_t row, uint32_t col) {
 	return this->mat[row*this->cols + col];
     }
     // Access individual elements (const)
-    const T& operator()(unsigned row, unsigned col) const {
+    const T& operator()(uint32_t row, uint32_t col) const {
 	return this->mat[row*this->cols + col];
     }
 
@@ -85,17 +85,17 @@ public:
     // const std::vector<T>& get_col(unsigned col_id) const;
 
     // LogSumExp a Matrix column
-    T log_sum_exp_col(unsigned col_id) const {
+    T log_sum_exp_col(uint32_t col_id) const {
 	// Note: this function accesses the elements rather inefficiently so
 	// it shouldn't be parallellised here. However, the caller can
 	// parallellize logsumexping multiple cols.
 	T max_elem = 0;
 	T sum = 0;
-	for (unsigned i = 0; i < this->rows; ++i) {
+	for (uint32_t i = 0; i < this->rows; ++i) {
 	    max_elem = (this->operator()(i, col_id) > max_elem ? this->operator()(i, col_id) : max_elem);
 	}
 	
-	for (unsigned i = 0; i < this->rows; ++i) {
+	for (uint32_t i = 0; i < this->rows; ++i) {
 	    sum += std::exp(this->operator()(i, col_id) - max_elem);
 	}
 	return max_elem + std::log(sum);
@@ -108,9 +108,9 @@ public:
     Matrix<T> transpose() const;
 
     // Get the number of rows of the matrix
-    inline unsigned get_rows() const { return this->rows; }
+    inline uint32_t get_rows() const { return this->rows; }
     // Get the number of columns of the matrix
-    inline unsigned get_cols() const { return this->cols; }
+    inline uint32_t get_cols() const { return this->cols; }
 
     // Get position of first element in this->mat
     const T& front() const { return this->mat.front(); }

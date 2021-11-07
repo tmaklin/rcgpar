@@ -13,7 +13,7 @@
 
 // Parameter Constructor
 template<typename T>
-Matrix<T>::Matrix(unsigned _rows, unsigned _cols, const T& _initial) {
+Matrix<T>::Matrix(uint32_t _rows, uint32_t _cols, const T& _initial) {
     mat.resize(_rows*_cols, _initial);
     rows = _rows;
     cols = _cols;
@@ -35,14 +35,14 @@ Matrix<T>& Matrix<T>::operator=(const Matrix<T>& rhs) {
     if (&rhs == this)
 	return *this;
 
-    unsigned new_rows = rhs.get_rows();
-    unsigned new_cols = rhs.get_cols();
+    uint32_t new_rows = rhs.get_rows();
+    uint32_t new_cols = rhs.get_cols();
     if (new_rows != rows || new_cols != cols) {
 	resize(new_rows, new_cols, (T)0);
     }
 #pragma omp parallel for schedule(static)
-    for (unsigned i = 0; i < new_rows; i++) {
-	for (unsigned j = 0; j < new_cols; j++) {
+    for (uint32_t i = 0; i < new_rows; i++) {
+	for (uint32_t j = 0; j < new_cols; j++) {
 	    this->operator()(i, j) = rhs(i, j); 
 	}
     }
@@ -55,8 +55,8 @@ Matrix<T> Matrix<T>::operator+(const Matrix<T>& rhs) const {
     Matrix result(this->rows, this->cols, 0.0);
 
 #pragma omp parallel for schedule(static)
-    for (unsigned i = 0; i < this->rows; i++) {
-	for (unsigned j = 0; j < this->cols; j++) {
+    for (uint32_t i = 0; i < this->rows; i++) {
+	for (uint32_t j = 0; j < this->cols; j++) {
 	    result(i, j) = this->operator()(i, j) + rhs(i,j);
 	}
     }
@@ -68,8 +68,8 @@ Matrix<T> Matrix<T>::operator+(const Matrix<T>& rhs) const {
 template<typename T>
 Matrix<T>& Matrix<T>::operator+=(const Matrix<T>& rhs) {
 #pragma omp parallel for schedule(static)
-    for (unsigned i = 0; i < this->rows; i++) {
-	for (unsigned j = 0; j < this->cols; j++) {
+    for (uint32_t i = 0; i < this->rows; i++) {
+	for (uint32_t j = 0; j < this->cols; j++) {
 	    this->operator()(i, j) += rhs(i, j);
 	}
     }
@@ -81,8 +81,8 @@ Matrix<T>& Matrix<T>::operator+=(const Matrix<T>& rhs) {
 template <typename T>
 void Matrix<T>::sum_fill(const Matrix<T>& rhs1, const Matrix<T>& rhs2) {
 #pragma omp parallel for schedule(static)
-    for (unsigned i = 0; i < this->rows; ++i) {
-	for (unsigned j = 0; j < this->cols; ++j) {
+    for (uint32_t i = 0; i < this->rows; ++i) {
+	for (uint32_t j = 0; j < this->cols; ++j) {
 	    this->operator()(i, j) = rhs1(i, j) + rhs2(i, j);
 	}
     }
@@ -94,8 +94,8 @@ Matrix<T> Matrix<T>::operator-(const Matrix<T>& rhs) const {
     Matrix result(this->rows, this->cols, 0.0);
 
 #pragma omp parallel for schedule(static)
-    for (unsigned i = 0; i < this->rows; i++) {
-	for (unsigned j = 0; j < this->cols; j++) {
+    for (uint32_t i = 0; i < this->rows; i++) {
+	for (uint32_t j = 0; j < this->cols; j++) {
 	    result(i, j) = this->operator()(i, j) - rhs(i, j);
 	}
     }
@@ -107,8 +107,8 @@ Matrix<T> Matrix<T>::operator-(const Matrix<T>& rhs) const {
 template<typename T>
 Matrix<T>& Matrix<T>::operator-=(const Matrix<T>& rhs) {
 #pragma omp parallel for schedule(static)
-    for (unsigned i = 0; i < this->rows; i++) {
-	for (unsigned j = 0; j < this->cols; j++) {
+    for (uint32_t i = 0; i < this->rows; i++) {
+	for (uint32_t j = 0; j < this->cols; j++) {
 	    this->operator()(i, j) -= rhs(i, j);
 	}
     }
@@ -122,9 +122,9 @@ Matrix<T> Matrix<T>::operator*(const Matrix<T>& rhs) const {
     Matrix result(this->rows, this->cols, 0.0);
 
 #pragma omp parallel for schedule(static)
-    for (unsigned i = 0; i < this->rows; i++) {
-	for (unsigned j = 0; j < this->cols; j++) {
-	    for (unsigned k = 0; k < this->rows; k++) {
+    for (uint32_t i = 0; i < this->rows; i++) {
+	for (uint32_t j = 0; j < this->cols; j++) {
+	    for (uint32_t k = 0; k < this->rows; k++) {
 		result(i, j) += this->operator()(i, k) * rhs(k, j);
 	    }
 	}
@@ -139,8 +139,8 @@ Matrix<T> Matrix<T>::transpose() const {
     Matrix result(this->rows, this->cols, 0.0);
 
 #pragma omp parallel for schedule(static)
-    for (unsigned i = 0; i < this->rows; i++) {
-	for (unsigned j = 0; j < this->cols; j++) {
+    for (uint32_t i = 0; i < this->rows; i++) {
+	for (uint32_t j = 0; j < this->cols; j++) {
 	    result(i, j) = this->operator()(j, i);
 	}
     }
@@ -152,8 +152,8 @@ Matrix<T> Matrix<T>::transpose() const {
 template<typename T>
 Matrix<T>& Matrix<T>::operator+=(const T& rhs) {
 #pragma omp parallel for schedule(static)
-    for (unsigned i = 0; i < this->rows; i++) {
-	for (unsigned j = 0; j < this->cols; j++) {
+    for (uint32_t i = 0; i < this->rows; i++) {
+	for (uint32_t j = 0; j < this->cols; j++) {
 	    this->operator()(i, j) += rhs;
 	}
     }
@@ -165,8 +165,8 @@ Matrix<T>& Matrix<T>::operator+=(const T& rhs) {
 template<typename T>
 Matrix<T>& Matrix<T>::operator-=(const T& rhs) {
 #pragma omp parallel for schedule(static)
-    for (unsigned i = 0; i < this->rows; i++) {
-	for (unsigned j=0; j < this->cols; j++) {
+    for (uint32_t i = 0; i < this->rows; i++) {
+	for (uint32_t j=0; j < this->cols; j++) {
 	    this->operator()(i, j) -= rhs;
 	}
     }
@@ -178,8 +178,8 @@ Matrix<T>& Matrix<T>::operator-=(const T& rhs) {
 template<typename T>
 Matrix<T>& Matrix<T>::operator*=(const T& rhs) {
 #pragma omp parallel for schedule(static)
-    for (unsigned i = 0; i < this->rows; ++i) {
-	for (unsigned j = 0; j < this->cols; ++j) {
+    for (uint32_t i = 0; i < this->rows; ++i) {
+	for (uint32_t j = 0; j < this->cols; ++j) {
 	    this->operator()(i, j) *= rhs;
 	}
     }
@@ -191,8 +191,8 @@ Matrix<T>& Matrix<T>::operator*=(const T& rhs) {
 template<typename T>
 Matrix<T>& Matrix<T>::operator/=(const T& rhs) {
 #pragma omp parallel for schedule(static)
-    for (unsigned i = 0; i < this->rows; ++i) {
-	for (unsigned j = 0; j < this->cols; ++j) {
+    for (uint32_t i = 0; i < this->rows; ++i) {
+	for (uint32_t j = 0; j < this->cols; ++j) {
 	    this->operator()(i, j) /= rhs;
 	}
     }
@@ -206,8 +206,8 @@ std::vector<T> Matrix<T>::operator*(const std::vector<T>& rhs) const {
     std::vector<T> result(rhs.size(), 0.0);
 
 #pragma omp parallel for schedule(static)
-    for (unsigned i = 0; i < rows; i++) {
-	for (unsigned j = 0; j < cols; j++) {
+    for (uint32_t i = 0; i < rows; i++) {
+	for (uint32_t j = 0; j < cols; j++) {
 	    result[i] += this->operator()(i, j) * rhs[j];
 	}
     }
@@ -219,9 +219,9 @@ std::vector<T> Matrix<T>::operator*(const std::vector<T>& rhs) const {
 template<typename T>
 void Matrix<T>::right_multiply(const std::vector<long unsigned>& rhs, std::vector<T>& result) const {
 #pragma omp parallel for schedule(static)
-    for (unsigned i = 0; i < this->rows; i++) {
+    for (uint32_t i = 0; i < this->rows; i++) {
 	result[i] = 0.0;
-	for (unsigned j = 0; j < this->cols; j++) {
+	for (uint32_t j = 0; j < this->cols; j++) {
 	    result[i] += this->operator()(i, j) * rhs[j];
 	}
     }
@@ -232,8 +232,8 @@ template<typename T>
 void Matrix<T>::exp_right_multiply(const std::vector<T>& rhs, std::vector<T>& result) const {
     std::fill(result.begin(), result.end(), 0.0);
 #pragma omp parallel for schedule(static) reduction(vec_double_plus:result)
-    for (unsigned i = 0; i < this->rows; i++) {
-	for (unsigned j = 0; j < this->cols; j++) {
+    for (uint32_t i = 0; i < this->rows; i++) {
+	for (uint32_t j = 0; j < this->cols; j++) {
 	    result[i] += std::exp(this->operator()(i, j) + rhs[j]);
 	}
     }
@@ -245,8 +245,8 @@ std::vector<double> Matrix<T>::operator*(const std::vector<long unsigned>& rhs) 
     std::vector<double> result(this->rows, 0.0);
   
 #pragma omp parallel for schedule(static)
-    for (unsigned i = 0; i < this->rows; i++) {
-	for (unsigned j = 0; j < this->cols; j++) {
+    for (uint32_t i = 0; i < this->rows; i++) {
+	for (uint32_t j = 0; j < this->cols; j++) {
 	    result[i] += this->operator()(i, j) * rhs[j];
 	}
     }
