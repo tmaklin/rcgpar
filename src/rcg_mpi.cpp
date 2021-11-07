@@ -16,32 +16,32 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
     int rc = MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
     rc = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    uint16_t n_rows;
-    uint32_t n_cols;
+    uint16_t n_groups;
+    uint32_t n_obs;
     if (rank == 0) {
-	n_rows = logl_full.get_rows();
-	n_cols = log_times_observed_full.size();
+	n_groups = logl_full.get_rows();
+	n_obs = log_times_observed_full.size();
     }
-    MPI_Bcast(&n_rows, 1, MPI_UINT16_T, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&n_cols, 1, MPI_UINT32_T, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&n_groups, 1, MPI_UINT16_T, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&n_obs, 1, MPI_UINT32_T, 0, MPI_COMM_WORLD);
 
     // Subdimensions for the processes
-    uint16_t n_cols_partial = n_cols/ntasks;
-    uint32_t n_items_partial = n_cols_partial*n_rows;
+    uint16_t n_obs_per_task = n_obs/ntasks;
+    uint32_t n_values_per_task = n_obs_per_task*n_groups;
 
     // Scatter the log likelihoods and log counts
-    std::vector<double> log_times_observed(n_cols/ntasks);
-    MPI_Scatter(&log_times_observed_full.front(), n_cols/ntasks, MPI_DOUBLE, &log_times_observed.front(), n_cols/ntasks, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    Matrix<double> logl(n_rows, n_cols_partial, 0.0);
-    MPI_Scatter(&logl_full.front(), n_items_partial, MPI_DOUBLE, &logl.front(), n_items_partial, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    std::vector<double> log_times_observed(n_obs/ntasks);
+    MPI_Scatter(&log_times_observed_full.front(), n_obs/ntasks, MPI_DOUBLE, &log_times_observed.front(), n_obs/ntasks, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    Matrix<double> logl(n_groups, n_obs_per_task, 0.0);
+    MPI_Scatter(&logl_full.front(), n_values_per_task, MPI_DOUBLE, &logl.front(), n_values_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     // Initialize variables.
-    Matrix<double> gamma_Z_partial = Matrix<double>(n_rows, n_cols_partial, std::log(1.0/(double)n_rows));
-    Matrix<double> step_partial(n_rows, n_cols_partial, 0.0);
+    Matrix<double> gamma_Z_partial = Matrix<double>(n_groups, n_obs_per_task, std::log(1.0/(double)n_groups));
+    Matrix<double> step_partial(n_groups, n_obs_per_task, 0.0);
 
     // Oldstep, oldm, and oldnorm are needed to revert the gradient descent step in some special cases.
-    Matrix<double> oldstep_partial(n_rows, n_cols_partial, 0.0);
-    std::vector<double> oldm(n_cols, 0.0);
+    Matrix<double> oldstep_partial(n_groups, n_obs_per_task, 0.0);
+    std::vector<double> oldm(n_obs, 0.0);
     double oldnorm = 1.0;
 
     // ELBO variables
@@ -60,7 +60,7 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
 
     Matrix<double> gamma_Z;
     if (rank == 0) {
-	gamma_Z = Matrix<double>(n_rows, n_cols, std::log(1.0/(double)n_rows)); // where gamma_Z is init at 1.0
+	gamma_Z = Matrix<double>(n_groups, n_obs, std::log(1.0/(double)n_groups)); // where gamma_Z is init at 1.0
     }
 
     double newnorm = 0.0;
@@ -82,12 +82,12 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
 	gamma_Z_partial += step_partial;
 
 	// Logsumexp 1
-	MPI_Gather(&gamma_Z_partial.front(), n_items_partial, MPI_DOUBLE, &gamma_Z.front(), n_items_partial, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Gather(&gamma_Z_partial.front(), n_values_per_task, MPI_DOUBLE, &gamma_Z.front(), n_values_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	if (rank == 0) {
 	    logsumexp(gamma_Z, oldm);
 	}
-	MPI_Scatter(&gamma_Z.front(), n_items_partial, MPI_DOUBLE, &gamma_Z_partial.front(), n_items_partial, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	MPI_Bcast(&oldm.front(), n_cols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Scatter(&gamma_Z.front(), n_values_per_task, MPI_DOUBLE, &gamma_Z_partial.front(), n_values_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&oldm.front(), n_obs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
 	gamma_Z_partial.exp_right_multiply(log_times_observed, N_k);
 	add_alpha0_to_Nk(alpha0, N_k);
@@ -106,12 +106,12 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
 	    }
 
 	    // Logsumexp 2
-	    MPI_Gather(&gamma_Z_partial.front(), n_items_partial, MPI_DOUBLE, &gamma_Z.front(), n_items_partial, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	    MPI_Gather(&gamma_Z_partial.front(), n_values_per_task, MPI_DOUBLE, &gamma_Z.front(), n_values_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	    if (rank == 0) {
 		logsumexp(gamma_Z, oldm);
 	    }
-	    MPI_Scatter(&gamma_Z.front(), n_items_partial, MPI_DOUBLE, &gamma_Z_partial.front(), n_items_partial, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	    MPI_Bcast(&oldm.front(), n_cols, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	    MPI_Scatter(&gamma_Z.front(), n_values_per_task, MPI_DOUBLE, &gamma_Z_partial.front(), n_values_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	    MPI_Bcast(&oldm.front(), n_obs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
 	    gamma_Z_partial.exp_right_multiply(log_times_observed, N_k);
 	    add_alpha0_to_Nk(alpha0, N_k);
@@ -128,7 +128,7 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
 	}
 	if (bound - oldbound < tol && !didreset) {
 	    // Logsumexp 3
-	    MPI_Gather(&gamma_Z_partial.front(), n_items_partial, MPI_DOUBLE, &gamma_Z.front(), n_items_partial, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	    MPI_Gather(&gamma_Z_partial.front(), n_values_per_task, MPI_DOUBLE, &gamma_Z.front(), n_values_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	    if (rank == 0) {
 		logsumexp(gamma_Z, oldm);
 	    }
@@ -137,7 +137,7 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
 	}
     }
     // Logsumexp 3
-    MPI_Gather(&gamma_Z_partial.front(), n_items_partial, MPI_DOUBLE, &gamma_Z.front(), n_items_partial, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Gather(&gamma_Z_partial.front(), n_values_per_task, MPI_DOUBLE, &gamma_Z.front(), n_values_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     if (rank == 0) {
 	logsumexp(gamma_Z, oldm);
     }
