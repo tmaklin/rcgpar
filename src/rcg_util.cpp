@@ -121,11 +121,3 @@ double calc_bound_const(const std::vector<double> &log_times_observed, const std
     bound_const = -std::lgamma(bound_const);
     return bound_const;
 }
-
-void add_alpha0_to_Nk(const std::vector<double> &alpha0, std::vector<double> &N_k) {
-    uint16_t n_groups = alpha0.size();
-#pragma omp parallel for schedule(static)
-    for (uint16_t i = 0; i < n_groups; ++i) {
-	N_k[i] += alpha0[i];
-    }
-}

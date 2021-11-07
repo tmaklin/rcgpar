@@ -5,6 +5,7 @@
 #include "rcg.hpp"
 
 #include <cmath>
+#include <algorithm>
 #include <iostream>
 
 #include "rcg_util.hpp"
@@ -25,7 +26,7 @@ Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double
 
     std::vector<double> N_k(alpha0.size());
     gamma_Z.exp_right_multiply(log_times_observed, N_k);
-    add_alpha0_to_Nk(alpha0, N_k);
+    std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
   
     for (uint16_t k = 0; k < maxiters; ++k) {
 	double newnorm = mixt_negnatgrad(gamma_Z, N_k, logl, step);
@@ -43,8 +44,7 @@ Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double
 	gamma_Z += step;
 	logsumexp(gamma_Z, oldm);
 	gamma_Z.exp_right_multiply(log_times_observed, N_k);
-
-	add_alpha0_to_Nk(alpha0, N_k);
+	std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
 
 	long double oldbound = bound;
 	bound = bound_const;
@@ -58,7 +58,7 @@ Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double
 	    }
 	    logsumexp(gamma_Z);
 	    gamma_Z.exp_right_multiply(log_times_observed, N_k);
-	    add_alpha0_to_Nk(alpha0, N_k);
+	    std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
 
 	    bound = bound_const;
 	    ELBO_rcg_mat(logl, gamma_Z, log_times_observed, alpha0, N_k, bound);
