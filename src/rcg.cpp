@@ -11,6 +11,7 @@
 
 #include "openmp_config.hpp"
 
+namespace rcgpar {
 double digamma(double x) {
     double result = 0, xx, xx2, xx4;
     assert(x > 0);
@@ -120,4 +121,5 @@ double calc_bound_const(const std::vector<double> &log_times_observed, const std
 
     bound_const = -std::lgamma(bound_const);
     return bound_const;
+}
 }

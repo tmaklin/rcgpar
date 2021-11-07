@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
     rc = MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
     rc = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    Matrix<double> log_lls;
+    rcgpar::Matrix<double> log_lls;
     std::vector<double> log_times_observed;
     uint32_t n_times_total = 0;
 
@@ -51,11 +51,11 @@ int main(int argc, char* argv[]) {
     std::vector<double> alpha0(n_groups, 1.0);
 
     // Optimize with rcg MPI call
-    const Matrix<double> &res_partial = rcg_optl_mpi(log_lls, log_times_observed, alpha0, tol, max_iters);
+    const rcgpar::Matrix<double> &res_partial = rcgpar::rcg_optl_mpi(log_lls, log_times_observed, alpha0, tol, max_iters);
 
-    Matrix<double> res;
+    rcgpar::Matrix<double> res;
     if (rank == 0) {
-	res = Matrix<double>(n_groups, n_obs, std::log(1.0/(double)n_groups)); // where gamma_Z is init at 1.0
+	res = rcgpar::Matrix<double>(n_groups, n_obs, std::log(1.0/(double)n_groups)); // where gamma_Z is init at 1.0
     }
 
     // Construct gamma_Z from the partials

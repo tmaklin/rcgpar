@@ -11,6 +11,7 @@
 
 #include "openmp_config.hpp"
 
+namespace rcgpar {
 // Parameter Constructor
 template<typename T>
 Matrix<T>::Matrix(uint32_t _rows, uint32_t _cols, const T& _initial) {
@@ -264,5 +265,6 @@ std::vector<double> Matrix<T>::operator*(const std::vector<long unsigned>& rhs) 
 //     }
 //     return col;
 // }
+}
 
 #endif

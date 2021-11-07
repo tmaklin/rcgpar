@@ -11,6 +11,7 @@
 #include "rcg.hpp"
 #include "openmp_config.hpp"
 
+namespace rcgpar {
 Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t maxiters) {
     uint16_t n_rows = logl.get_rows();
     uint32_t n_cols = log_times_observed.size();
@@ -77,4 +78,5 @@ Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double
     logsumexp(gamma_Z);
     std::cerr << std::endl;
     return(gamma_Z);
+}
 }

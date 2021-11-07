@@ -12,6 +12,7 @@
 
 #include "rcg.hpp"
 
+namespace rcgpar {
 Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double> &log_times_observed_full, const std::vector<double> &alpha0, const double &tol, uint16_t maxiters) {
     int ntasks,rank;
     MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
@@ -128,4 +129,5 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
     logsumexp(gamma_Z_partial, oldm_partial);
     std::cerr << std::endl;
     return(gamma_Z_partial);
+}
 }

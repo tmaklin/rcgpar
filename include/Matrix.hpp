@@ -17,6 +17,7 @@
 // parallellized should be provided in the .cpp file that is included
 // at the very end of this file.
 
+namespace rcgpar {
 template <typename T> class Matrix {
 private:
     std::vector<T> mat;
@@ -124,7 +125,7 @@ public:
     static size_t rows_offset() { return offsetof(Matrix<double>, rows); };
     static size_t cols_offset() { return offsetof(Matrix<double>, cols); };
 };
-
+}
 #include "../src/Matrix_omp.cpp"
 
 #endif

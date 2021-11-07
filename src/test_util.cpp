@@ -4,7 +4,7 @@
 #include <string>
 #include <sstream>
 
-std::vector<double> mixture_components(const Matrix<double> &probs, const std::vector<double> &log_times_observed, const uint32_t n_times_total) {
+std::vector<double> mixture_components(const rcgpar::Matrix<double> &probs, const std::vector<double> &log_times_observed, const uint32_t n_times_total) {
   std::vector<double> thetas(probs.get_rows(), 0.0);
   for (uint32_t i = 0; i < probs.get_rows(); ++i) {
     for (uint32_t j = 0; j < probs.get_cols(); ++j) {
@@ -15,7 +15,7 @@ std::vector<double> mixture_components(const Matrix<double> &probs, const std::v
   return thetas;
 }
 
-void read_test_data(Matrix<double> &log_lls, std::vector<double> &log_times_observed, uint32_t &n_times_total) {
+void read_test_data(rcgpar::Matrix<double> &log_lls, std::vector<double> &log_times_observed, uint32_t &n_times_total) {
     std::ifstream stream("../test_times_observed.txt");
     std::string line;
     while(std::getline(stream, line)) {
@@ -24,7 +24,7 @@ void read_test_data(Matrix<double> &log_lls, std::vector<double> &log_times_obse
 	n_times_total += obs_count;
     }
     std::ifstream stream2("../test_likelihoods.tsv");
-    log_lls = Matrix<double>(4, 78, 0.0);
+    log_lls = rcgpar::Matrix<double>(4, 78, 0.0);
     uint16_t i = 0;
     while(std::getline(stream2, line)) {
 	uint16_t j = 0;

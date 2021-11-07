@@ -5,6 +5,7 @@
 
 #include "Matrix.hpp"
 
+namespace rcgpar {
 void logsumexp(Matrix<double> &gamma_Z);
 void logsumexp(Matrix<double> &gamma_Z, std::vector<double> &m);
 
@@ -24,5 +25,6 @@ double calc_bound_const(const std::vector<double> &log_times_observed,
 
 void add_alpha0_to_Nk(const std::vector<double> &alpha0,
 		      std::vector<double> &N_k);
+}
 
 #endif
