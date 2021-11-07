@@ -5,9 +5,24 @@
 
 #include "Matrix.hpp"
 
-Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double> &log_times_observed,
-			    const std::vector<double> &alpha0, const double &tol, uint16_t maxiters);
-Matrix<double> rcg_optl_mpi(Matrix<double> &logl, const std::vector<double> &log_times_observed,
-			    const std::vector<double> &alpha0, const double &tol, uint16_t maxiters);
+void logsumexp(Matrix<double> &gamma_Z);
+void logsumexp(Matrix<double> &gamma_Z, std::vector<double> &m);
+
+double mixt_negnatgrad(const Matrix<double> &gamma_Z,
+		       const std::vector<double> &N_k,
+		       const Matrix<double> &logl, Matrix<double> &dL_dphi);
+
+void ELBO_rcg_mat(const Matrix<double> &logl, const Matrix<double> &gamma_Z,
+		  const std::vector<double> &counts,
+		  const std::vector<double> &alpha0,
+		  const std::vector<double> &N_k, long double &bound);
+
+void revert_step(Matrix<double> &gamma_Z, const std::vector<double> &oldm);
+
+double calc_bound_const(const std::vector<double> &log_times_observed,
+			const std::vector<double> &alpha0);
+
+void add_alpha0_to_Nk(const std::vector<double> &alpha0,
+		      std::vector<double> &N_k);
 
 #endif

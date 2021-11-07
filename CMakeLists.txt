@@ -86,8 +86,8 @@ ${CMAKE_BINARY_DIR}/include)
 if (OPENMP_FOUND)
   ### OpenMP parallellized rcg
   add_library(rcgomp
-    ${CMAKE_SOURCE_DIR}/src/rcg_omp.cpp
-    ${CMAKE_SOURCE_DIR}/src/rcg_util.cpp
+    ${CMAKE_SOURCE_DIR}/src/rcg.cpp
+    ${CMAKE_SOURCE_DIR}/src/rcgpar_omp.cpp
     ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
   ## OpenMP integration test
   add_executable(rcg-omp-test
@@ -99,8 +99,8 @@ endif()
 if (MPI_FOUND)
   ### MPI parallellized rcg
   add_library(rcgmpi
-    ${CMAKE_SOURCE_DIR}/src/rcg_mpi.cpp
-    ${CMAKE_SOURCE_DIR}/src/rcg_util.cpp
+    ${CMAKE_SOURCE_DIR}/src/rcg.cpp
+    ${CMAKE_SOURCE_DIR}/src/rcgpar_mpi.cpp
     ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
   ### MPI integration test
   add_executable(rcg-mpi-test

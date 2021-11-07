@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include "Matrix.hpp"
-#include "rcg.hpp"
+#include "rcgpar.hpp"
 #include "test_util.hpp"
 
 #include "version.h"

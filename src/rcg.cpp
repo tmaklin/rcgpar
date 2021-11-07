@@ -3,7 +3,7 @@
 // This file contains implementations for the rcg.cpp functions that
 // run either single-threaded or parallellized with OpenMP.
 
-#include "rcg_util.hpp"
+#include "rcg.hpp"
 
 #include <assert.h>
 

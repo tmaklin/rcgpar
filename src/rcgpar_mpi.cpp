@@ -2,7 +2,7 @@
 //
 // This file contains the rcg_optl_mat function for MPI calls.
 
-#include "rcg.hpp"
+#include "rcgpar.hpp"
 
 #include <mpi.h>
 
@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <iostream>
 
-#include "rcg_util.hpp"
+#include "rcg.hpp"
 
 Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double> &log_times_observed_full, const std::vector<double> &alpha0, const double &tol, uint16_t maxiters) {
     int ntasks,rank;
