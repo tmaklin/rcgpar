@@ -27,7 +27,11 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
     MPI_Bcast(&n_obs, 1, MPI_UINT32_T, 0, MPI_COMM_WORLD);
 
     // Subdimensions for the processes
-    uint32_t n_obs_per_task = n_obs/ntasks;
+    uint32_t n_obs_per_task = std::floor(n_obs/ntasks);
+    if (rank == ntasks) {
+	// Last process takes care of observations assigned to remainder.
+	n_obs_per_task += n_obs - n_obs_per_task*ntasks;
+    }
 
     // Scatter the log likelihoods and log counts
     // log counts

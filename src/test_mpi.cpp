@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <iostream>
+#include <cmath>
 
 #include "Matrix.hpp"
 #include "rcgpar.hpp"
@@ -60,6 +61,10 @@ int main(int argc, char* argv[]) {
 
     // Construct gamma_Z from the partials
     for (uint16_t i = 0; i < n_groups; ++i) {
+	uint32_t n_obs_per_task = std::floor(n_obs/ntasks);
+	if (rank == ntasks) {
+	    n_obs_per_task += n_obs - n_obs_per_task*ntasks;
+	}
 	MPI_Gather(&res_partial.front() + i*n_obs/ntasks, n_obs/ntasks, MPI_DOUBLE, &res.front() + i*n_obs, n_obs/ntasks, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     }
     rc = MPI_Finalize();
