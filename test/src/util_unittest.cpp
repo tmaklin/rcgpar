@@ -20,14 +20,18 @@
 //
 #include "rcgpar_unittest.hpp"
 
-#include "openmp_config.hpp"
+#include <numeric>
+#include <cmath>
+#include <iostream>
 
-TEST_F(Rcgpar, rcg_optl_omp) {
-#if defined(RCGPAR_OPENMP_SUPPORT) && (RCGPAR_OPENMP_SUPPORT) == 1
-    omp_set_num_threads(2);
-#endif
-    // Estimate gamma_Z
-    rcgpar::Matrix<double> got = rcg_optl_omp(logl, log_times_observed, alpha0, tol, max_iters);
+#include "util.hpp"
 
-    EXPECT_EQ(expected_gamma_Z, got);
+TEST_F(Rcgpar, mixture_components) {
+    // Transform probs into thetas
+    const std::vector<double> &got = rcgpar::mixture_components(expected_gamma_Z, log_times_observed);
+
+    for (uint16_t i = 0; i < n_groups; ++i) {
+	SCOPED_TRACE(i);
+	EXPECT_NEAR(expected_thetas[i], got[i], tol*100);
+    }
 }

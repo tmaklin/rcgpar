@@ -47,6 +47,6 @@ TEST_F(Rcgpar, rcg_optl_mpi) {
 	MPI_Gather(&got_partial.front() + i*n_obs/ntasks, n_obs/ntasks, MPI_DOUBLE, &got.front() + i*n_obs, n_obs/ntasks, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     }
     MPI_Bcast(&got.front(), n_groups*n_obs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    EXPECT_EQ(expected, got);
+    EXPECT_EQ(expected_gamma_Z, got);
     MPI_Finalize();
 }

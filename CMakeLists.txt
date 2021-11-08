@@ -100,6 +100,8 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
   if(OPENMP_FOUND)
     add_executable(runOmpTest ${CMAKE_SOURCE_DIR}/test/src/rcgpar_omp_unittest.cpp)
     add_test(runOmpTest runOmpTest)
+    add_executable(runUtilTest ${CMAKE_SOURCE_DIR}/test/src/util_unittest.cpp)
+    add_test(runUtilTest runUtilTest)
   endif()
   if(MPI_FOUND)
     add_executable(runMpiTest ${CMAKE_SOURCE_DIR}/test/src/rcgpar_mpi_unittest.cpp)
@@ -121,6 +123,9 @@ include_directories(${CMAKE_SOURCE_DIR}/include
   ${CMAKE_SOURCE_DIR}/test/include)
 
 ## Libraries and executables
+## utils
+add_library(rcgutils ${CMAKE_SOURCE_DIR}/src/util.cpp)
+
 if (OPENMP_FOUND)
   ### OpenMP parallellized rcg
   add_library(rcgomp
@@ -129,7 +134,8 @@ if (OPENMP_FOUND)
     ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
   ## Unit tests
   if(CMAKE_BUILD_TYPE MATCHES Debug)
-    target_link_libraries(runOmpTest rcgomp gtest gtest_main)
+    target_link_libraries(runOmpTest rcgomp rcgutils gtest gtest_main)
+    target_link_libraries(runUtilTest rcgomp rcgutils gtest gtest_main)
   endif()
 endif()
 
@@ -139,6 +145,7 @@ if (MPI_FOUND)
     ${CMAKE_SOURCE_DIR}/src/rcg.cpp
     ${CMAKE_SOURCE_DIR}/src/rcgpar_mpi.cpp
     ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
+  target_link_libraries(rcgmpi rcgutils)
   ## Unit tests
   if(CMAKE_BUILD_TYPE MATCHES Debug)
     target_link_libraries(runMpiTest rcgmpi gtest gtest_main)
@@ -148,6 +155,7 @@ endif()
 # Link libraries
 if (OPENMP_FOUND)
   target_link_libraries(rcgomp OpenMP::OpenMP_CXX)
+  target_link_libraries(rcgomp rcgutils)
   if (MPI_FOUND)
     target_link_libraries(rcgmpi OpenMP::OpenMP_CXX) ## Hybrid parallellization
   endif()

@@ -43,8 +43,8 @@ protected:
 	this->n_groups = 4;
 	this->n_obs = 10;
 
-	this->expected = rcgpar::Matrix<double>(expc_vec, this->n_groups, this->n_obs);
-
+	this->expected_gamma_Z = rcgpar::Matrix<double>(expc_vec, this->n_groups, this->n_obs);
+	this->expected_thetas = { 0.999543, 0.00073079, 9.66135e-05, 0.000112505 };
 
 	this->logl = rcgpar::Matrix<double>(logl_vec, this->n_groups, this->n_obs);
 	this->log_times_observed = { 7.681099,7.04316,6.849066,5.278115,5.164786,5.062595,6.947937,6.863803,7.277248,7.666222 };
@@ -53,7 +53,8 @@ protected:
 	this->max_iters = 5000;
     }
     // Result
-    rcgpar::Matrix<double> expected;
+    rcgpar::Matrix<double> expected_gamma_Z;
+    std::vector<double> expected_thetas;
 
     // Sizes
     uint16_t n_groups;
