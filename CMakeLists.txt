@@ -97,14 +97,12 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
   set_target_properties(gmock_main PROPERTIES EXCLUDE_FROM_ALL 1)
   include_directories("${CMAKE_GOOGLETEST_HEADERS}")
   enable_testing()
-  if(OPENMP_FOUND)
-    add_executable(runOmpTest ${CMAKE_SOURCE_DIR}/test/src/rcgpar_omp_unittest.cpp)
-    add_test(runOmpTest runOmpTest)
-    add_executable(runUtilTest ${CMAKE_SOURCE_DIR}/test/src/util_unittest.cpp)
-    add_test(runUtilTest runUtilTest)
-    add_executable(runRcgTest ${CMAKE_SOURCE_DIR}/test/src/rcg_unittest.cpp)
-    add_test(runRcgTest runRcgTest)
-  endif()
+  add_executable(runOmpTest ${CMAKE_SOURCE_DIR}/test/src/rcgpar_omp_unittest.cpp)
+  add_test(runOmpTest runOmpTest)
+  add_executable(runUtilTest ${CMAKE_SOURCE_DIR}/test/src/util_unittest.cpp)
+  add_test(runUtilTest runUtilTest)
+  add_executable(runRcgTest ${CMAKE_SOURCE_DIR}/test/src/rcg_unittest.cpp)
+  add_test(runRcgTest runRcgTest)
   if(MPI_FOUND)
     add_executable(runMpiTest ${CMAKE_SOURCE_DIR}/test/src/rcgpar_mpi_unittest.cpp)
     add_test(runMpiTest runMpiTest)
@@ -128,18 +126,17 @@ include_directories(${CMAKE_SOURCE_DIR}/include
 ## utils
 add_library(rcgutils ${CMAKE_SOURCE_DIR}/src/util.cpp)
 
-if (OPENMP_FOUND)
-  ### OpenMP parallellized rcg
-  add_library(rcgomp
-    ${CMAKE_SOURCE_DIR}/src/rcg.cpp
-    ${CMAKE_SOURCE_DIR}/src/rcgpar_omp.cpp
-    ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
-  ## Unit tests
-  if(CMAKE_BUILD_TYPE MATCHES Debug)
-    target_link_libraries(runOmpTest rcgomp rcgutils gtest gtest_main)
-    target_link_libraries(runUtilTest rcgomp rcgutils gtest gtest_main)
-    target_link_libraries(runRcgTest rcgomp gtest gtest_main)
-  endif()
+### OpenMP parallellized rcg
+add_library(rcgomp
+  ${CMAKE_SOURCE_DIR}/src/rcg.cpp
+  ${CMAKE_SOURCE_DIR}/src/rcgpar_omp.cpp
+  ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
+
+## Link unit tests with rcgomp
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+  target_link_libraries(runOmpTest rcgomp rcgutils gtest gtest_main)
+  target_link_libraries(runUtilTest rcgomp rcgutils gtest gtest_main)
+  target_link_libraries(runRcgTest rcgomp gtest gtest_main)
 endif()
 
 if (MPI_FOUND)
