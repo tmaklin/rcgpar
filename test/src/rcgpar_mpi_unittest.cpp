@@ -18,39 +18,35 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
 // USA
 //
-#include <vector>
-#include <iostream>
+#include "rcgpar_unittest.hpp"
 
-#include "Matrix.hpp"
-#include "rcgpar.hpp"
-#include "test_util.hpp"
+#include <mpi.h>
 
-#include "version.h"
 #include "openmp_config.hpp"
 
-int main() {
-    std::cerr << "rcgpar-OpenMP-test" << RCGPAR_BUILD_VERSION << std::endl;
+TEST_F(Rcgpar, rcg_optl_mpi) {
+    // Init MPI
+    MPI_Init(NULL, NULL);
+    int ntasks,rank;
+    MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
 #if defined(RCGPAR_OPENMP_SUPPORT) && (RCGPAR_OPENMP_SUPPORT) == 1
-    omp_set_num_threads(4);
+    omp_set_num_threads(2);
 #endif
-    uint16_t n_groups = 4;
-    uint32_t n_times_total = 0;
+    // Estimate gamma_Z
+    rcgpar::Matrix<double> got_partial = rcg_optl_mpi(logl, log_times_observed, alpha0, tol, max_iters);
 
-    std::vector<double> log_times_observed;
-    rcgpar::Matrix<double> log_lls;
-    read_test_data(log_lls, log_times_observed, n_times_total);
-
-    std::vector<double> alpha0(n_groups, 1.0);
-    double tol = 1e-8;
-    uint16_t max_iters = 5000;
-
-    const rcgpar::Matrix<double> &res = rcgpar::rcg_optl_omp(log_lls, log_times_observed, alpha0, tol, max_iters);
-    const std::vector<double> &thetas = mixture_components(res, log_times_observed, n_times_total);
-
+    // Construct gamma_Z from the partials
+    rcgpar::Matrix<double> got = rcgpar::Matrix<double>(n_groups, n_obs, 0.0);
     for (uint16_t i = 0; i < n_groups; ++i) {
-	std::cerr << i << '\t' << thetas.at(i) << '\n';
+	uint32_t n_obs_per_task = std::floor(n_obs/ntasks);
+	if (rank == ntasks) {
+	    n_obs_per_task += n_obs - n_obs_per_task*ntasks;
+	}
+	MPI_Gather(&got_partial.front() + i*n_obs/ntasks, n_obs/ntasks, MPI_DOUBLE, &got.front() + i*n_obs, n_obs/ntasks, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     }
-    std::cerr << std::endl;
-
-    return 0;
+    MPI_Bcast(&got.front(), n_groups*n_obs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    EXPECT_EQ(expected, got);
+    MPI_Finalize();
 }

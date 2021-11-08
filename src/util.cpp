@@ -18,12 +18,9 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
 // USA
 //
-#include "test_util.hpp"
+#include "util.hpp"
 
-#include <fstream>
-#include <string>
-#include <sstream>
-
+namespace rcgpar {
 std::vector<double> mixture_components(const rcgpar::Matrix<double> &probs, const std::vector<double> &log_times_observed, const uint32_t n_times_total) {
   std::vector<double> thetas(probs.get_rows(), 0.0);
   for (uint32_t i = 0; i < probs.get_rows(); ++i) {
@@ -34,27 +31,4 @@ std::vector<double> mixture_components(const rcgpar::Matrix<double> &probs, cons
   }
   return thetas;
 }
-
-void read_test_data(rcgpar::Matrix<double> &log_lls, std::vector<double> &log_times_observed, uint32_t &n_times_total) {
-    std::ifstream stream("../test_times_observed.txt");
-    std::string line;
-    while(std::getline(stream, line)) {
-	uint32_t obs_count = std::stoul(line);
-	log_times_observed.emplace_back(std::log(obs_count));
-	n_times_total += obs_count;
-    }
-    std::ifstream stream2("../test_likelihoods.tsv");
-    log_lls = rcgpar::Matrix<double>(4, 78, 0.0);
-    uint16_t i = 0;
-    while(std::getline(stream2, line)) {
-	uint16_t j = 0;
-	std::string part;
-	std::stringstream parts(line);
-	while(std::getline(parts, part, '\t')) {
-	    log_lls(j, i) = std::stod(part);
-	    ++j;
-	}
-	++i;
-    }
 }
-

@@ -18,18 +18,16 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
 // USA
 //
-#ifndef RCGPAR_TEST_UTIL_HPP
-#define RCGPAR_TEST_UTIL_HPP
+#include "rcgpar_unittest.hpp"
 
-#include <vector>
+#include "openmp_config.hpp"
 
-#include "Matrix.hpp"
-
-std::vector<double> mixture_components(const rcgpar::Matrix<double> &probs,
-				       const std::vector<double> &log_times_observed,
-				       const uint32_t n_times_total);
-
-void read_test_data(rcgpar::Matrix<double> &log_lls,
-		    std::vector<double> &log_times_observed, uint32_t &n_times_total);
-
+TEST_F(Rcgpar, rcg_optl_omp) {
+#if defined(RCGPAR_OPENMP_SUPPORT) && (RCGPAR_OPENMP_SUPPORT) == 1
+    omp_set_num_threads(2);
 #endif
+    // Estimate gamma_Z
+    rcgpar::Matrix<double> got = rcg_optl_omp(logl, log_times_observed, alpha0, tol, max_iters);
+
+    EXPECT_EQ(expected, got);
+}

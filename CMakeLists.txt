@@ -33,7 +33,6 @@ if (OPENMP_FOUND)
 else()
   set(RCGPAR_OPENMP_SUPPORT 0)
 endif()
-## Check dependencies
 ### MPI
 find_package(MPI)
 if (MPI_FOUND)
@@ -51,6 +50,7 @@ else()
   add_compile_options(-std=c++11)
 endif()
 
+## Do an out-of-source build
 set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
@@ -71,6 +71,43 @@ else()
 endif()
 string(TIMESTAMP _BUILD_TIMESTAMP)
 
+## Download googletest if building in debug mode
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+  if (DEFINED CMAKE_GOOGLETEST_HEADERS)
+    message(STATUS "googletest headers provided in: ${CMAKE_GOOGLETEST_HEADERS}")
+  else()
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/CMakeLists-googletest.txt.in ${CMAKE_BINARY_DIR}/external/googletest-download/CMakeLists.txt)
+    execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+      RESULT_VARIABLE result
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/external/googletest-download )
+    if(result)
+      message(FATAL_ERROR "CMake step for googletest failed: ${result}")
+    endif()
+    execute_process(COMMAND ${CMAKE_COMMAND} --build .
+      RESULT_VARIABLE result
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/external/googletest-download )
+    if(result)
+      message(FATAL_ERROR "Build step for googletest failed: ${result}")
+    endif()
+    set(CMAKE_GOOGLETEST_HEADERS ${CMAKE_CURRENT_BINARY_DIR}/external/googletest/googletest/include)
+    add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/external/googletest
+                     ${CMAKE_CURRENT_BINARY_DIR}/external/googletest/build)
+  endif()
+  set_target_properties(gmock PROPERTIES EXCLUDE_FROM_ALL 1)
+  set_target_properties(gmock_main PROPERTIES EXCLUDE_FROM_ALL 1)
+  include_directories("${CMAKE_GOOGLETEST_HEADERS}")
+  enable_testing()
+  if(OPENMP_FOUND)
+    add_executable(runOmpTest ${CMAKE_SOURCE_DIR}/test/src/rcgpar_omp_unittest.cpp)
+    add_test(runOmpTest runOmpTest)
+  endif()
+  if(MPI_FOUND)
+    add_executable(runMpiTest ${CMAKE_SOURCE_DIR}/test/src/rcgpar_mpi_unittest.cpp)
+    add_test(runMpiTest runMpiTest)
+  endif()
+endif()
+
+
 ## Generate a version.h file containing build version and timestamp
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/version.h.in ${CMAKE_BINARY_DIR}/include/version.h @ONLY)
 ## Configure OpenMP if it's supported on the system.
@@ -80,7 +117,8 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/mpi_config.hpp.in ${CMAKE_BINA
 
 ## Includes
 include_directories(${CMAKE_SOURCE_DIR}/include
-${CMAKE_BINARY_DIR}/include)
+  ${CMAKE_BINARY_DIR}/include
+  ${CMAKE_SOURCE_DIR}/test/include)
 
 ## Libraries and executables
 if (OPENMP_FOUND)
@@ -89,11 +127,10 @@ if (OPENMP_FOUND)
     ${CMAKE_SOURCE_DIR}/src/rcg.cpp
     ${CMAKE_SOURCE_DIR}/src/rcgpar_omp.cpp
     ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
-  ## OpenMP integration test
-  add_executable(rcg-omp-test
-    ${CMAKE_SOURCE_DIR}/src/test_util.cpp
-    ${CMAKE_SOURCE_DIR}/src/test_omp.cpp)
-  target_link_libraries(rcg-omp-test rcgomp)
+  ## Unit tests
+  if(CMAKE_BUILD_TYPE MATCHES Debug)
+    target_link_libraries(runOmpTest rcgomp gtest gtest_main)
+  endif()
 endif()
 
 if (MPI_FOUND)
@@ -102,11 +139,10 @@ if (MPI_FOUND)
     ${CMAKE_SOURCE_DIR}/src/rcg.cpp
     ${CMAKE_SOURCE_DIR}/src/rcgpar_mpi.cpp
     ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
-  ### MPI integration test
-  add_executable(rcg-mpi-test
-    ${CMAKE_SOURCE_DIR}/src/test_util.cpp
-    ${CMAKE_SOURCE_DIR}/src/test_mpi.cpp)
-  target_link_libraries(rcg-mpi-test rcgmpi)
+  ## Unit tests
+  if(CMAKE_BUILD_TYPE MATCHES Debug)
+    target_link_libraries(runMpiTest rcgmpi gtest gtest_main)
+  endif()
 endif()
 
 # Link libraries
