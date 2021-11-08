@@ -89,6 +89,9 @@ public:
     Matrix<T>& operator*=(const T& rhs);
     Matrix<T>& operator/=(const T& rhs);
 
+    // Matrix-matrix comparison
+    bool operator==(const Matrix<double>& rhs) const;
+
     // Matrix-vector
     std::vector<T> operator*(const std::vector<T>& rhs) const;
     std::vector<double> operator*(const std::vector<long unsigned>& rhs) const;

@@ -234,6 +234,21 @@ Matrix<T>& Matrix<T>::operator/=(const T& rhs) {
     return *this;
 }
 
+// Matrix-matrix comparison
+template<typename T>
+bool Matrix<T>::operator==(const Matrix<double>& rhs) const {
+    bool all_equal = this->rows == rhs.get_rows();
+    all_equal &= (this->cols == rhs.get_cols());
+    double tol = 1e-4;
+#pragma omp parallel for schedule(static) reduction (&:all_equal)
+    for (uint32_t i = 0; i < this->rows; ++i) {
+	for (uint32_t j = 0; j < this->cols; ++j) {
+	    all_equal &= (std::abs(this->operator()(i, j) - rhs(i, j)) < tol);
+	}
+    }
+    return all_equal;
+}
+
 // Matrix-vector right multiplication
 template<typename T>
 std::vector<T> Matrix<T>::operator*(const std::vector<T>& rhs) const {
