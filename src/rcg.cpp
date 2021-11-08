@@ -89,7 +89,7 @@ void ELBO_rcg_mat(const Matrix<double> &logl, const Matrix<double> &gamma_Z, con
 	for (uint32_t j = 0; j < n_obs; ++j) {
 	    bound += std::exp(gamma_Z(i, j) + counts[j])*(logl(i, j) - gamma_Z(i, j));
 	}
-	bound -= std::lgamma(alpha0[i]) - std::lgamma(N_k[i]);
+	bound += std::lgamma(N_k[i]);
     }
 }
 
@@ -105,21 +105,24 @@ void revert_step(Matrix<double> &gamma_Z, const std::vector<double> &oldm) {
 }
 
 double calc_bound_const(const std::vector<double> &log_times_observed, const std::vector<double> &alpha0) {
-    double bound_const = 0.0;
+    double counts_sum = 0.0;
     uint32_t n_obs = log_times_observed.size();
-#pragma omp parallel for schedule(static) reduction(+:bound_const)
+#pragma omp parallel for schedule(static) reduction(+:counts_sum)
     for (uint32_t i = 0; i < n_obs; ++i) {
-	bound_const += std::exp(log_times_observed[i]);
+	counts_sum += std::exp(log_times_observed[i]);
     }
 
+    double alpha0_sum = 0.0;
+    double lgamma_alpha0_sum = 0.0;
     uint16_t n_groups = alpha0.size();
-#pragma omp parallel for schedule(static) reduction(+:bound_const)
+#pragma omp parallel for schedule(static) reduction(+:alpha0_sum) reduction(+:lgamma_alpha0_sum)
     for (uint32_t i = 0; i < n_groups; ++i) {
-	bound_const += alpha0[i];
-	bound_const += std::lgamma(alpha0[i]);
+	alpha0_sum += alpha0[i];
+	lgamma_alpha0_sum += std::lgamma(alpha0[i]);
     }
-
-    bound_const = -std::lgamma(bound_const);
+    double bound_const = std::lgamma(alpha0_sum);
+    bound_const -= std::lgamma(alpha0_sum + counts_sum);
+    bound_const -= lgamma_alpha0_sum;
     return bound_const;
 }
 }
