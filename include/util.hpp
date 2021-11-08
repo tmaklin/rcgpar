@@ -26,8 +26,9 @@
 
 #include "Matrix.hpp"
 
+namespace rcgpar{
 std::vector<double> mixture_components(const rcgpar::Matrix<double> &probs,
-				       const std::vector<double> &log_times_observed,
-				       const uint32_t n_times_total);
+				       const std::vector<double> &log_times_observed);
+}
 
 #endif

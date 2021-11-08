@@ -21,10 +21,12 @@
 #include "util.hpp"
 
 namespace rcgpar {
-std::vector<double> mixture_components(const rcgpar::Matrix<double> &probs, const std::vector<double> &log_times_observed, const uint32_t n_times_total) {
+std::vector<double> mixture_components(const rcgpar::Matrix<double> &probs, const std::vector<double> &log_times_observed) {
   std::vector<double> thetas(probs.get_rows(), 0.0);
   for (uint32_t i = 0; i < probs.get_rows(); ++i) {
+    uint32_t n_times_total = 0.0;
     for (uint32_t j = 0; j < probs.get_cols(); ++j) {
+      n_times_total += std::exp(log_times_observed[j]);
       thetas[i] += std::exp(probs(i, j) + log_times_observed[j]);
     }
     thetas[i] /= n_times_total;
