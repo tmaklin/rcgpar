@@ -6,6 +6,7 @@
 
 #include <cmath>
 #include <algorithm>
+#include <numeric>
 #include <iostream>
 
 #include "rcg.hpp"
@@ -48,8 +49,10 @@ Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double
 	std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
 
 	long double oldbound = bound;
-	bound = bound_const;
+	bound = 0.0;
 	ELBO_rcg_mat(logl, gamma_Z, log_times_observed, alpha0, N_k, bound);
+	bound += std::accumulate(N_k.begin(), N_k.end(), (double)0.0, [](double acc, double elem){ return acc + std::lgamma(elem); });
+	bound += bound_const;
 
 	if (bound < oldbound) {
 	    didreset = true;

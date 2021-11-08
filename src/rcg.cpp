@@ -89,7 +89,6 @@ void ELBO_rcg_mat(const Matrix<double> &logl, const Matrix<double> &gamma_Z, con
 	for (uint32_t j = 0; j < n_obs; ++j) {
 	    bound += std::exp(gamma_Z(i, j) + counts[j])*(logl(i, j) - gamma_Z(i, j));
 	}
-	bound += std::lgamma(N_k[i]);
     }
 }
 
