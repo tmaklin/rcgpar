@@ -103,26 +103,20 @@ const rcgpar::Matrix<double> LogsumexpTest::oldstep_x_betaFR(std::vector<double>
       7.07923, 7.0201,  6.8859,  7.02111, 6.95756, 6.81056, 6.87524, 6.79898, 6.61316, 6.9995 }
 											 )), TEST_N_GROUPS, TEST_N_OBS);
 // Test ELBO_rcg_mat()
-class ElboRcgMatTest : public ::testing::Test, protected ExpectedGammaZTest, protected LogCountsTest, protected LogLikelihoodTest, protected Alpha0Test {
+class ElboRcgMatTest : public ::testing::Test, protected ExpectedGammaZTest, protected LogCountsTest, protected LogLikelihoodTest {
 protected:
     static void SetUpTestSuite() {}
     void SetUp() {
 	bound_got = 0.0;
-	N_k_new = std::vector<double>(TEST_N_GROUPS);
-	expected_gamma_Z.exp_right_multiply(log_times_observed, N_k_new);
-	std::transform(N_k_new.begin(), N_k_new.end(), alpha0.begin(), N_k_new.begin(), std::plus<double>());
+	std::vector<double> N_k_tmp(TEST_N_GROUPS);
+	expected_gamma_Z.exp_right_multiply(log_times_observed, N_k_tmp);
     }
     void TearDown() {
 	bound_got = 0.0;
-	N_k_new.clear();
-	N_k_new.shrink_to_fit();
     }
 
     // Expecteds
     static constexpr long double expected_bound = 9161.51;
-
-    // Test inputs
-    std::vector<double> N_k_new;
 
     // Test outputs
     long double bound_got;

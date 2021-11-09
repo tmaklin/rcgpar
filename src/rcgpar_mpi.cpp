@@ -116,7 +116,7 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
 	long double oldbound = bound;
 	long double bound_partial = 0.0;
 	bound = 0.0;
-  	ELBO_rcg_mat(logl_partial, gamma_Z_partial, log_times_observed, alpha0, N_k, bound_partial);
+  	ELBO_rcg_mat(logl_partial, gamma_Z_partial, log_times_observed, bound_partial);
 	MPI_Allreduce(&bound_partial, &bound, 1, MPI_LONG_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         bound += std::accumulate(N_k.begin(), N_k.end(), (double)0.0, [](double acc, double elem){ return acc + std::lgamma(elem); });
 	bound += bound_const;
@@ -136,7 +136,7 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
 	    std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
 	
 	    bound_partial = 0.0;
-	    ELBO_rcg_mat(logl_partial, gamma_Z_partial, log_times_observed, alpha0, N_k, bound_partial);
+	    ELBO_rcg_mat(logl_partial, gamma_Z_partial, log_times_observed, bound_partial);
 	    MPI_Allreduce(&bound_partial, &bound, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 	    bound += bound_const;
 	} else {

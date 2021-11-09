@@ -36,8 +36,7 @@ double mixt_negnatgrad(const Matrix<double> &gamma_Z,
 
 void ELBO_rcg_mat(const Matrix<double> &logl, const Matrix<double> &gamma_Z,
 		  const std::vector<double> &counts,
-		  const std::vector<double> &alpha0,
-		  const std::vector<double> &N_k, long double &bound);
+		  long double &bound);
 
 void revert_step(Matrix<double> &gamma_Z, const std::vector<double> &oldm);
 

@@ -70,7 +70,7 @@ Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double
 
 	long double oldbound = bound;
 	bound = 0.0;
-	ELBO_rcg_mat(logl, gamma_Z, log_times_observed, alpha0, N_k, bound);
+	ELBO_rcg_mat(logl, gamma_Z, log_times_observed, bound);
 	bound += std::accumulate(N_k.begin(), N_k.end(), (double)0.0, [](double acc, double elem){ return acc + std::lgamma(elem); });
 	bound += bound_const;
 
@@ -85,7 +85,7 @@ Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double
 	    std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
 
 	    bound = bound_const;
-	    ELBO_rcg_mat(logl, gamma_Z, log_times_observed, alpha0, N_k, bound);
+	    ELBO_rcg_mat(logl, gamma_Z, log_times_observed, bound);
 	} else {
 	    oldstep = step;
 	}

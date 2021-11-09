@@ -101,7 +101,7 @@ double mixt_negnatgrad(const Matrix<double> &gamma_Z, const std::vector<double> 
     return newnorm;
 }
 
-void ELBO_rcg_mat(const Matrix<double> &logl, const Matrix<double> &gamma_Z, const std::vector<double> &counts, const std::vector<double> &alpha0, const std::vector<double> &N_k, long double &bound) {
+void ELBO_rcg_mat(const Matrix<double> &logl, const Matrix<double> &gamma_Z, const std::vector<double> &counts, long double &bound) {
     uint16_t n_groups = gamma_Z.get_rows();
     uint32_t n_obs = gamma_Z.get_cols();
 #pragma omp parallel for schedule(static) reduction(+:bound)
