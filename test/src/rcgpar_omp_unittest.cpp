@@ -20,14 +20,16 @@
 //
 #include "rcgpar_unittest.hpp"
 
+#include "rcgpar.hpp"
 #include "openmp_config.hpp"
 
-TEST_F(Rcgpar, rcg_optl_omp) {
+// Test rcg_otpl_mat_omp()
+TEST_F(RcgOptlMatTest, FinalGammaZCorrect_OMP) {
 #if defined(RCGPAR_OPENMP_SUPPORT) && (RCGPAR_OPENMP_SUPPORT) == 1
     omp_set_num_threads(2);
 #endif
     // Estimate gamma_Z
-    rcgpar::Matrix<double> got = rcg_optl_omp(logl, log_times_observed, alpha0, tol, max_iters);
+    got = rcg_optl_omp(logl, log_times_observed, alpha0, tol, max_iters);
 
-    EXPECT_EQ(expected_gamma_Z, got);
+    EXPECT_EQ(final_gamma_Z, got);
 }

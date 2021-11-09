@@ -22,9 +22,11 @@
 
 #include <mpi.h>
 
+#include "rcgpar.hpp"
 #include "openmp_config.hpp"
 
-TEST_F(Rcgpar, rcg_optl_mpi) {
+// Test rcg_optl_mat_mpi()
+TEST_F(RcgOptlMatTest, FinalGammaZCorrect_MPI) {
     // Init MPI
     MPI_Init(NULL, NULL);
     int ntasks,rank;
@@ -34,19 +36,21 @@ TEST_F(Rcgpar, rcg_optl_mpi) {
 #if defined(RCGPAR_OPENMP_SUPPORT) && (RCGPAR_OPENMP_SUPPORT) == 1
     omp_set_num_threads(2);
 #endif
+
     // Estimate gamma_Z
-    rcgpar::Matrix<double> got_partial = rcg_optl_mpi(logl, log_times_observed, alpha0, tol, max_iters);
+    rcgpar::Matrix<double> my_logl(logl);
+    got = rcg_optl_mpi(my_logl, log_times_observed, alpha0, tol, max_iters);
 
     // Construct gamma_Z from the partials
-    rcgpar::Matrix<double> got = rcgpar::Matrix<double>(n_groups, n_obs, 0.0);
+    rcgpar::Matrix<double> got_all = rcgpar::Matrix<double>(n_groups, n_obs, 0.0);
     for (uint16_t i = 0; i < n_groups; ++i) {
 	uint32_t n_obs_per_task = std::floor(n_obs/ntasks);
 	if (rank == ntasks) {
 	    n_obs_per_task += n_obs - n_obs_per_task*ntasks;
 	}
-	MPI_Gather(&got_partial.front() + i*n_obs/ntasks, n_obs/ntasks, MPI_DOUBLE, &got.front() + i*n_obs, n_obs/ntasks, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Gather(&got.front() + i*n_obs/ntasks, n_obs/ntasks, MPI_DOUBLE, &got_all.front() + i*n_obs, n_obs/ntasks, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     }
-    MPI_Bcast(&got.front(), n_groups*n_obs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    EXPECT_EQ(expected_gamma_Z, got);
+    MPI_Bcast(&got_all.front(), n_groups*n_obs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    EXPECT_EQ(final_gamma_Z, got_all);
     MPI_Finalize();
 }
