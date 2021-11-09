@@ -23,8 +23,8 @@
 #include "gtest/gtest.h"
 
 #include "rcg.hpp"
-#include "openmp_config.hpp"
 
+// Test digamma()
 TEST_F(DigammaTest, ResultCorrect) {
     for (uint16_t i = 0; i < tests.size(); ++i) {
 	SCOPED_TRACE(i);
@@ -33,63 +33,53 @@ TEST_F(DigammaTest, ResultCorrect) {
     }
 }
 
-TEST_F(Rcg, mixt_negnatgradNewnormCorrect) {
-    rcgpar::Matrix<double> step_got(n_groups, n_obs, 0.0);
-    double got = mixt_negnatgrad(gamma_Z, N_k, logl, step_got);
-    EXPECT_NEAR(expected_newnorm, got, 1e-4);
+// Test mixt_negnatgrad()
+TEST_F(MixtNegnatgradTest, NewnormCorrect) {
+    newnorm_got = mixt_negnatgrad(gamma_Z, N_k, logl, step_got);
+    EXPECT_NEAR(expected_newnorm, newnorm_got, 1e-4);
 }
 
-TEST_F(Rcg, mixt_negnatgradStepUpdated) {
-    rcgpar::Matrix<double> step_got(n_groups, n_obs, 0.0);
+// Test mixt_negnatgrad()
+TEST_F(MixtNegnatgradTest, dL_dPhiCorrect) {
     mixt_negnatgrad(gamma_Z, N_k, logl, step_got);
     EXPECT_EQ(expected_step, step_got);
 }
 
-TEST_F(Rcg, logsumexp_returnmGammaZUpdated) {
-    std::vector<double> oldm_got(n_obs, 0.0);
-    rcgpar::Matrix<double> gamma_Z_got(gamma_Z);
-    gamma_Z_got += oldstep_x_betaFR;
-    gamma_Z_got += expected_step;
-    logsumexp(gamma_Z_got, oldm_got);
-    EXPECT_EQ(expected_gamma_Z, gamma_Z_got);
-}
-
-TEST_F(Rcg, logsumexpGammaZUpdated) {
-    rcgpar::Matrix<double> gamma_Z_got(gamma_Z);
-    gamma_Z_got += oldstep_x_betaFR;
-    gamma_Z_got += expected_step;
+// Test logsumexp()
+TEST_F(LogsumexpTest, GammaZCorrect) {
     logsumexp(gamma_Z_got);
     EXPECT_EQ(expected_gamma_Z, gamma_Z_got);
 }
 
-TEST_F(Rcg, logsumexpOldmCorrect) {
-    std::vector<double> oldm_got(n_obs, 0.0);
-    rcgpar::Matrix<double> gamma_Z_got(gamma_Z);
-    gamma_Z_got += oldstep_x_betaFR;
-    gamma_Z_got += expected_step;
+// Test logsumexp()
+TEST_F(LogsumexpTest, GammaZCorrectInReturnOldM) {
     logsumexp(gamma_Z_got, oldm_got);
-    for (uint32_t i = 0; i < n_obs; ++i) {
+    EXPECT_EQ(expected_gamma_Z, gamma_Z_got);
+}
+
+// Test logsumexp()
+TEST_F(LogsumexpTest, OldMCorrect) {
+    logsumexp(gamma_Z_got, oldm_got);
+    for (uint32_t i = 0; i < oldm_got.size(); ++i) {
  	SCOPED_TRACE(i);
 	EXPECT_NEAR(expected_oldm[i], oldm_got[i], 1e-4);
     }
 }
 
-TEST_F(Rcg, ELBO_rcg_matBoundCorrect) {
-    long double bound_got = 0.0;
-    std::vector<double> N_k_new(n_groups, 0.0);
-    expected_gamma_Z.exp_right_multiply(log_times_observed, N_k_new);
-    std::transform(N_k_new.begin(), N_k_new.end(), alpha0.begin(), N_k_new.begin(), std::plus<double>());
+// Test ELBO_rcg_mat()
+TEST_F(ElboRcgMatTest, BoundCorrect) {
     ELBO_rcg_mat(logl, expected_gamma_Z, log_times_observed, alpha0, N_k_new, bound_got);
     EXPECT_NEAR(expected_bound, bound_got, 1e-3);
 }
 
-TEST_F(Rcg, revert_stepGammaZCorrect) {
-    rcgpar::Matrix<double> gamma_Z_got(expected_gamma_Z);
+// Test revert_step
+TEST_F(RevertStepTest, RevertedGammaZCorrect) {
     revert_step(gamma_Z_got, expected_oldm);
     EXPECT_EQ(expected_reverted_gamma_Z, gamma_Z_got);
 }
 
-TEST_F(Rcg, calc_bound_constBoundConstCorrect) {
-    double bound_const_got = rcgpar::calc_bound_const(log_times_observed, alpha0);
+// Test calc_bound_const()
+TEST_F(CalcBoundConstTest, BoundConstCorrect) {
+    bound_const_got = rcgpar::calc_bound_const(log_times_observed, alpha0);
     EXPECT_NEAR(expected_bound_const, bound_const_got, 1e-2);
 }
