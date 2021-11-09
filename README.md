@@ -43,7 +43,7 @@ supports both protocols.
 ### Compiling and running tests
 rcgpar uses the [googletest](https://github.com/google/googletest)
 framework to test the libraries. Tests can be built by compiling the
-program in debug mode by appending the `-DCMAKE_BUILD_TYPE=Debug` flag
+program in debug mode by appending the `-DCMAKE_BUILD_TESTS=1` flag
 to the cmake call. Tests will be created in `build/bin/` and the
 executables will be prefixed with "run".
 
