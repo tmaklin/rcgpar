@@ -20,6 +20,8 @@
 //
 #include "rcgpar_unittest.hpp"
 
+#include <fstream>
+
 #include "rcgpar.hpp"
 #include "openmp_config.hpp"
 
@@ -29,7 +31,8 @@ TEST_F(RcgOptlMatTest, FinalGammaZCorrect_OMP) {
     omp_set_num_threads(2);
 #endif
     // Estimate gamma_Z
-    got = rcg_optl_omp(logl, log_times_observed, alpha0, tol, max_iters);
+    std::ofstream empty;
+    got = rcg_optl_omp(logl, log_times_observed, alpha0, tol, max_iters, empty);
 
     EXPECT_EQ(final_gamma_Z, got);
 }

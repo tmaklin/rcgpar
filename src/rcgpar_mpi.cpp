@@ -34,7 +34,7 @@
 #include "rcg.hpp"
 
 namespace rcgpar {
-Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double> &log_times_observed_full, const std::vector<double> &alpha0, const double &tol, uint16_t maxiters) {
+Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double> &log_times_observed_full, const std::vector<double> &alpha0, const double &tol, uint16_t maxiters, std::ostream &log) {
     int ntasks,rank;
     MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -143,18 +143,18 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
 	    oldstep_partial = step_partial;
 	}
 	if (k % 5 == 0 && rank == 0) {
-	    std::cerr << "  " <<  "iter: " << k << ", bound: " << bound << ", |g|: " << newnorm << '\n';
+	    log << "  " <<  "iter: " << k << ", bound: " << bound << ", |g|: " << newnorm << '\n';
 	}
 	if (bound - oldbound < tol && !didreset) {
 	    // Logsumexp 3
 	    logsumexp(gamma_Z_partial, oldm_partial);
-	    std::cerr << std::endl;
+	    log << std::endl;
 	    return(gamma_Z_partial);
 	}
     }
     // Logsumexp 3
     logsumexp(gamma_Z_partial, oldm_partial);
-    std::cerr << std::endl;
+    log << std::endl;
     return(gamma_Z_partial);
 }
 }

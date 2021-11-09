@@ -22,6 +22,8 @@
 
 #include <mpi.h>
 
+#include <fstream>
+
 #include "rcgpar.hpp"
 #include "openmp_config.hpp"
 
@@ -39,7 +41,8 @@ TEST_F(RcgOptlMatTest, FinalGammaZCorrect_MPI) {
 
     // Estimate gamma_Z
     rcgpar::Matrix<double> my_logl(logl);
-    got = rcg_optl_mpi(my_logl, log_times_observed, alpha0, tol, max_iters);
+    std::ofstream empty;
+    got = rcg_optl_mpi(my_logl, log_times_observed, alpha0, tol, max_iters, empty);
 
     // Construct gamma_Z from the partials
     rcgpar::Matrix<double> got_all = rcgpar::Matrix<double>(n_groups, n_obs, 0.0);

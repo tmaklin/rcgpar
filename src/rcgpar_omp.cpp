@@ -33,7 +33,7 @@
 #include "openmp_config.hpp"
 
 namespace rcgpar {
-Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t maxiters) {
+Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t maxiters, std::ostream &log) {
     uint16_t n_rows = logl.get_rows();
     uint32_t n_cols = log_times_observed.size();
     Matrix<double> gamma_Z(n_rows, n_cols, std::log(1.0/(double)n_rows)); // where gamma_Z is init at 1.0
@@ -90,16 +90,16 @@ Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double
 	    oldstep = step;
 	}
 	if (k % 5 == 0) {
-	    std::cerr << "  " <<  "iter: " << k << ", bound: " << bound << ", |g|: " << newnorm << '\n';
+	    log << "  " <<  "iter: " << k << ", bound: " << bound << ", |g|: " << newnorm << '\n';
 	}
 	if (bound - oldbound < tol && !didreset) {
 	    logsumexp(gamma_Z);
-	    std::cerr << std::endl;
+	    log << std::endl;
 	    return(gamma_Z);
 	}
     }
     logsumexp(gamma_Z);
-    std::cerr << std::endl;
+    log << std::endl;
     return(gamma_Z);
 }
 }
