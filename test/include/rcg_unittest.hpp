@@ -29,81 +29,7 @@
 #include "gtest/gtest.h"
 
 #include "Matrix.hpp"
-
-////
-// Constant input data that is reused in several tests
-const uint16_t TEST_N_GROUPS = 4;
-const uint32_t TEST_N_OBS = 10;
-
-class LogLikelihoodTest {
-protected:
-    static const rcgpar::Matrix<double> logl;
-};
-const rcgpar::Matrix<double> LogLikelihoodTest::logl(std::vector<double>(std::initializer_list<double>(
-    { -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503,
-      -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.371713,
-      -0.0100503, -0.0100503, -0.0100503, -0.371713,  -0.371713,  -0.371713,  -4.60517,   -4.60517,   -4.60517,   -0.0100503,
-      -0.0100503, -0.371713,  -4.60517,   -0.0100503, -0.371713,  -4.60517,   -0.0100503, -0.371713,  -4.60517,   -0.0100503 }
-											 )), TEST_N_GROUPS, TEST_N_OBS);
-
-class LogCountsTest {
-protected:
-    static const std::vector<double> log_times_observed;
-};
-const std::vector<double> LogCountsTest::log_times_observed(std::initializer_list<double>(
-    { 7.681099, 7.04316, 6.849066, 5.278115, 5.164786, 5.062595, 6.947937, 6.863803, 7.277248, 7.666222 }));
-
-
-class GammaZTest {
-protected:
-    // Intermediate values from iteration k == 3
-    static const rcgpar::Matrix<double> gamma_Z;
-};
-const rcgpar::Matrix<double> GammaZTest::gamma_Z(std::vector<double>(std::initializer_list<double>(
-    { -0.861124, -0.824187, -0.737067, -0.830991, -0.792902, -0.702885, -0.76075,  -0.719832, -0.622649, -0.742541,
-      -1.01295,  -0.976009, -0.888889, -0.982813, -0.944725, -0.854708, -0.912572, -0.871654, -0.774472, -1.26242,
-      -2.33926,  -2.30233,  -2.21521,  -2.67719,  -2.6391,   -2.54908,  -6.91527,  -6.87435,  -6.77717,  -2.22068,
-      -2.13905,  -2.47017,  -6.69137,  -2.10891,  -2.43888,  -6.65719,  -2.03867,  -2.36581,  -6.57695,  -2.02046 }
-											 )), TEST_N_GROUPS, TEST_N_OBS);
-
-class ExpectedStepTest {
-protected:
-    static const rcgpar::Matrix<double> expected_step;
-};
-const rcgpar::Matrix<double> ExpectedStepTest::expected_step(std::vector<double>(std::initializer_list<double>(
-    { 8.33935, 8.30241, 8.21529, 8.30921, 8.27113, 8.18111, 8.23897, 8.19806, 8.10087, 8.22076,
-      8.27279, 8.23585, 8.14873, 8.24266, 8.20457, 8.11455, 8.17241, 8.1315,  8.03431, 8.1606,
-      7.88108, 7.84415, 7.75703, 7.85735, 7.81926, 7.72924, 7.86197, 7.82105, 7.72387, 7.7625,
-      7.93521, 7.90467, 7.89242, 7.90508, 7.87339, 7.85823, 7.83484, 7.80032, 7.778,   7.81663 }
-											 )), TEST_N_GROUPS, TEST_N_OBS);
-
-class ExpectedGammaZTest {
-protected:
-    static const rcgpar::Matrix<double> expected_gamma_Z;
-};
-const rcgpar::Matrix<double> ExpectedGammaZTest::expected_gamma_Z(std::vector<double>(std::initializer_list<double>(
-    { -0.681538, -0.662494, -0.617806, -0.667704, -0.648392, -0.603055, -0.635526, -0.615577, -0.568692, -0.557316,
-      -0.951042, -0.931998, -0.887311, -0.937208, -0.917896, -0.872559, -0.905031, -0.885081, -0.838196, -1.18688,
-      -3.09143,  -3.07238,  -3.0277,   -3.43766,  -3.41835,  -3.37301,  -7.62022,  -7.60027,  -7.55338,  -2.96721,
-      -2.77441,  -3.11543,  -7.28548,  -2.76058,  -3.10133,  -7.27073,  -2.7284,   -3.06852,  -7.23637,  -2.65019 }
-											 )), TEST_N_GROUPS, TEST_N_OBS);
-
-
-class ExpectedOldMTest {
-protected:
-    static const std::vector<double> expected_oldm;
-};
-const std::vector<double> ExpectedOldMTest::expected_oldm(std::initializer_list<double>(
-    { 15.6498, 15.57, 15.3724, 15.5779, 15.4934, 15.2823, 15.3998, 15.302, 15.0506, 15.4459 }));
-
-class Alpha0Test {
-protected:
-    static const std::vector<double> alpha0;
-};
-const std::vector<double> Alpha0Test::alpha0(TEST_N_GROUPS, 1.0);
-
-////
-// Test classes
+#include "unittest_common_inputs.hpp"
 
 // Test digamma()
 class DigammaTest : public ::testing::Test {
@@ -242,6 +168,5 @@ protected:
     double bound_const_got;
 };
 const double CalcBoundConstTest::expected_bound_const = -85494;
-
 
 #endif

@@ -39,7 +39,7 @@ if (MPI_FOUND)
   set(RCGPAR_MPI_SUPPORT 1)
   include_directories(MPI_C_INCLUDE_DIRS)
 else()
-  set(RCGPAR_OPENMP_SUPPORT 0)
+  set(RCGPAR_MPI_SUPPORT 0)
 endif()
 
 ## Set C++11 support depending on cmake version
@@ -71,8 +71,8 @@ else()
 endif()
 string(TIMESTAMP _BUILD_TIMESTAMP)
 
-## Download googletest if building in debug mode
-if(CMAKE_BUILD_TYPE MATCHES Debug)
+## Download googletest if building tests
+if(CMAKE_BUILD_TESTS)
   if (DEFINED CMAKE_GOOGLETEST_HEADERS)
     message(STATUS "googletest headers provided in: ${CMAKE_GOOGLETEST_HEADERS}")
   else()
@@ -97,12 +97,12 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
   set_target_properties(gmock_main PROPERTIES EXCLUDE_FROM_ALL 1)
   include_directories("${CMAKE_GOOGLETEST_HEADERS}")
   enable_testing()
-  add_executable(runOmpTest ${CMAKE_SOURCE_DIR}/test/src/rcgpar_omp_unittest.cpp)
-  add_test(runOmpTest runOmpTest)
-  add_executable(runUtilTest ${CMAKE_SOURCE_DIR}/test/src/util_unittest.cpp)
-  add_test(runUtilTest runUtilTest)
-  add_executable(runRcgTest ${CMAKE_SOURCE_DIR}/test/src/rcg_unittest.cpp)
-  add_test(runRcgTest runRcgTest)
+  add_executable(runUnitTests
+    ${CMAKE_SOURCE_DIR}/test/src/rcgpar_omp_unittest.cpp
+    ${CMAKE_SOURCE_DIR}/test/src/util_unittest.cpp
+    ${CMAKE_SOURCE_DIR}/test/src/rcg_unittest.cpp
+    ${CMAKE_SOURCE_DIR}/test/src/unittest_common_inputs.cpp)
+  add_test(runUnitTests runUnitTests)
   if(MPI_FOUND)
     add_executable(runMpiTest ${CMAKE_SOURCE_DIR}/test/src/rcgpar_mpi_unittest.cpp)
     add_test(runMpiTest runMpiTest)
@@ -133,10 +133,8 @@ add_library(rcgomp
   ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
 
 ## Link unit tests with rcgomp
-if(CMAKE_BUILD_TYPE MATCHES Debug)
-  target_link_libraries(runOmpTest rcgomp rcgutils gtest gtest_main)
-  target_link_libraries(runUtilTest rcgomp rcgutils gtest gtest_main)
-  target_link_libraries(runRcgTest rcgomp gtest gtest_main)
+if(CMAKE_BUILD_TESTS)
+  target_link_libraries(runUnitTests rcgomp rcgutils gtest gtest_main)
 endif()
 
 if (MPI_FOUND)
@@ -147,7 +145,7 @@ if (MPI_FOUND)
     ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
   target_link_libraries(rcgmpi rcgutils)
   ## Unit tests
-  if(CMAKE_BUILD_TYPE MATCHES Debug)
+  if(CMAKE_BUILD_TESTS)
     target_link_libraries(runMpiTest rcgmpi gtest gtest_main)
   endif()
 endif()

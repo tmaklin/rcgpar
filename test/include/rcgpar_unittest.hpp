@@ -26,8 +26,7 @@
 #include "gtest/gtest.h"
 
 #include "Matrix.hpp"
-#include "util_unittest.hpp"
-#include "rcg_unittest.hpp"
+#include "unittest_common_inputs.hpp"
 
 class RcgOptlMatTest : public ::testing::Test, protected FinalGammaZTest, protected LogLikelihoodTest, protected LogCountsTest, protected Alpha0Test {
 protected:
