@@ -18,7 +18,7 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
 // USA
 //
-#include "rcgpar_unittest.hpp"
+#include "util_unittest.hpp"
 
 #include <numeric>
 #include <cmath>
@@ -26,12 +26,12 @@
 
 #include "util.hpp"
 
-TEST_F(Rcgpar, mixture_components) {
+TEST_F(MixtureComponentsTest, ThetasCorrect) {
     // Transform probs into thetas
-    const std::vector<double> &got = rcgpar::mixture_components(expected_gamma_Z, log_times_observed);
+    got = rcgpar::mixture_components(final_gamma_Z, log_times_observed);
 
-    for (uint16_t i = 0; i < n_groups; ++i) {
+    for (uint16_t i = 0; i < got.size(); ++i) {
 	SCOPED_TRACE(i);
-	EXPECT_NEAR(expected_thetas[i], got[i], tol*100);
+	EXPECT_NEAR(expected_thetas[i], got[i], 1e-4);
     }
 }

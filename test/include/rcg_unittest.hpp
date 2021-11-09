@@ -18,8 +18,8 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
 // USA
 //
-#ifndef RCGPAR_RCGPAR_UNITTEST_HPP
-#define RCGPAR_RCGPAR_UNITTEST_HPP
+#ifndef RCGPAR_RCG_UNITTEST_HPP
+#define RCGPAR_RCG_UNITTEST_HPP
 
 #include <cstddef>
 #include <vector>
