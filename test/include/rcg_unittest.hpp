@@ -23,12 +23,12 @@
 
 #include <cstddef>
 #include <vector>
+#include <initializer_list>
 #include <algorithm>
 
 #include "gtest/gtest.h"
 
 #include "Matrix.hpp"
-#include "rcgpar.hpp"
 
 ////
 // Constant input data that is reused in several tests

@@ -20,10 +20,6 @@
 //
 #include "util_unittest.hpp"
 
-#include <numeric>
-#include <cmath>
-#include <iostream>
-
 #include "util.hpp"
 
 TEST_F(MixtureComponentsTest, ThetasCorrect) {

@@ -22,14 +22,12 @@
 #define RCGPAR_UTIL_UNITTEST_HPP
 
 #include <vector>
-#include <cstddef>
+#include <initializer_list>
 
 #include "gtest/gtest.h"
 
-#include "Matrix.hpp"
-#include "rcgpar.hpp"
-
 #include "rcg_unittest.hpp"
+#include "Matrix.hpp"
 
 class MixtureComponentsTest : public ::testing::Test, protected LogCountsTest {
 protected:
