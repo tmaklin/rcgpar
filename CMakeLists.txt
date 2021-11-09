@@ -112,11 +112,11 @@ endif()
 
 
 ## Generate a version.h file containing build version and timestamp
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/version.h.in ${CMAKE_BINARY_DIR}/include/version.h @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/version.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/version.h @ONLY)
 ## Configure OpenMP if it's supported on the system.
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/openmp_config.hpp.in ${CMAKE_BINARY_DIR}/include/openmp_config.hpp @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/openmp_config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/include/openmp_config.hpp @ONLY)
 ## Configure MPI if it's supported on the system.
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/mpi_config.hpp.in ${CMAKE_BINARY_DIR}/include/mpi_config.hpp @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/mpi_config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/include/mpi_config.hpp @ONLY)
 
 ## Includes
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include
