@@ -45,6 +45,15 @@ TEST_F(MixtNegnatgradTest, dL_dPhiCorrect) {
     EXPECT_EQ(expected_step, step_got);
 }
 
+// Test update_N_k()
+TEST_F(UpdateNkTest, NkCorrect) {
+    update_N_k(expected_gamma_Z, log_times_observed, alpha0, got);
+    for (uint16_t i = 0; i < got.size(); ++i) {
+	SCOPED_TRACE(i);
+	EXPECT_NEAR(expected_N_k[i], got[i], 1e-2);
+    }
+}
+
 // Test logsumexp()
 TEST_F(LogsumexpTest, GammaZCorrect) {
     logsumexp(gamma_Z_got);

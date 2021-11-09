@@ -25,7 +25,6 @@
 // This file contains the rcg_optl_mat function for OpenMP calls.
 
 #include <cmath>
-#include <algorithm>
 #include <numeric>
 #include <iostream>
 
@@ -47,8 +46,7 @@ Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double
     double bound_const = calc_bound_const(log_times_observed, alpha0);
 
     std::vector<double> N_k(alpha0.size());
-    gamma_Z.exp_right_multiply(log_times_observed, N_k);
-    std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
+    update_N_k(gamma_Z, log_times_observed, alpha0, N_k);
   
     for (uint16_t k = 0; k < maxiters; ++k) {
 	double newnorm = mixt_negnatgrad(gamma_Z, N_k, logl, step);
@@ -65,8 +63,7 @@ Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double
 
 	gamma_Z += step;
 	logsumexp(gamma_Z, oldm);
-	gamma_Z.exp_right_multiply(log_times_observed, N_k);
-	std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
+	update_N_k(gamma_Z, log_times_observed, alpha0, N_k);
 
 	long double oldbound = bound;
 	bound = 0.0;
@@ -81,8 +78,7 @@ Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double
 		gamma_Z -= oldstep;
 	    }
 	    logsumexp(gamma_Z);
-	    gamma_Z.exp_right_multiply(log_times_observed, N_k);
-	    std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
+	    update_N_k(gamma_Z, log_times_observed, alpha0, N_k);
 
 	    bound = bound_const;
 	    ELBO_rcg_mat(logl, gamma_Z, log_times_observed, bound);

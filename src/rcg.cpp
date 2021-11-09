@@ -28,6 +28,7 @@
 #include <assert.h>
 
 #include <cmath>
+#include <algorithm>
 
 #include "openmp_config.hpp"
 
@@ -99,6 +100,12 @@ double mixt_negnatgrad(const Matrix<double> &gamma_Z, const std::vector<double> 
 	}
     }
     return newnorm;
+}
+
+void update_N_k(const Matrix<double> &gamma_Z, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, std::vector<double> &N_k) {
+    // exp_right_multiply() clears the current N_k
+    gamma_Z.exp_right_multiply(log_times_observed, N_k);
+    std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
 }
 
 void ELBO_rcg_mat(const Matrix<double> &logl, const Matrix<double> &gamma_Z, const std::vector<double> &counts, long double &bound) {

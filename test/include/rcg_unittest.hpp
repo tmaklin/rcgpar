@@ -73,6 +73,23 @@ protected:
 const double MixtNegnatgradTest::expected_newnorm = 0.193162;
 const std::vector<double> MixtNegnatgradTest::N_k(std::initializer_list<double>({ 4857.97, 3905.03, 701.053, 903.946 }));
 
+class UpdateNkTest : public ::testing::Test, protected ExpectedGammaZTest, protected LogCountsTest, protected Alpha0Test {
+protected:
+    void SetUp() override {
+	got = std::vector<double>(TEST_N_GROUPS, 0.0);
+    }
+    void TearDown() override {
+	got.clear();
+	got.shrink_to_fit();
+    }
+
+    // Expecteds
+    const std::vector<double> expected_N_k = { 5585.01,3983.44,327.192,472.355 };
+
+    // Test output
+    std::vector<double> got;
+};
+
 // Test logsumexp()
 class LogsumexpTest : public ::testing::Test, protected GammaZTest, protected ExpectedGammaZTest, protected ExpectedOldMTest, private ExpectedStepTest  {
 private:
