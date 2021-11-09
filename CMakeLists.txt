@@ -98,14 +98,14 @@ if(CMAKE_BUILD_TESTS)
   include_directories("${CMAKE_GOOGLETEST_HEADERS}")
   enable_testing()
   add_executable(runUnitTests
-    ${CMAKE_SOURCE_DIR}/test/src/rcgpar_omp_unittest.cpp
-    ${CMAKE_SOURCE_DIR}/test/src/util_unittest.cpp
-    ${CMAKE_SOURCE_DIR}/test/src/rcg_unittest.cpp
-    ${CMAKE_SOURCE_DIR}/test/src/unittest_common_inputs.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/src/rcgpar_omp_unittest.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/src/util_unittest.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/src/rcg_unittest.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/src/unittest_common_inputs.cpp)
   add_test(runUnitTests runUnitTests)
   if(MPI_FOUND)
-    add_executable(runMpiTest ${CMAKE_SOURCE_DIR}/test/src/rcgpar_mpi_unittest.cpp
-      ${CMAKE_SOURCE_DIR}/test/src/unittest_common_inputs.cpp)
+    add_executable(runMpiTest ${CMAKE_CURRENT_SOURCE_DIR}/test/src/rcgpar_mpi_unittest.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/test/src/unittest_common_inputs.cpp)
     add_test(runMpiTest runMpiTest)
   endif()
 endif()
@@ -119,19 +119,19 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/openmp_config.hpp.in ${CMAKE_B
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/mpi_config.hpp.in ${CMAKE_BINARY_DIR}/include/mpi_config.hpp @ONLY)
 
 ## Includes
-include_directories(${CMAKE_SOURCE_DIR}/include
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_BINARY_DIR}/include
-  ${CMAKE_SOURCE_DIR}/test/include)
+  ${CMAKE_CURRENT_SOURCE_DIR}/test/include)
 
 ## Libraries and executables
 ## utils
-add_library(rcgutils ${CMAKE_SOURCE_DIR}/src/util.cpp)
+add_library(rcgutils ${CMAKE_CURRENT_SOURCE_DIR}/src/util.cpp)
 
 ### OpenMP parallellized rcg
 add_library(rcgomp
-  ${CMAKE_SOURCE_DIR}/src/rcg.cpp
-  ${CMAKE_SOURCE_DIR}/src/rcgpar_omp.cpp
-  ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar_omp.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Matrix_omp.cpp)
 
 ## Link unit tests with rcgomp
 if(CMAKE_BUILD_TESTS)
@@ -141,9 +141,9 @@ endif()
 if (MPI_FOUND)
   ### MPI parallellized rcg
   add_library(rcgmpi
-    ${CMAKE_SOURCE_DIR}/src/rcg.cpp
-    ${CMAKE_SOURCE_DIR}/src/rcgpar_mpi.cpp
-    ${CMAKE_SOURCE_DIR}/src/Matrix_omp.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar_mpi.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Matrix_omp.cpp)
   target_link_libraries(rcgmpi rcgutils)
   ## Unit tests
   if(CMAKE_BUILD_TESTS)
