@@ -33,6 +33,8 @@
 
 #include "rcg.hpp"
 
+const uint16_t M_NUM_MAX_PROCESSES = 1024;
+
 namespace rcgpar {
 Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double> &log_times_observed_full, const std::vector<double> &alpha0, const double &tol, uint16_t maxiters, std::ostream &log) {
     int ntasks,rank;
@@ -48,20 +50,31 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
 
     // Subdimensions for the processes
     uint32_t n_obs_per_task = std::floor(n_obs/ntasks);
-    if (rank == ntasks) {
+    if (rank == (ntasks - 1)) {
 	// Last process takes care of observations assigned to remainder.
 	n_obs_per_task += n_obs - n_obs_per_task*ntasks;
     }
 
     // Scatter the log likelihoods and log counts
-    // log counts
+    int displs[M_NUM_MAX_PROCESSES];
+    int sendcounts[M_NUM_MAX_PROCESSES] = { 0 };
+    int sendsum = 0;
+    for (uint16_t i = 0; i < ntasks - 1; ++i) {
+	displs[i] = sendsum;
+	sendcounts[i] = std::floor(n_obs/ntasks);
+	sendsum += sendcounts[i];
+    }
+    displs[ntasks - 1] = sendsum;
+    sendcounts[ntasks - 1] = std::floor(n_obs/ntasks) + n_obs - ntasks*std::floor(n_obs/ntasks);
+
     std::vector<double> log_times_observed(n_obs_per_task);
-    MPI_Scatter(&log_times_observed_full.front(), n_obs_per_task, MPI_DOUBLE, &log_times_observed.front(), n_obs_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Scatterv(&log_times_observed_full.front(), sendcounts, displs, MPI_DOUBLE, &log_times_observed.front(), n_obs_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     // log likelihoods
     Matrix<double> logl_partial(n_groups, n_obs_per_task, 0.0);
+	//MPI_Gatherv(&got.front() + i*n_obs_per_task, n_obs_per_task, MPI_DOUBLE, &got_all.front() + i*n_obs, recvcount, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     for (uint16_t i = 0; i < n_groups; ++i) {
-	MPI_Scatter(&logl_full.front() + i*n_obs, n_obs_per_task, MPI_DOUBLE, &logl_partial.front() + i*n_obs_per_task, n_obs_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Scatterv(&logl_full.front() + i*n_obs, sendcounts, displs, MPI_DOUBLE, &logl_partial.front() + i*n_obs_per_task, n_obs_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     }
 
     // Initialize variables.

@@ -27,6 +27,8 @@
 #include "rcgpar.hpp"
 #include "openmp_config.hpp"
 
+const uint16_t M_NUM_MAX_PROCESSES = 1024;
+
 // Test rcg_optl_mat_mpi()
 TEST_F(RcgOptlMatTest, FinalGammaZCorrect_MPI) {
     // Init MPI
@@ -46,12 +48,30 @@ TEST_F(RcgOptlMatTest, FinalGammaZCorrect_MPI) {
 
     // Construct gamma_Z from the partials
     rcgpar::Matrix<double> got_all = rcgpar::Matrix<double>(n_groups, n_obs, 0.0);
+
+    uint32_t n_obs_per_task = std::floor(n_obs/ntasks);
+    if (rank == (ntasks - 1)) {
+	n_obs_per_task += n_obs - n_obs_per_task*ntasks;
+    }
+    std::cerr << n_obs_per_task << std::endl;
+    int displs[M_NUM_MAX_PROCESSES];
+    int recvcounts[M_NUM_MAX_PROCESSES] = { 0 };
+    int recvsum = 0;
+    for (uint16_t i = 0; i < ntasks - 1; ++i) {
+	displs[i] = recvsum;
+	recvcounts[i] = std::floor(n_obs/ntasks);
+	recvsum += recvcounts[i];
+    }
+    displs[ntasks - 1] = recvsum;
+    recvcounts[ntasks - 1] = std::floor(n_obs/ntasks) + n_obs - ntasks*std::floor(n_obs/ntasks);
+
     for (uint16_t i = 0; i < n_groups; ++i) {
-	uint32_t n_obs_per_task = std::floor(n_obs/ntasks);
-	if (rank == ntasks) {
-	    n_obs_per_task += n_obs - n_obs_per_task*ntasks;
+	MPI_Gatherv(&got.front() + i*n_obs_per_task, n_obs_per_task, MPI_DOUBLE, &got_all.front() + i*n_obs, recvcounts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	if (rank == (ntasks - 1)) {
+	    std::cerr << i*n_obs_per_task << ',';
+	    std::cerr << i*n_obs << ',';
+	    std::cerr << n_obs_per_task << std::endl;
 	}
-	MPI_Gather(&got.front() + i*n_obs/ntasks, n_obs/ntasks, MPI_DOUBLE, &got_all.front() + i*n_obs, n_obs/ntasks, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     }
     MPI_Bcast(&got_all.front(), n_groups*n_obs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     EXPECT_EQ(final_gamma_Z, got_all);
