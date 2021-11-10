@@ -36,9 +36,9 @@ double mixt_negnatgrad(const Matrix<double> &gamma_Z,
 
 void update_N_k(const Matrix<double> &gamma_Z, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, std::vector<double> &N_k);
 
-void ELBO_rcg_mat(const Matrix<double> &logl, const Matrix<double> &gamma_Z,
-		  const std::vector<double> &counts,
-		  long double &bound);
+long double ELBO_rcg_mat(const Matrix<double> &logl, const Matrix<double> &gamma_Z,
+			 const std::vector<double> &counts, const std::vector<double> &N_k,
+			 const double bound_const, bool mpi_mode = false);
 
 void revert_step(Matrix<double> &gamma_Z, const std::vector<double> &oldm);
 

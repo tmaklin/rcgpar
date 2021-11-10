@@ -77,8 +77,8 @@ TEST_F(LogsumexpTest, OldMCorrect) {
 
 // Test ELBO_rcg_mat()
 TEST_F(ElboRcgMatTest, BoundCorrect) {
-    ELBO_rcg_mat(logl, expected_gamma_Z, log_times_observed, bound_got);
-    EXPECT_NEAR(expected_bound, bound_got, 1e-3);
+    bound_got = ELBO_rcg_mat(logl, expected_gamma_Z, log_times_observed, expected_N_k, expected_bound_const);
+    EXPECT_NEAR(expected_bound, bound_got, 1e-1);
 }
 
 // Test revert_step

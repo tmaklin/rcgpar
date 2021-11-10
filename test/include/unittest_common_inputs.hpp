@@ -61,6 +61,16 @@ protected:
     static const rcgpar::Matrix<double> expected_gamma_Z;
 };
 
+class ExpectedNkTest {
+protected:
+    static const std::vector<double> expected_N_k;
+};
+
+class ExpectedBoundConstTest {
+protected:
+    static const long double expected_bound_const;
+};
+
 class ExpectedOldMTest {
 protected:
     static const std::vector<double> expected_oldm;

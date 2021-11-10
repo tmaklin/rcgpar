@@ -27,8 +27,6 @@
 #include <mpi.h>
 
 #include <cmath>
-#include <algorithm>
-#include <numeric>
 #include <iostream>
 
 #include "rcg.hpp"
@@ -110,12 +108,7 @@ Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<d
 	std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
 
 	long double oldbound = bound;
-	long double bound_partial = 0.0;
-	bound = 0.0;
-  	ELBO_rcg_mat(logl_partial, gamma_Z_partial, log_times_observed, bound_partial);
-	MPI_Allreduce(&bound_partial, &bound, 1, MPI_LONG_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        bound += std::accumulate(N_k.begin(), N_k.end(), (double)0.0, [](double acc, double elem){ return acc + std::lgamma(elem); });
-	bound += bound_const;
+	bound = ELBO_rcg_mat(logl_partial, gamma_Z_partial, log_times_observed, N_k, bound_const, true);
 
 	if (bound < oldbound) {
 	    didreset = true;
@@ -130,11 +123,8 @@ Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<d
 	    gamma_Z_partial.exp_right_multiply(log_times_observed, N_k_partial);
 	    MPI_Allreduce(&N_k_partial.front(), &N_k.front(), n_groups, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 	    std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
-	
-	    bound_partial = 0.0;
-	    ELBO_rcg_mat(logl_partial, gamma_Z_partial, log_times_observed, bound_partial);
-	    MPI_Allreduce(&bound_partial, &bound, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-	    bound += bound_const;
+
+	    bound = ELBO_rcg_mat(logl_partial, gamma_Z_partial, log_times_observed, N_k, bound_const, true);
 	} else {
 	    oldstep_partial = step_partial;
 	}

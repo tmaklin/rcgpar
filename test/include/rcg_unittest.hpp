@@ -73,7 +73,7 @@ protected:
 const double MixtNegnatgradTest::expected_newnorm = 0.193162;
 const std::vector<double> MixtNegnatgradTest::N_k(std::initializer_list<double>({ 4857.97, 3905.03, 701.053, 903.946 }));
 
-class UpdateNkTest : public ::testing::Test, protected ExpectedGammaZTest, protected LogCountsTest, protected Alpha0Test {
+class UpdateNkTest : public ::testing::Test, protected ExpectedGammaZTest, protected LogCountsTest, protected Alpha0Test, protected ExpectedNkTest {
 protected:
     void SetUp() override {
 	got = std::vector<double>(TEST_N_GROUPS, 0.0);
@@ -82,9 +82,6 @@ protected:
 	got.clear();
 	got.shrink_to_fit();
     }
-
-    // Expecteds
-    const std::vector<double> expected_N_k = { 5585.01,3983.44,327.192,472.355 };
 
     // Test output
     std::vector<double> got;
@@ -120,7 +117,7 @@ const rcgpar::Matrix<double> LogsumexpTest::oldstep_x_betaFR(std::vector<double>
       7.07923, 7.0201,  6.8859,  7.02111, 6.95756, 6.81056, 6.87524, 6.79898, 6.61316, 6.9995 }
 											 )), TEST_N_GROUPS, TEST_N_OBS);
 // Test ELBO_rcg_mat()
-class ElboRcgMatTest : public ::testing::Test, protected ExpectedGammaZTest, protected LogCountsTest, protected LogLikelihoodTest {
+class ElboRcgMatTest : public ::testing::Test, protected ExpectedGammaZTest, protected LogCountsTest, protected LogLikelihoodTest, protected ExpectedNkTest, protected ExpectedBoundConstTest  {
 protected:
     static void SetUpTestSuite() {}
     void SetUp() {
@@ -133,7 +130,7 @@ protected:
     }
 
     // Expecteds
-    static constexpr long double expected_bound = 9161.51;
+    static constexpr long double expected_bound = -699.064;
 
     // Test outputs
     long double bound_got;
@@ -163,7 +160,7 @@ const rcgpar::Matrix<double> RevertStepTest::expected_reverted_gamma_Z(std::vect
 											 )), TEST_N_GROUPS, TEST_N_OBS);
 
 // Test calc_bound_const
-class CalcBoundConstTest : public ::testing::Test, protected LogCountsTest, protected Alpha0Test {
+class CalcBoundConstTest : public ::testing::Test, protected LogCountsTest, protected Alpha0Test, protected ExpectedBoundConstTest {
 protected:
     void SetUp() {
 	bound_const_got = 0.0;
@@ -172,12 +169,8 @@ protected:
 	bound_const_got = 0.0;
     }
 
-    // Expecteds
-    static const double expected_bound_const;
-
     // Test outputs
     double bound_const_got;
 };
-const double CalcBoundConstTest::expected_bound_const = -85494;
 
 #endif

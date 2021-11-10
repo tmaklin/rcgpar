@@ -29,8 +29,14 @@
 
 #include <cmath>
 #include <algorithm>
+#include <numeric>
 
 #include "openmp_config.hpp"
+#include "mpi_config.hpp"
+
+#if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
+#include <mpi.h>
+#endif
 
 namespace rcgpar {
 double digamma(double x) {
@@ -108,7 +114,8 @@ void update_N_k(const Matrix<double> &gamma_Z, const std::vector<double> &log_ti
     std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
 }
 
-void ELBO_rcg_mat(const Matrix<double> &logl, const Matrix<double> &gamma_Z, const std::vector<double> &counts, long double &bound) {
+long double ELBO_rcg_mat(const Matrix<double> &logl, const Matrix<double> &gamma_Z, const std::vector<double> &counts, const std::vector<double> &N_k, const double bound_const, const bool mpi_mode) {
+    long double bound = 0.0;
     uint16_t n_groups = gamma_Z.get_rows();
     uint32_t n_obs = gamma_Z.get_cols();
 #pragma omp parallel for schedule(static) reduction(+:bound)
@@ -117,6 +124,17 @@ void ELBO_rcg_mat(const Matrix<double> &logl, const Matrix<double> &gamma_Z, con
 	    bound += std::exp(gamma_Z(i, j) + counts[j])*(logl(i, j) - gamma_Z(i, j));
 	}
     }
+
+#if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
+    if (mpi_mode) {
+	long double bound_partial = bound;
+	MPI_Allreduce(&bound_partial, &bound, 1, MPI_LONG_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
+#endif
+    bound += std::accumulate(N_k.begin(), N_k.end(), (double)0.0, [](double acc, double elem){ return acc + std::lgamma(elem); });
+    bound += bound_const;
+
+    return bound;
 }
 
 void revert_step(Matrix<double> &gamma_Z, const std::vector<double> &oldm) {

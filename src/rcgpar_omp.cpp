@@ -25,7 +25,6 @@
 // This file contains the rcg_optl_mat function for OpenMP calls.
 
 #include <cmath>
-#include <numeric>
 #include <iostream>
 
 #include "rcg.hpp"
@@ -66,10 +65,7 @@ Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double
 	update_N_k(gamma_Z, log_times_observed, alpha0, N_k);
 
 	long double oldbound = bound;
-	bound = 0.0;
-	ELBO_rcg_mat(logl, gamma_Z, log_times_observed, bound);
-	bound += std::accumulate(N_k.begin(), N_k.end(), (double)0.0, [](double acc, double elem){ return acc + std::lgamma(elem); });
-	bound += bound_const;
+	bound = ELBO_rcg_mat(logl, gamma_Z, log_times_observed, N_k, bound_const);
 
 	if (bound < oldbound) {
 	    didreset = true;
@@ -80,8 +76,7 @@ Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double
 	    logsumexp(gamma_Z);
 	    update_N_k(gamma_Z, log_times_observed, alpha0, N_k);
 
-	    bound = bound_const;
-	    ELBO_rcg_mat(logl, gamma_Z, log_times_observed, bound);
+	    bound = ELBO_rcg_mat(logl, gamma_Z, log_times_observed, N_k, bound_const);
 	} else {
 	    oldstep = step;
 	}

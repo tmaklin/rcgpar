@@ -50,6 +50,11 @@ const rcgpar::Matrix<double> ExpectedGammaZTest::expected_gamma_Z(std::vector<do
       -3.09143,  -3.07238,  -3.0277,   -3.43766,  -3.41835,  -3.37301,  -7.62022,  -7.60027,  -7.55338,  -2.96721,
       -2.77441,  -3.11543,  -7.28548,  -2.76058,  -3.10133,  -7.27073,  -2.7284,   -3.06852,  -7.23637,  -2.65019 }
 											 )), TEST_N_GROUPS, TEST_N_OBS);
+const std::vector<double> ExpectedNkTest::expected_N_k(std::initializer_list<double>(
+    { 5585.01,3983.44,327.192,472.355 }));
+
+const long double ExpectedBoundConstTest::expected_bound_const = -85494;
+
 const std::vector<double> ExpectedOldMTest::expected_oldm(std::initializer_list<double>(
     { 15.6498, 15.57, 15.3724, 15.5779, 15.4934, 15.2823, 15.3998, 15.302, 15.0506, 15.4459 }));
 
