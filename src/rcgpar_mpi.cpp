@@ -37,7 +37,7 @@
 const uint16_t M_NUM_MAX_PROCESSES = 1024;
 
 namespace rcgpar {
-Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double> &log_times_observed_full, const std::vector<double> &alpha0, const double &tol, uint16_t maxiters, std::ostream &log) {
+Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<double> &log_times_observed_full, const std::vector<double> &alpha0, const double &tol, uint16_t maxiters, std::ostream &log) {
     // MPI handler
     MpiHandler handler;
     const int rank = handler.get_rank();
@@ -146,13 +146,29 @@ Matrix<double> rcg_optl_mpi(Matrix<double> &logl_full, const std::vector<double>
 	if (bound - oldbound < tol && !didreset) {
 	    // Logsumexp 3
 	    logsumexp(gamma_Z_partial, oldm_partial);
+
+	    // Construct gamma_Z from the partials
+	    Matrix<double> gamma_Z_full(n_groups, n_obs, 0.0);
+	    for (uint16_t i = 0; i < n_groups; ++i) {
+		MPI_Gatherv(&gamma_Z_partial.front() + i*n_obs_per_task, n_obs_per_task, MPI_DOUBLE, &gamma_Z_full.front() + i*n_obs, sendcounts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	    }
+	    MPI_Bcast(&gamma_Z_full.front(), n_groups*n_obs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
 	    log << std::endl;
-	    return(gamma_Z_partial);
+	    return(gamma_Z_full);
 	}
     }
     // Logsumexp 3
     logsumexp(gamma_Z_partial, oldm_partial);
+
+    // Construct gamma_Z from the partials
+    Matrix<double> gamma_Z_full(n_groups, n_obs, 0.0);
+    for (uint16_t i = 0; i < n_groups; ++i) {
+	MPI_Gatherv(&gamma_Z_partial.front() + i*n_obs_per_task, n_obs_per_task, MPI_DOUBLE, &gamma_Z_full.front() + i*n_obs, sendcounts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    }
+    MPI_Bcast(&gamma_Z_full.front(), n_groups*n_obs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
     log << std::endl;
-    return(gamma_Z_partial);
+    return(gamma_Z_full);
 }
 }

@@ -30,7 +30,7 @@ namespace rcgpar {
 Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double> &log_times_observed,
 			    const std::vector<double> &alpha0, const double &tol, uint16_t maxiters,
 			    std::ostream &log);
-Matrix<double> rcg_optl_mpi(Matrix<double> &logl, const std::vector<double> &log_times_observed,
+Matrix<double> rcg_optl_mpi(const Matrix<double> &logl, const std::vector<double> &log_times_observed,
 			    const std::vector<double> &alpha0, const double &tol, uint16_t maxiters,
 			    std::ostream &log);
 }
