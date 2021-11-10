@@ -77,16 +77,11 @@ Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<d
     bool didreset = false;
 
     // // gamma_Z %*% exp(log_times_observed), store result in N_k.
-    std::vector<double> N_k_partial(n_groups);
-    gamma_Z_partial.exp_right_multiply(log_times_observed, N_k_partial);
     std::vector<double> N_k(n_groups);
-    MPI_Allreduce(&N_k_partial.front(), &N_k.front(), n_groups, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-    std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
+    update_N_k(gamma_Z_partial, log_times_observed, alpha0, N_k, true);
 
     for (uint16_t k = 0; k < maxiters; ++k) {
-	double newnorm;
-	double newnorm_partial = mixt_negnatgrad(gamma_Z_partial, N_k, logl_partial, step_partial);
-	MPI_Allreduce(&newnorm_partial, &newnorm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+	double newnorm = mixt_negnatgrad(gamma_Z_partial, N_k, logl_partial, step_partial);
 	double beta_FR = newnorm/oldnorm;
 	oldnorm = newnorm;
     
@@ -103,9 +98,7 @@ Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<d
 	// Logsumexp 1
 	logsumexp(gamma_Z_partial, oldm_partial);
 
-	gamma_Z_partial.exp_right_multiply(log_times_observed, N_k_partial);
-	MPI_Allreduce(&N_k_partial.front(), &N_k.front(), n_groups, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-	std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
+	update_N_k(gamma_Z_partial, log_times_observed, alpha0, N_k, true);
 
 	long double oldbound = bound;
 	bound = ELBO_rcg_mat(logl_partial, gamma_Z_partial, log_times_observed, N_k, bound_const, true);
@@ -120,9 +113,7 @@ Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<d
 	    // Logsumexp 2
 	    logsumexp(gamma_Z_partial, oldm_partial);
 
-	    gamma_Z_partial.exp_right_multiply(log_times_observed, N_k_partial);
-	    MPI_Allreduce(&N_k_partial.front(), &N_k.front(), n_groups, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-	    std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
+	    update_N_k(gamma_Z_partial, log_times_observed, alpha0, N_k, true);
 
 	    bound = ELBO_rcg_mat(logl_partial, gamma_Z_partial, log_times_observed, N_k, bound_const, true);
 	} else {

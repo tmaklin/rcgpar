@@ -82,7 +82,7 @@ void logsumexp(Matrix<double> &gamma_Z, std::vector<double> &m) {
     }
 }
 
-double mixt_negnatgrad(const Matrix<double> &gamma_Z, const std::vector<double> &N_k, const Matrix<double> &logl, Matrix<double> &dL_dphi) {
+double mixt_negnatgrad(const Matrix<double> &gamma_Z, const std::vector<double> &N_k, const Matrix<double> &logl, Matrix<double> &dL_dphi, bool mpi_mode) {
     uint32_t n_obs = gamma_Z.get_cols();
     uint16_t n_groups = gamma_Z.get_rows();
 
@@ -105,12 +105,25 @@ double mixt_negnatgrad(const Matrix<double> &gamma_Z, const std::vector<double> 
 	    newnorm += std::exp(gamma_Z(i, j)) * (dL_dphi(i, j) - colsums[j]) * dL_dphi(i, j);
 	}
     }
+
+#if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
+    if (mpi_mode) {
+	long double newnorm_partial = newnorm;
+	MPI_Allreduce(&newnorm_partial, &newnorm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
+#endif
     return newnorm;
 }
 
-void update_N_k(const Matrix<double> &gamma_Z, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, std::vector<double> &N_k) {
+void update_N_k(const Matrix<double> &gamma_Z, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, std::vector<double> &N_k, bool mpi_mode) {
     // exp_right_multiply() clears the current N_k
     gamma_Z.exp_right_multiply(log_times_observed, N_k);
+#if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
+    std::vector<double> N_k_partial = N_k;
+    if (mpi_mode) {
+	MPI_Allreduce(&N_k_partial.front(), &N_k.front(), N_k.size(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    }
+#endif
     std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
 }
 

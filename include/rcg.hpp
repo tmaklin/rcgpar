@@ -32,9 +32,9 @@ void logsumexp(Matrix<double> &gamma_Z, std::vector<double> &m);
 
 double mixt_negnatgrad(const Matrix<double> &gamma_Z,
 		       const std::vector<double> &N_k,
-		       const Matrix<double> &logl, Matrix<double> &dL_dphi);
+		       const Matrix<double> &logl, Matrix<double> &dL_dphi, bool mpi_mode = false);
 
-void update_N_k(const Matrix<double> &gamma_Z, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, std::vector<double> &N_k);
+void update_N_k(const Matrix<double> &gamma_Z, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, std::vector<double> &N_k, bool mpi_mode = false);
 
 long double ELBO_rcg_mat(const Matrix<double> &logl, const Matrix<double> &gamma_Z,
 			 const std::vector<double> &counts, const std::vector<double> &N_k,
