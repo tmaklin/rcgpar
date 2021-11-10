@@ -35,6 +35,10 @@ make
 creating the `librcgmpi.a` library in `build/lib/`. If OpenMP is also
 supported, the `librcgomp.a` library will also be created.
 
+librcgmpi is compiled by default to support up to 1024 processes. If
+you need more, recompile the project with
+`-DCMAKE_MPI_MAX_PROCESSES=<big number>` added to the cmake command.
+
 #### Hybrid OpenMP + MPI
 `librcgmpi.a` automatically provides hybrid OpenMP + MPI
 parallellization when the library is compiled on a system that

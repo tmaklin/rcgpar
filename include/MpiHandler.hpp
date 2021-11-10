@@ -24,17 +24,17 @@
 
 #include <cstddef>
 
+#include "mpi_config.hpp"
+
 class MpiHandler {
     // Class that takes care of dividing a n x m matrix to the MPI
     // tasks and gathering the results from the tasks back together.
 private:
-    static const uint16_t M_NUM_MAX_PROCESSES = 1024;
-
     int n_tasks;
     int rank;
 
-    int displacements[M_NUM_MAX_PROCESSES];
-    int bufcounts[M_NUM_MAX_PROCESSES] = { 0 };
+    int displacements[RCGPAR_MPI_MAX_PROCESSES];
+    int bufcounts[RCGPAR_MPI_MAX_PROCESSES] = { 0 };
 
 public:
     MpiHandler() {

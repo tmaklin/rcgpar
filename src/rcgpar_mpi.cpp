@@ -34,8 +34,6 @@
 #include "rcg.hpp"
 #include "MpiHandler.hpp"
 
-const uint16_t M_NUM_MAX_PROCESSES = 1024;
-
 namespace rcgpar {
 Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<double> &log_times_observed_full, const std::vector<double> &alpha0, const double &tol, uint16_t maxiters, std::ostream &log) {
     // MPI handler
