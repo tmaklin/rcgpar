@@ -30,6 +30,7 @@
 #include <cmath>
 #include <algorithm>
 #include <numeric>
+#include <fstream>
 
 #include "openmp_config.hpp"
 #include "mpi_config.hpp"
@@ -181,5 +182,77 @@ double calc_bound_const(const std::vector<double> &log_times_observed, const std
     bound_const -= std::lgamma(alpha0_sum + counts_sum);
     bound_const -= lgamma_alpha0_sum;
     return bound_const;
+}
+
+void rcg_optl_mat(const Matrix<double> &logl, const std::vector<double> &log_times_observed,
+		  const std::vector<double> &alpha0,
+		  const long double bound_const, const double tol, const uint16_t max_iters,
+		  const bool mpi_mode, Matrix<double> &gamma_Z, std::ostream &log) {
+    uint16_t n_groups = alpha0.size();
+    uint32_t n_obs = log_times_observed.size();
+
+    // Initialize variables.
+    Matrix<double> step(n_groups, n_obs, 0.0);
+    Matrix<double> oldstep(n_groups, n_obs, 0.0);
+    std::vector<double> oldm(n_obs, 0.0);
+    double oldnorm = 1.0;
+    long double bound = -100000.0;
+
+    // // gamma_Z %*% exp(log_times_observed), store result in N_k.
+    std::vector<double> N_k(n_groups);
+    update_N_k(gamma_Z, log_times_observed, alpha0, N_k, mpi_mode);
+
+    bool didreset = false;
+    for (uint16_t k = 0; k < max_iters; ++k) {
+	double newnorm = mixt_negnatgrad(gamma_Z, N_k, logl, step);
+	double beta_FR = newnorm/oldnorm;
+	oldnorm = newnorm;
+
+	if (didreset) {
+	    oldstep *= 0.0;
+	} else if (beta_FR > 0) {
+	    oldstep *= beta_FR;
+	    step += oldstep;
+	}
+	didreset = false;
+
+	gamma_Z += step;
+
+	// Logsumexp 1
+	logsumexp(gamma_Z, oldm);
+	update_N_k(gamma_Z, log_times_observed, alpha0, N_k, mpi_mode);
+
+	long double oldbound = bound;
+	bound = ELBO_rcg_mat(logl, gamma_Z, log_times_observed, N_k, bound_const, mpi_mode);
+
+	if (bound < oldbound) {
+	    didreset = true;
+	    revert_step(gamma_Z, oldm);
+	    if (beta_FR > 0) {
+		gamma_Z -= oldstep;
+	    }
+
+	    // Logsumexp 2
+	    logsumexp(gamma_Z, oldm);
+	    update_N_k(gamma_Z, log_times_observed, alpha0, N_k, mpi_mode);
+
+	    bound = ELBO_rcg_mat(logl, gamma_Z, log_times_observed, N_k, bound_const, mpi_mode);
+	} else {
+	    oldstep = step;
+	}
+	if (k % 5 == 0) {
+	    log << "  " <<  "iter: " << k << ", bound: " << bound << ", |g|: " << newnorm << '\n';
+	}
+	if (bound - oldbound < tol && !didreset) {
+	    // Logsumexp 3
+	    logsumexp(gamma_Z, oldm);
+	    log << std::endl;
+	    return;
+	}
+    }
+    // Logsumexp 3
+    logsumexp(gamma_Z, oldm);
+    log << std::endl;
+    return;
 }
 }

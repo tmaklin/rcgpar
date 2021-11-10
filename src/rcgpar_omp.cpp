@@ -31,66 +31,15 @@
 #include "openmp_config.hpp"
 
 namespace rcgpar {
-Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t maxiters, std::ostream &log) {
-    uint16_t n_rows = logl.get_rows();
-    uint32_t n_cols = log_times_observed.size();
-    Matrix<double> gamma_Z(n_rows, n_cols, std::log(1.0/(double)n_rows)); // where gamma_Z is init at 1.0
-    Matrix<double> oldstep(n_rows, n_cols, 0.0);
-    Matrix<double> step(n_rows, n_cols, 0.0);
-    std::vector<double> oldm(n_cols, 0.0);
-    double oldnorm = 1.0;
-    long double bound = -100000.0;
-    bool didreset = false;
-
+Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, std::ostream &log) {
+    Matrix<double> gamma_Z(logl.get_rows(), log_times_observed.size(), std::log(1.0/(double)logl.get_rows())); // where gamma_Z is init at 1.0
     double bound_const = calc_bound_const(log_times_observed, alpha0);
 
-    std::vector<double> N_k(alpha0.size());
-    update_N_k(gamma_Z, log_times_observed, alpha0, N_k);
-  
-    for (uint16_t k = 0; k < maxiters; ++k) {
-	double newnorm = mixt_negnatgrad(gamma_Z, N_k, logl, step);
-	double beta_FR = newnorm/oldnorm;
-	oldnorm = newnorm;
+    // Estimate gamma_Z
+    rcg_optl_mat(logl, log_times_observed, alpha0,
+		 bound_const, tol, max_iters,
+		 false, gamma_Z, log);
 
-	if (didreset) {
-	    oldstep *= 0.0;
-	} else if (beta_FR > 0) {
-	    oldstep *= beta_FR;
-	    step += oldstep;
-	}
-	didreset = false;
-
-	gamma_Z += step;
-	logsumexp(gamma_Z, oldm);
-	update_N_k(gamma_Z, log_times_observed, alpha0, N_k);
-
-	long double oldbound = bound;
-	bound = ELBO_rcg_mat(logl, gamma_Z, log_times_observed, N_k, bound_const);
-
-	if (bound < oldbound) {
-	    didreset = true;
-	    revert_step(gamma_Z, oldm);
-	    if (beta_FR > 0) {
-		gamma_Z -= oldstep;
-	    }
-	    logsumexp(gamma_Z);
-	    update_N_k(gamma_Z, log_times_observed, alpha0, N_k);
-
-	    bound = ELBO_rcg_mat(logl, gamma_Z, log_times_observed, N_k, bound_const);
-	} else {
-	    oldstep = step;
-	}
-	if (k % 5 == 0) {
-	    log << "  " <<  "iter: " << k << ", bound: " << bound << ", |g|: " << newnorm << '\n';
-	}
-	if (bound - oldbound < tol && !didreset) {
-	    logsumexp(gamma_Z);
-	    log << std::endl;
-	    return(gamma_Z);
-	}
-    }
-    logsumexp(gamma_Z);
-    log << std::endl;
     return(gamma_Z);
 }
 }

@@ -22,6 +22,8 @@
 #define RCGPAR_RCG_HPP
 
 #include <vector>
+#include <cstddef>
+#include <fstream>
 
 #include "Matrix.hpp"
 
@@ -47,6 +49,10 @@ double calc_bound_const(const std::vector<double> &log_times_observed,
 
 void add_alpha0_to_Nk(const std::vector<double> &alpha0,
 		      std::vector<double> &N_k);
+void rcg_optl_mat(const Matrix<double> &logl, const std::vector<double> &log_times_observed,
+		  const std::vector<double> &alpha0,
+		  const long double bound_const, const double tol, const uint16_t max_iters,
+		  const bool mpi_mode, Matrix<double> &gamma_Z, std::ostream &log);
 }
 
 #endif
