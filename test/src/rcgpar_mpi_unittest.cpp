@@ -30,7 +30,7 @@
 const uint16_t M_NUM_MAX_PROCESSES = 1024;
 
 // Test rcg_optl_mat_mpi()
-TEST_F(RcgOptlMatTest, FinalGammaZCorrect_MPI) {
+TEST_F(RcgOptlTest, FinalGammaZCorrect_MPI) {
     // Init MPI
     MPI_Init(NULL, NULL);
 

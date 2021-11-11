@@ -74,7 +74,8 @@ Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double
     // Validate input data
     check_input(logl, log_times_observed, alpha0, tol, max_iters);
 
-    Matrix<double> gamma_Z(logl.get_rows(), log_times_observed.size(), std::log(1.0/(double)logl.get_rows())); // where gamma_Z is init at 1.0
+    // where gamma_Z is init at 1.0
+    Matrix<double> gamma_Z(logl.get_rows(), log_times_observed.size(), std::log(1.0/(double)logl.get_rows()));
     double bound_const = calc_bound_const(log_times_observed, alpha0);
 
     // Estimate gamma_Z

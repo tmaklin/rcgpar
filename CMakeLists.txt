@@ -103,9 +103,9 @@ if(CMAKE_BUILD_TESTS)
   include_directories("${CMAKE_GOOGLETEST_HEADERS}")
   enable_testing()
   add_executable(runUnitTests
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/src/rcg_unittest.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/src/rcgpar_omp_unittest.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/src/util_unittest.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/src/rcg_unittest.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test/src/unittest_common_inputs.cpp)
   add_test(runUnitTests runUnitTests)
   if(MPI_FOUND)

@@ -25,6 +25,7 @@
 #include <vector>
 #include <initializer_list>
 #include <algorithm>
+#include <cmath>
 
 #include "gtest/gtest.h"
 
@@ -171,6 +172,19 @@ protected:
 
     // Test outputs
     double bound_const_got;
+};
+
+class RcgOptlMatTest : public ::testing::Test, protected LogLikelihoodTest, protected LogCountsTest, protected Alpha0Test, protected ExpectedBoundConstTest, protected FinalGammaZTest {
+protected:
+    void SetUp() {
+        final_gamma_Z_got = rcgpar::Matrix<double>(logl.get_rows(), logl.get_cols(), std::log(1.0/(double)logl.get_rows()));
+    }
+    void TearDown() {
+        final_gamma_Z_got = rcgpar::Matrix<double>();
+    }
+
+    // Test outputs
+    rcgpar::Matrix<double> final_gamma_Z_got;
 };
 
 #endif

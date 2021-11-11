@@ -28,7 +28,7 @@
 #include "Matrix.hpp"
 #include "unittest_common_inputs.hpp"
 
-class RcgOptlMatTest : public ::testing::Test, protected FinalGammaZTest, protected LogLikelihoodTest, protected LogCountsTest, protected Alpha0Test {
+class RcgOptlTest : public ::testing::Test, protected FinalGammaZTest, protected LogLikelihoodTest, protected LogCountsTest, protected Alpha0Test {
 protected:
     void SetUp() override {
 	n_groups = logl.get_rows();

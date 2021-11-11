@@ -20,6 +20,8 @@
 //
 #include "rcg_unittest.hpp"
 
+#include <fstream>
+
 #include "gtest/gtest.h"
 
 #include "rcg.hpp"
@@ -91,4 +93,14 @@ TEST_F(RevertStepTest, RevertedGammaZCorrect) {
 TEST_F(CalcBoundConstTest, BoundConstCorrect) {
     bound_const_got = rcgpar::calc_bound_const(log_times_observed, alpha0);
     EXPECT_NEAR(expected_bound_const, bound_const_got, 1e-2);
+}
+
+// Test rcg_optl_mat()
+TEST_F(RcgOptlMatTest, FinalGammaZCorrect) {
+    std::ofstream empty;
+    rcg_optl_mat(logl, log_times_observed, alpha0,
+		 expected_bound_const, 1e-8, 5000,
+		 false, final_gamma_Z_got, empty);
+    std::cerr << final_gamma_Z_got.get_rows() << std::endl;
+    EXPECT_EQ(final_gamma_Z, final_gamma_Z_got);
 }

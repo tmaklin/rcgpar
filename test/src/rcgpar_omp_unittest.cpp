@@ -26,7 +26,7 @@
 #include "openmp_config.hpp"
 
 // Test rcg_otpl_mat_omp()
-TEST_F(RcgOptlMatTest, FinalGammaZCorrect_OMP) {
+TEST_F(RcgOptlTest, FinalGammaZCorrect_OMP) {
 #if defined(RCGPAR_OPENMP_SUPPORT) && (RCGPAR_OPENMP_SUPPORT) == 1
     omp_set_num_threads(2);
 #endif
