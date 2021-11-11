@@ -20,7 +20,7 @@
 //
 #include "util_unittest.hpp"
 
-#include "util.hpp"
+#include "rcgpar.hpp"
 
 TEST_F(MixtureComponentsTest, ThetasCorrect) {
     // Transform probs into thetas

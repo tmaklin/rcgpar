@@ -35,6 +35,8 @@ Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double
 Matrix<double> rcg_optl_mpi(const Matrix<double> &logl, const std::vector<double> &log_times_observed,
 			    const std::vector<double> &alpha0, const double &tol, uint16_t maxiters,
 			    std::ostream &log);
+std::vector<double> mixture_components(const rcgpar::Matrix<double> &probs,
+				       const std::vector<double> &log_times_observed);
 
 }
 
