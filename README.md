@@ -56,8 +56,8 @@ run the MPI test from the executable runMpiTest.
 
 ## Usage
 Simply include the `rcgpar.hpp` header in your project. This header
-provides two functions: 'rcg_optl_omp' for OpenMP parallelization
-and 'rcg_optl_mpi' for MPI (+OpenMP, if enabled) parallelization.
+provides two functions: 'rcgpar::rcg_optl_omp' for OpenMP parallelization
+and rcgpar::'rcg_optl_mpi' for MPI (+OpenMP, if enabled) parallelization.
 
 ## License
 The source code from this project is subject to the terms of the
