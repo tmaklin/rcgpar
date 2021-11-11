@@ -21,10 +21,9 @@
 #include "rcgpar.hpp"
 
 // Riemannian conjugate gradient for parameter estimation.
-//
-// This file contains the rcg_optl_mat function for MPI calls.
 
 #include <mpi.h>
+#include "mpi_config.hpp"
 
 #include <exception>
 #include <string>
@@ -32,7 +31,10 @@
 #include <iostream>
 
 #include "rcg.hpp"
+
+#if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
 #include "MpiHandler.hpp"
+#endif
 
 namespace rcgpar {
 void check_input(const Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters) {
@@ -52,6 +54,7 @@ void check_input(const Matrix<double> &logl, const std::vector<double> &log_time
     }
 }
 
+#if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
 void check_mpi(const MpiHandler &handler) {
     if (handler.get_status() != MPI_SUCCESS) {
 	int len,eclass;
@@ -66,6 +69,21 @@ void check_mpi(const MpiHandler &handler) {
 	throw std::runtime_error(msg);
     }
 }
+#endif
+
+Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, std::ostream &log) {
+    Matrix<double> gamma_Z(logl.get_rows(), log_times_observed.size(), std::log(1.0/(double)logl.get_rows())); // where gamma_Z is init at 1.0
+    double bound_const = calc_bound_const(log_times_observed, alpha0);
+
+    // Estimate gamma_Z
+    rcg_optl_mat(logl, log_times_observed, alpha0,
+		 bound_const, tol, max_iters,
+		 false, gamma_Z, log);
+
+    return(gamma_Z);
+}
+
+#if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
 Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<double> &log_times_observed_full, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, std::ostream &log) {
     // Input data dimensions
     const uint16_t n_groups = alpha0.size();
@@ -120,4 +138,5 @@ Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<d
 
     return(gamma_Z_full);
 }
+#endif
 }

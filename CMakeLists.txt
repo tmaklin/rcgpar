@@ -135,7 +135,7 @@ add_library(rcgutils ${CMAKE_CURRENT_SOURCE_DIR}/src/util.cpp)
 ### OpenMP parallellized rcg
 add_library(rcgomp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar_omp.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Matrix_omp.cpp)
 
 ## Link unit tests with rcgomp
@@ -147,7 +147,7 @@ if (MPI_FOUND)
   ### MPI parallellized rcg
   add_library(rcgmpi
     ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar_mpi.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Matrix_omp.cpp)
   target_link_libraries(rcgmpi rcgutils)
   ## Unit tests
