@@ -72,7 +72,7 @@ void check_mpi(const MpiHandler &handler) {
 
 Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, std::ostream &log) {
     // Validate input data
-    check_input(logl_full, log_times_observed_full, alpha0, tol, max_iters);
+    check_input(logl, log_times_observed, alpha0, tol, max_iters);
 
     Matrix<double> gamma_Z(logl.get_rows(), log_times_observed.size(), std::log(1.0/(double)logl.get_rows())); // where gamma_Z is init at 1.0
     double bound_const = calc_bound_const(log_times_observed, alpha0);
