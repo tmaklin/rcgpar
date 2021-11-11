@@ -24,6 +24,7 @@
 
 #include <cstddef>
 
+namespace rcgpar{
 class MpiHandler {
     // Class that takes care of dividing a n x m matrix to the MPI
     // tasks and gathering the results from the tasks back together.
@@ -76,5 +77,6 @@ public:
 	return this->rank;
     }
 };
+}
 
 #endif
