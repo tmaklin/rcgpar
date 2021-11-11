@@ -22,7 +22,6 @@
 
 // Riemannian conjugate gradient for parameter estimation.
 
-#include <mpi.h>
 #include "mpi_config.hpp"
 
 #include <exception>

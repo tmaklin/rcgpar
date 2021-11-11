@@ -24,4 +24,8 @@
 #define RCGPAR_MPI_SUPPORT @RCGPAR_MPI_SUPPORT@
 #define RCGPAR_MPI_MAX_PROCESSES @RCGPAR_MPI_MAX_PROCESSES@
 
+#if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
+#include <mpi.h>
+#endif
+
 #endif

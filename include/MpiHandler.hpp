@@ -20,11 +20,9 @@
 //
 #ifndef RCGPAR_MPIHANDLER_HPP
 #define RCGPAR_MPIHANDLER_HPP
-#include <mpi.h>
+#include "mpi_config.hpp"
 
 #include <cstddef>
-
-#include "mpi_config.hpp"
 
 class MpiHandler {
     // Class that takes care of dividing a n x m matrix to the MPI

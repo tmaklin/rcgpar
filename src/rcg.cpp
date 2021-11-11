@@ -35,10 +35,6 @@
 #include "openmp_config.hpp"
 #include "mpi_config.hpp"
 
-#if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
-#include <mpi.h>
-#endif
-
 namespace rcgpar {
 double digamma(double x) {
     double result = 0, xx, xx2, xx4;
