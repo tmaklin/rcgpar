@@ -32,14 +32,15 @@ class MpiHandler {
 private:
     int n_tasks;
     int rank;
+    int status;
 
     int displacements[RCGPAR_MPI_MAX_PROCESSES];
     int bufcounts[RCGPAR_MPI_MAX_PROCESSES] = { 0 };
 
 public:
     MpiHandler() {
-	MPI_Comm_size(MPI_COMM_WORLD, &this->n_tasks);
-	MPI_Comm_rank(MPI_COMM_WORLD, &this->rank);
+	this->status = MPI_Comm_size(MPI_COMM_WORLD, &this->n_tasks);
+	this->status = MPI_Comm_rank(MPI_COMM_WORLD, &this->rank);
     }
     uint32_t obs_per_task(const uint32_t n_obs) const {
 	uint32_t n_obs_per_task = std::floor(n_obs/this->n_tasks);
@@ -66,6 +67,9 @@ public:
     }
     const int* get_bufcounts() const {
 	return this->bufcounts;
+    }
+    int get_status() const {
+	return this->status;
     }
     int get_n_tasks() const {
 	return this->n_tasks;

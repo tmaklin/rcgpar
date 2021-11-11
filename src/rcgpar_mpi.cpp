@@ -26,6 +26,8 @@
 
 #include <mpi.h>
 
+#include <exception>
+#include <string>
 #include <cmath>
 #include <iostream>
 
@@ -33,6 +35,37 @@
 #include "MpiHandler.hpp"
 
 namespace rcgpar {
+void check_input(const Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters) {
+    uint16_t n_groups = logl.get_rows();
+    uint32_t n_obs = logl.get_cols();
+    if (tol < 0) {
+	throw std::invalid_argument("Tolerance cannot be negative (type: double).");
+    }
+    if (max_iters == 0) {
+	throw std::invalid_argument("Max iters cannot be 0 (type: uint16_t).");
+    }
+    if (n_groups != alpha0.size()) {
+	throw std::domain_error("Number of components (rows) in logl differs from the number of values in alpha0.");
+    }
+    if (n_obs != log_times_observed.size()) {
+	throw std::domain_error("Number of observations (columns) in logl differs from the number of observations in log_times_observed.");
+    }
+}
+
+void check_mpi(const MpiHandler &handler) {
+    if (handler.get_status() != MPI_SUCCESS) {
+	int len,eclass;
+	char mpi_error[MPI_MAX_ERROR_STRING];
+	MPI_Error_class(handler.get_status(), &eclass);
+	MPI_Error_string(handler.get_status(), mpi_error, &len);
+	throw std::runtime_error("MPI returned an error: " + std::string(mpi_error));
+    }
+    if (handler.get_n_tasks() > RCGPAR_MPI_MAX_PROCESSES) {
+	std::string msg("Number of MPI tasks is greater than the allowed " + std::to_string(RCGPAR_MPI_MAX_PROCESSES) +
+				 ".\nRecompile rcgpar with '-DCMAKE_MPI_MAX_PROCESSES=<big number>' to support more tasks.");
+	throw std::runtime_error(msg);
+    }
+}
 Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<double> &log_times_observed_full, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, std::ostream &log) {
     // Input data dimensions
     const uint16_t n_groups = alpha0.size();
@@ -41,6 +74,11 @@ Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<d
     // MPI handler
     MpiHandler handler;
     const int rank = handler.get_rank();
+
+    // Validate input data
+    check_input(logl_full, log_times_observed_full, alpha0, tol, max_iters);
+    // Check that MPI is running and setup correctly
+    check_mpi(handler);
 
     // Initialize variables for MPI
     MPI_Bcast(&n_obs, 1, MPI_UINT32_T, 0, MPI_COMM_WORLD);
