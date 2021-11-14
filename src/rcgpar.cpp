@@ -96,8 +96,12 @@ Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<d
     MpiHandler handler;
     const int rank = handler.get_rank();
 
-    // Validate input data
-    check_input(logl_full, log_times_observed_full, alpha0, tol, max_iters);
+    // Validate input data on root process and abort if incorrect
+    if (rank == 0) {
+      check_input(logl_partial, log_times_observed, alpha0, tol, max_iters);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+
     // Check that MPI is running and setup correctly
     check_mpi(handler);
 
@@ -116,6 +120,10 @@ Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<d
     for (uint16_t i = 0; i < n_groups; ++i) {
 	MPI_Scatterv(&logl_full.front() + i*n_obs, sendcounts, displs, MPI_DOUBLE, &logl_partial.front() + i*n_obs_per_task, n_obs_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     }
+
+    // Validate input data again on all processes to check that the scatters went through OK.
+    check_input(logl_partial, log_times_observed, alpha0, tol, max_iters);
+    MPI_Barrier(MPI_COMM_WORLD);
 
     // Initialize partial gamma_Z
     Matrix<double> gamma_Z_partial = Matrix<double>(n_groups, n_obs_per_task, std::log(1.0/(double)n_groups));
