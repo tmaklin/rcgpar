@@ -25,6 +25,7 @@
 #define RCGPAR_MPI_MAX_PROCESSES @RCGPAR_MPI_MAX_PROCESSES@
 
 #if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
+#define OMPI_SKIP_MPICXX 1 // See https://github.com/open-mpi/ompi/issues/5157
 #include <mpi.h>
 #endif
 
