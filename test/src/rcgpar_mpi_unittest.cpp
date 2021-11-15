@@ -20,12 +20,11 @@
 //
 #include "rcgpar_unittest.hpp"
 
-#include <mpi.h>
-
 #include <fstream>
 
 #include "rcgpar.hpp"
 #include "openmp_config.hpp"
+#include "mpi_config.hpp"
 
 const uint16_t M_NUM_MAX_PROCESSES = 1024;
 
