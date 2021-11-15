@@ -98,7 +98,7 @@ Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<d
 
     // Validate input data on root process and abort if incorrect
     if (rank == 0) {
-      check_input(logl_partial, log_times_observed, alpha0, tol, max_iters);
+      check_input(logl_full, log_times_observed_full, alpha0, tol, max_iters);
     }
     MPI_Barrier(MPI_COMM_WORLD);
 
