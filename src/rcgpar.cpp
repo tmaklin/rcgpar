@@ -145,7 +145,7 @@ Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<d
     for (uint16_t i = 0; i < n_groups; ++i) {
 	MPI_Gatherv(&gamma_Z_partial.front() + i*n_obs_per_task, n_obs_per_task, MPI_DOUBLE, &gamma_Z_full.front() + i*n_obs, sendcounts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     }
-    MPI_Bcast(&gamma_Z_full.front(), n_groups*n_obs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPIX_Bcast_x(&gamma_Z_full.front(), n_groups*n_obs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     return(gamma_Z_full);
 }

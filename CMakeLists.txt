@@ -22,6 +22,10 @@ if(CMAKE_BUILD_TYPE MATCHES Release)
   endif()
 endif()
 
+## Do an out-of-source build
+set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 ## Check dependencies
 ### OpenMP
 find_package(OpenMP)
@@ -43,6 +47,33 @@ if (MPI_FOUND)
   else()
     set(RCGPAR_MPI_MAX_PROCESSES 1024)
   endif()
+
+  # Check MPI dependencies
+  ## BigMPI
+  if (DEFINED CMAKE_BIGMPI_HEADERS AND DEFINED CMAKE_BIGMPI_LIBRARY)
+    message(STATUS "BigMPI headers provided in: ${CMAKE_BIGMPI_HEADERS}")
+    message(STATUS "BigMPI library provided in: ${CMAKE_BIGMPI_LIBRARY}")
+  else()
+    set(LIB_LINKAGE_TYPE "STATIC")
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/CMakeLists-bigmpi.txt.in ${CMAKE_CURRENT_BINARY_DIR}/external/bigmpi-download/CMakeLists.txt)
+    execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+      RESULT_VARIABLE result
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/external/bigmpi-download )
+    if(result)
+      message(FATAL_ERROR "CMake step for BigMPI failed: ${result}")
+    endif()
+    execute_process(COMMAND ${CMAKE_COMMAND} --build .
+      RESULT_VARIABLE result
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/external/bigmpi-download )
+    if(result)
+      message(FATAL_ERROR "Build step for BigMPI failed: ${result}")
+    endif()
+    set(CMAKE_BIGMPI_HEADERS ${CMAKE_CURRENT_BINARY_DIR}/external/bigmpi/src)
+    set(CMAKE_BIGMPI_LIBRARY ${LIBRARY_OUTPUT_PATH}/libbigmpi.a)
+    add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/external/bigmpi
+      ${CMAKE_CURRENT_BINARY_DIR}/external/bigmpi/build)
+  endif()
+  include_directories("${CMAKE_BIGMPI_HEADERS}")
 else()
   set(RCGPAR_MPI_SUPPORT 0)
 endif()
@@ -54,10 +85,6 @@ if (${CMAKE_MAJOR_VERSION} GREATER 2 AND ${CMAKE_MINOR_VERSION} GREATER 0)
 else()
   add_compile_options(-std=c++11)
 endif()
-
-## Do an out-of-source build
-set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 ## Get version number from git tags
 find_package(Git)
@@ -150,6 +177,7 @@ if (MPI_FOUND)
     ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Matrix_omp.cpp)
   target_link_libraries(rcgmpi rcgutils)
+  add_dependencies(rcgmpi bigmpi)
   ## Unit tests
   if(CMAKE_BUILD_TESTS)
     target_link_libraries(runMpiTest rcgmpi gtest gtest_main)
@@ -159,7 +187,7 @@ endif()
 # Link libraries
 if (OPENMP_FOUND)
   if (MPI_FOUND)
-    target_link_libraries(rcgmpi OpenMP::OpenMP_CXX) ## Hybrid parallellization
+    target_link_libraries(rcgmpi OpenMP::OpenMP_CXX ${LIBRARY_OUTPUT_PATH}/libbigmpi.a) ## Hybrid parallellization
   endif()
   if (BUILD_TESTS)
     target_link_libraries(rcgomp rcgutils runUnitTests OpenMP::OpenMP_CXX)
