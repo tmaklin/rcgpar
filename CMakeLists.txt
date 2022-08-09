@@ -43,6 +43,33 @@ if (MPI_FOUND)
   else()
     set(RCGPAR_MPI_MAX_PROCESSES 1024)
   endif()
+
+  # Check MPI dependencies
+  ## BigMPI
+  if (DEFINED CMAKE_BIGMPI_HEADERS AND DEFINED CMAKE_BIGMPI_LIBRARY)
+    message(STATUS "BigMPI headers provided in: ${CMAKE_BIGMPI_HEADERS}")
+    message(STATUS "BigMPI library provided in: ${CMAKE_BIGMPI_LIBRARY}")
+  else()
+    set(LIB_LINKAGE_TYPE "STATIC")
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/CMakeLists-bigmpi.txt.in ${CMAKE_CURRENT_BINARY_DIR}/external/bigmpi-download/CMakeLists.txt)
+    execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+      RESULT_VARIABLE result
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/external/bigmpi-download )
+    if(result)
+      message(FATAL_ERROR "CMake step for BigMPI failed: ${result}")
+    endif()
+    execute_process(COMMAND ${CMAKE_COMMAND} --build .
+      RESULT_VARIABLE result
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/external/bigmpi-download )
+    if(result)
+      message(FATAL_ERROR "Build step for BigMPI failed: ${result}")
+    endif()
+    set(CMAKE_BIGMPI_HEADERS ${CMAKE_CURRENT_BINARY_DIR}/external/bigmpi/src)
+    set(CMAKE_BIGMPI_LIBRARY ${CMAKE_CURRENT_BINARY_DIR}/external/bigmpi/build/src/libbigmpi.a)
+    add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/external/bigmpi
+      ${CMAKE_CURRENT_BINARY_DIR}/external/bigmpi/build)
+  endif()
+  include_directories("${CMAKE_BIGMPI_HEADERS}")
 else()
   set(RCGPAR_MPI_SUPPORT 0)
 endif()
@@ -159,7 +186,7 @@ endif()
 # Link libraries
 if (OPENMP_FOUND)
   if (MPI_FOUND)
-    target_link_libraries(rcgmpi OpenMP::OpenMP_CXX) ## Hybrid parallellization
+    target_link_libraries(rcgmpi OpenMP::OpenMP_CXX ${CMAKE_BIGMPI_LIBRARY}) ## Hybrid parallellization
   endif()
   if (BUILD_TESTS)
     target_link_libraries(rcgomp rcgutils runUnitTests OpenMP::OpenMP_CXX)
