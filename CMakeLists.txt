@@ -177,6 +177,7 @@ if (MPI_FOUND)
     ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/Matrix_omp.cpp)
   target_link_libraries(rcgmpi rcgutils)
+  add_dependencies(rcgmpi bigmpi)
   ## Unit tests
   if(CMAKE_BUILD_TESTS)
     target_link_libraries(runMpiTest rcgmpi gtest gtest_main)
