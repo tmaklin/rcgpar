@@ -22,6 +22,10 @@ if(CMAKE_BUILD_TYPE MATCHES Release)
   endif()
 endif()
 
+## Do an out-of-source build
+set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
 ## Check dependencies
 ### OpenMP
 find_package(OpenMP)
@@ -65,7 +69,7 @@ if (MPI_FOUND)
       message(FATAL_ERROR "Build step for BigMPI failed: ${result}")
     endif()
     set(CMAKE_BIGMPI_HEADERS ${CMAKE_CURRENT_BINARY_DIR}/external/bigmpi/src)
-    set(CMAKE_BIGMPI_LIBRARY ${CMAKE_CURRENT_BINARY_DIR}/external/bigmpi/build/src/libbigmpi.a)
+    set(CMAKE_BIGMPI_LIBRARY ${LIBRARY_OUTPUT_PATH}/libbigmpi.a)
     add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/external/bigmpi
       ${CMAKE_CURRENT_BINARY_DIR}/external/bigmpi/build)
   endif()
@@ -81,10 +85,6 @@ if (${CMAKE_MAJOR_VERSION} GREATER 2 AND ${CMAKE_MINOR_VERSION} GREATER 0)
 else()
   add_compile_options(-std=c++11)
 endif()
-
-## Do an out-of-source build
-set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 ## Get version number from git tags
 find_package(Git)
@@ -186,7 +186,7 @@ endif()
 # Link libraries
 if (OPENMP_FOUND)
   if (MPI_FOUND)
-    target_link_libraries(rcgmpi OpenMP::OpenMP_CXX ${CMAKE_BIGMPI_LIBRARY}) ## Hybrid parallellization
+    target_link_libraries(rcgmpi OpenMP::OpenMP_CXX ${LIBRARY_OUTPUT_PATH}/libbigmpi.a) ## Hybrid parallellization
   endif()
   if (BUILD_TESTS)
     target_link_libraries(rcgomp rcgutils runUnitTests OpenMP::OpenMP_CXX)
