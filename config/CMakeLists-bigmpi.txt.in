@@ -9,7 +9,7 @@ ExternalProject_Add(bigmpi-download
   SOURCE_DIR        "${CMAKE_CURRENT_BINARY_DIR}/external/bigmpi"
   BUILD_IN_SOURCE   0
   BUILD_COMMAND	    ""
-  CMAKE_ARGS	    -D LIB_LINKAGE_TYPE="STATIC"
+  CMAKE_ARGS	    ""
   CONFIGURE_COMMAND ""
   INSTALL_COMMAND   ""
   TEST_COMMAND      ""
