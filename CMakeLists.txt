@@ -37,9 +37,10 @@ if (OPENMP_FOUND)
 else()
   set(RCGPAR_OPENMP_SUPPORT 0)
 endif()
+
 ### MPI
-find_package(MPI)
-if (MPI_FOUND)
+if (CMAKE_ENABLE_MPI_SUPPORT)
+  find_package(MPI REQUIRED)
   set(RCGPAR_MPI_SUPPORT 1)
   include_directories(MPI_C_INCLUDE_DIRS)
   if (CMAKE_MPI_MAX_PROCESSES)

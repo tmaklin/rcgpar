@@ -28,7 +28,7 @@ to set up your MPI environment. For example, to set up rcgpar using
 [Open MPI](https://www.open-mpi.org/) enter the `build/` directory and run
 ```
 module load mpi/openmp
-cmake -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx ..
+cmake -DCMAKE_ENABLE_MPI_SUPPORT=1 -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx ..
 make
 ```
 
