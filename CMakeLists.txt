@@ -79,6 +79,11 @@ else()
   set(RCGPAR_MPI_SUPPORT 0)
 endif()
 
+## Seamat
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/seamat)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/seamat/include/)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/seamat/external/BitMagic-7.12.3/src/)
+
 ## Set C++11 support depending on cmake version
 if (${CMAKE_MAJOR_VERSION} GREATER 2 AND ${CMAKE_MINOR_VERSION} GREATER 0)
   set (CMAKE_CXX_STANDARD 11)
@@ -163,8 +168,7 @@ add_library(rcgutils ${CMAKE_CURRENT_SOURCE_DIR}/src/util.cpp)
 ### OpenMP parallellized rcg
 add_library(rcgomp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/Matrix_omp.cpp)
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp)
 
 ## Link unit tests with rcgomp
 if(CMAKE_BUILD_TESTS)
@@ -175,8 +179,7 @@ if (MPI_FOUND)
   ### MPI parallellized rcg
   add_library(rcgmpi
     ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Matrix_omp.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp)
   target_link_libraries(rcgmpi rcgutils)
   add_dependencies(rcgmpi bigmpi)
   ## Unit tests
