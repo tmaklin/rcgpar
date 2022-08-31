@@ -32,7 +32,11 @@ TEST_F(RcgOptlTest, FinalGammaZCorrect_OMP) {
 #endif
     // Estimate gamma_Z
     std::ofstream empty;
-    got = rcg_optl_omp(logl, log_times_observed, alpha0, tol, max_iters, empty);
+    got = rcgpar::rcg_optl_omp(logl, log_times_observed, alpha0, tol, max_iters, empty);
 
-    EXPECT_EQ(final_gamma_Z, got);
+    for (size_t i = 0; i < final_gamma_Z.get_rows(); ++i) {
+	for (size_t j = 0; j < final_gamma_Z.get_cols(); ++j) {
+	    EXPECT_NEAR(final_gamma_Z(i, j), got(i, j), 1e-4);
+	}
+    }
 }

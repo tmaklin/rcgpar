@@ -35,7 +35,7 @@ protected:
 	n_obs = logl.get_cols();
     }
     void TearDown() override {
-	got = rcgpar::Matrix<double>();
+	got = seamat::DenseMatrix<double>();
 	n_groups = 0;
 	n_obs = 0;
     }
@@ -49,7 +49,7 @@ protected:
     uint32_t n_obs;
 
     // Test output
-    rcgpar::Matrix<double> got;
+    seamat::DenseMatrix<double> got;
 };
 
 #endif

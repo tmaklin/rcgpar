@@ -21,7 +21,7 @@
 #include "rcgpar.hpp"
 
 namespace rcgpar {
-std::vector<double> mixture_components(const rcgpar::Matrix<double> &probs, const std::vector<double> &log_times_observed) {
+std::vector<double> mixture_components(const seamat::Matrix<double> &probs, const std::vector<double> &log_times_observed) {
   std::vector<double> thetas(probs.get_rows(), 0.0);
   for (uint32_t i = 0; i < probs.get_rows(); ++i) {
     uint32_t n_times_total = 0.0;

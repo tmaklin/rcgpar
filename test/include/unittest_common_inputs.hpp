@@ -29,6 +29,7 @@
 #include "gtest/gtest.h"
 
 #include "Matrix.hpp"
+#include "rcgpar.hpp"
 
 // Constant input data that is reused in several tests
 
@@ -37,7 +38,7 @@ const uint32_t TEST_N_OBS = 10;
 
 class LogLikelihoodTest {
 protected:
-    static const rcgpar::Matrix<double> logl;
+    static const seamat::DenseMatrix<double> logl;
 };
 
 class LogCountsTest {
@@ -48,17 +49,17 @@ protected:
 class GammaZTest {
 protected:
     // Intermediate values from iteration k == 3
-    static const rcgpar::Matrix<double> gamma_Z;
+    static const seamat::DenseMatrix<double> gamma_Z;
 };
 
 class ExpectedStepTest {
 protected:
-    static const rcgpar::Matrix<double> expected_step;
+    static const seamat::DenseMatrix<double> expected_step;
 };
 
 class ExpectedGammaZTest {
 protected:
-    static const rcgpar::Matrix<double> expected_gamma_Z;
+    static const seamat::DenseMatrix<double> expected_gamma_Z;
 };
 
 class ExpectedNkTest {
@@ -83,7 +84,7 @@ protected:
 
 class FinalGammaZTest {
 protected:
-    static const rcgpar::Matrix<double> final_gamma_Z;
+    static const seamat::DenseMatrix<double> final_gamma_Z;
 };
 
 #endif

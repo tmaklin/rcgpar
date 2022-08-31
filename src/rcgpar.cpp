@@ -36,7 +36,7 @@
 #endif
 
 namespace rcgpar {
-void check_input(const Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters) {
+void check_input(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters) {
     uint16_t n_groups = logl.get_rows();
     uint32_t n_obs = logl.get_cols();
     if (tol < 0) {
@@ -70,12 +70,12 @@ void check_mpi(const MpiHandler &handler) {
 }
 #endif
 
-Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, std::ostream &log) {
+seamat::DenseMatrix<double> rcg_optl_omp(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, std::ostream &log) {
     // Validate input data
     check_input(logl, log_times_observed, alpha0, tol, max_iters);
 
     // where gamma_Z is init at 1.0
-    Matrix<double> gamma_Z(logl.get_rows(), log_times_observed.size(), std::log(1.0/(double)logl.get_rows()));
+    seamat::DenseMatrix<double> gamma_Z(logl.get_rows(), log_times_observed.size(), std::log(1.0/(double)logl.get_rows()));
     double bound_const = calc_bound_const(log_times_observed, alpha0);
 
     // Estimate gamma_Z
@@ -87,7 +87,7 @@ Matrix<double> rcg_optl_omp(const Matrix<double> &logl, const std::vector<double
 }
 
 #if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
-Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<double> &log_times_observed_full, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, std::ostream &log) {
+seamat::DenseMatrix<double> rcg_optl_mpi(const seamat::Matrix<double> &logl_full, const std::vector<double> &log_times_observed_full, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, std::ostream &log) {
     // Input data dimensions
     const uint16_t n_groups = alpha0.size();
     uint32_t n_obs = log_times_observed_full.size();
@@ -116,7 +116,7 @@ Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<d
     MPI_Scatterv(&log_times_observed_full.front(), sendcounts, displs, MPI_DOUBLE, &log_times_observed.front(), n_obs_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     // log likelihoods
-    Matrix<double> logl_partial(n_groups, n_obs_per_task, 0.0);
+    seamat::DenseMatrix<double> logl_partial(n_groups, n_obs_per_task, 0.0);
     for (uint16_t i = 0; i < n_groups; ++i) {
 	MPI_Scatterv(&logl_full.front() + i*n_obs, sendcounts, displs, MPI_DOUBLE, &logl_partial.front() + i*n_obs_per_task, n_obs_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     }
@@ -126,7 +126,7 @@ Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<d
     MPI_Barrier(MPI_COMM_WORLD);
 
     // Initialize partial gamma_Z
-    Matrix<double> gamma_Z_partial = Matrix<double>(n_groups, n_obs_per_task, std::log(1.0/(double)n_groups));
+    seamat::DenseMatrix<double> gamma_Z_partial = seamat::DenseMatrix<double>(n_groups, n_obs_per_task, std::log(1.0/(double)n_groups));
 
     // ELBO constant
     double bound_const = 0.0;
@@ -141,7 +141,7 @@ Matrix<double> rcg_optl_mpi(const Matrix<double> &logl_full, const std::vector<d
 		 true, gamma_Z_partial, log);
 
     // Construct gamma_Z from the partials
-    Matrix<double> gamma_Z_full(n_groups, n_obs, 0.0);
+    seamat::DenseMatrix<double> gamma_Z_full(n_groups, n_obs, 0.0);
     for (uint16_t i = 0; i < n_groups; ++i) {
 	MPI_Gatherv(&gamma_Z_partial.front() + i*n_obs_per_task, n_obs_per_task, MPI_DOUBLE, &gamma_Z_full.front() + i*n_obs, sendcounts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     }
