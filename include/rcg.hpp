@@ -25,7 +25,7 @@
 #include <cstddef>
 #include <fstream>
 
-#include "../external/seamat/include/Matrix.hpp"
+#include "Matrix.hpp"
 
 #include <omp.h>
 #include <algorithm>

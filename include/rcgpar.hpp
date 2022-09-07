@@ -25,7 +25,7 @@
 #include <cstddef>
 #include <ostream>
 
-#include "../external/seamat/include/Matrix.hpp"
+#include "Matrix.hpp"
 
 namespace rcgpar {
 seamat::DenseMatrix<double> rcg_optl_omp(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed,
