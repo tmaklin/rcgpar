@@ -79,10 +79,29 @@ else()
   set(RCGPAR_MPI_SUPPORT 0)
 endif()
 
-## Seamat
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/seamat)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/seamat/include/)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/seamat/external/BitMagic-7.12.3/src/)
+## seamat
+if (DEFINED CMAKE_SEAMAT_HEADERS)
+  message(STATUS "seamat headers provided in: ${CMAKE_SEAMAT_HEADERS}")
+else()
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/CMakeLists-seamat.txt.in ${CMAKE_BINARY_DIR}/external/seamat-download/CMakeLists.txt)
+  execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/external/seamat-download )
+  if(result)
+    message(FATAL_ERROR "CMake step for seamat failed: ${result}")
+  endif()
+  execute_process(COMMAND ${CMAKE_COMMAND} --build .
+    RESULT_VARIABLE result
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/external/seamat-download )
+  if(result)
+    message(FATAL_ERROR "Build step for seamat failed: ${result}")
+  endif()
+  add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/external/seamat
+                   ${CMAKE_CURRENT_BINARY_DIR}/external/seamat/build)
+  set(CMAKE_SEAMAT_HEADERS ${CMAKE_CURRENT_BINARY_DIR}/external/seamat/include include_directories(${CMAKE_CURRENT_BINARY_DIR}/external/seamat/external/BitMagic-7.12.3/src/)
+)
+endif()
+include_directories(${CMAKE_SEAMAT_HEADERS})
 
 ## Set C++11 support depending on cmake version
 if (${CMAKE_MAJOR_VERSION} GREATER 2 AND ${CMAKE_MINOR_VERSION} GREATER 0)
