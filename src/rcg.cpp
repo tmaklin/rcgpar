@@ -49,26 +49,26 @@ double digamma(double x) {
     return result;
 }
 
-void logsumexp(Matrix<double> &gamma_Z) {
+void logsumexp(seamat::Matrix<double> &gamma_Z) {
     uint32_t n_obs = gamma_Z.get_cols();
     uint16_t n_groups = gamma_Z.get_rows();
 
 #pragma omp parallel for schedule(static)
     for (uint32_t i = 0; i < n_obs; ++i) {
-	double m = gamma_Z.log_sum_exp_col(i);
+	double m = gamma_Z.log_sum_exp_col<double>(i);
 	for (uint16_t j = 0; j < n_groups; ++j) {
 	    gamma_Z(j, i) -= m;
 	}
     }
 }
 
-void logsumexp(Matrix<double> &gamma_Z, std::vector<double> &m) {
+void logsumexp(seamat::Matrix<double> &gamma_Z, std::vector<double> &m) {
     uint32_t n_obs = gamma_Z.get_cols();
     uint16_t n_groups = gamma_Z.get_rows();
 
 #pragma omp parallel for schedule(static)
     for (uint32_t i = 0; i < n_obs; ++i) {
-	m[i] = gamma_Z.log_sum_exp_col(i);
+	m[i] = gamma_Z.log_sum_exp_col<double>(i);
     }
 
 #pragma omp parallel for schedule(static)
@@ -79,7 +79,7 @@ void logsumexp(Matrix<double> &gamma_Z, std::vector<double> &m) {
     }
 }
 
-double mixt_negnatgrad(const Matrix<double> &gamma_Z, const std::vector<double> &N_k, const Matrix<double> &logl, Matrix<double> &dL_dphi, bool mpi_mode) {
+double mixt_negnatgrad(const seamat::Matrix<double> &gamma_Z, const std::vector<double> &N_k, const seamat::Matrix<double> &logl, seamat::Matrix<double> &dL_dphi, bool mpi_mode) {
     uint32_t n_obs = gamma_Z.get_cols();
     uint16_t n_groups = gamma_Z.get_rows();
 
@@ -112,7 +112,7 @@ double mixt_negnatgrad(const Matrix<double> &gamma_Z, const std::vector<double> 
     return newnorm;
 }
 
-void update_N_k(const Matrix<double> &gamma_Z, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, std::vector<double> &N_k, bool mpi_mode) {
+void update_N_k(const seamat::Matrix<double> &gamma_Z, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, std::vector<double> &N_k, bool mpi_mode) {
     // exp_right_multiply() clears the current N_k
     gamma_Z.exp_right_multiply(log_times_observed, N_k);
     if (mpi_mode) {
@@ -124,7 +124,7 @@ void update_N_k(const Matrix<double> &gamma_Z, const std::vector<double> &log_ti
     std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
 }
 
-long double ELBO_rcg_mat(const Matrix<double> &logl, const Matrix<double> &gamma_Z, const std::vector<double> &counts, const std::vector<double> &N_k, const double bound_const, const bool mpi_mode) {
+long double ELBO_rcg_mat(const seamat::Matrix<double> &logl, const seamat::Matrix<double> &gamma_Z, const std::vector<double> &counts, const std::vector<double> &N_k, const double bound_const, const bool mpi_mode) {
     long double bound = 0.0;
     uint16_t n_groups = gamma_Z.get_rows();
     uint32_t n_obs = gamma_Z.get_cols();
@@ -147,7 +147,7 @@ long double ELBO_rcg_mat(const Matrix<double> &logl, const Matrix<double> &gamma
     return bound;
 }
 
-void revert_step(Matrix<double> &gamma_Z, const std::vector<double> &oldm) {
+void revert_step(seamat::Matrix<double> &gamma_Z, const std::vector<double> &oldm) {
     uint16_t n_groups = gamma_Z.get_rows();
     uint32_t n_obs = gamma_Z.get_cols();
 #pragma omp parallel for schedule(static)
@@ -180,16 +180,16 @@ double calc_bound_const(const std::vector<double> &log_times_observed, const std
     return bound_const;
 }
 
-void rcg_optl_mat(const Matrix<double> &logl, const std::vector<double> &log_times_observed,
+void rcg_optl_mat(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed,
 		  const std::vector<double> &alpha0,
 		  const long double bound_const, const double tol, const uint16_t max_iters,
-		  const bool mpi_mode, Matrix<double> &gamma_Z, std::ostream &log) {
+		  const bool mpi_mode, seamat::Matrix<double> &gamma_Z, std::ostream &log) {
     uint16_t n_groups = alpha0.size();
     uint32_t n_obs = log_times_observed.size();
 
     // Initialize variables.
-    Matrix<double> step(n_groups, n_obs, 0.0);
-    Matrix<double> oldstep(n_groups, n_obs, 0.0);
+    seamat::DenseMatrix<double> step(n_groups, n_obs, 0.0);
+    seamat::DenseMatrix<double> oldstep(n_groups, n_obs, 0.0);
     std::vector<double> oldm(n_obs, 0.0);
     double oldnorm = 1.0;
     long double bound = -100000.0;

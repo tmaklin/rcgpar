@@ -79,12 +79,18 @@ else()
   set(RCGPAR_MPI_SUPPORT 0)
 endif()
 
-## Set C++11 support depending on cmake version
+## seamat
+if (DEFINED CMAKE_SEAMAT_HEADERS)
+  message(STATUS "seamat headers provided in: ${CMAKE_SEAMAT_HEADERS}")
+endif()
+include_directories(${CMAKE_SEAMAT_HEADERS})
+
+## Set C++17 support depending on cmake version
 if (${CMAKE_MAJOR_VERSION} GREATER 2 AND ${CMAKE_MINOR_VERSION} GREATER 0)
-  set (CMAKE_CXX_STANDARD 11)
+  set (CMAKE_CXX_STANDARD 17)
   set (CMAKE_CXX_STANDARD_REQUIRED ON)
 else()
-  add_compile_options(-std=c++11)
+  add_compile_options(-std=c++17)
 endif()
 
 ## Get version number from git tags
@@ -163,8 +169,7 @@ add_library(rcgutils ${CMAKE_CURRENT_SOURCE_DIR}/src/util.cpp)
 ### OpenMP parallellized rcg
 add_library(rcgomp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/Matrix_omp.cpp)
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp)
 
 ## Link unit tests with rcgomp
 if(CMAKE_BUILD_TESTS)
@@ -175,8 +180,7 @@ if (MPI_FOUND)
   ### MPI parallellized rcg
   add_library(rcgmpi
     ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/Matrix_omp.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp)
   target_link_libraries(rcgmpi rcgutils)
   add_dependencies(rcgmpi bigmpi)
   ## Unit tests

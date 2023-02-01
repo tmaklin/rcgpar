@@ -55,10 +55,10 @@ protected:
 class MixtNegnatgradTest : public ::testing::Test, protected LogLikelihoodTest, protected GammaZTest, protected ExpectedStepTest {
 protected:
     void SetUp() {
-	step_got = rcgpar::Matrix<double>(TEST_N_GROUPS, TEST_N_OBS, 0.0);
+	step_got = seamat::DenseMatrix<double>(TEST_N_GROUPS, TEST_N_OBS, 0.0);
     }
     void TearDown() {
-	step_got = rcgpar::Matrix<double>();
+	step_got = seamat::DenseMatrix<double>();
     }
 
     // Expecteds
@@ -69,7 +69,7 @@ protected:
 
     // Test output
     double newnorm_got;
-    rcgpar::Matrix<double> step_got;
+    seamat::DenseMatrix<double> step_got;
 };
 const double MixtNegnatgradTest::expected_newnorm = 0.193162;
 const std::vector<double> MixtNegnatgradTest::N_k(std::initializer_list<double>({ 4857.97, 3905.03, 701.053, 903.946 }));
@@ -91,7 +91,7 @@ protected:
 // Test logsumexp()
 class LogsumexpTest : public ::testing::Test, protected GammaZTest, protected ExpectedGammaZTest, protected ExpectedOldMTest, private ExpectedStepTest  {
 private:
-    static const rcgpar::Matrix<double> oldstep_x_betaFR;
+    static const seamat::DenseMatrix<double> oldstep_x_betaFR;
 
 protected:
     static void SetUpTestSuite() {}
@@ -104,14 +104,14 @@ protected:
     void TearDown() {
 	oldm_got.clear();
 	oldm_got.shrink_to_fit();
-	gamma_Z_got = rcgpar::Matrix<double>();
+	gamma_Z_got = seamat::DenseMatrix<double>();
     }
 
     // Test output
     std::vector<double> oldm_got;
-    rcgpar::Matrix<double> gamma_Z_got;
+    seamat::DenseMatrix<double> gamma_Z_got;
 };
-const rcgpar::Matrix<double> LogsumexpTest::oldstep_x_betaFR(std::vector<double>(std::initializer_list<double>(
+const seamat::DenseMatrix<double> LogsumexpTest::oldstep_x_betaFR(std::vector<double>(std::initializer_list<double>(
     { 7.49005, 7.42931, 7.2764,  7.43193, 7.36678, 7.20105, 7.28606, 7.2082,  7.00366, 7.41032,
       7.43893, 7.37819, 7.22528, 7.3808,  7.31566, 7.14993, 7.23494, 7.15708, 6.95253, 7.3608,
       7.01656, 6.95583, 6.80291, 6.96004, 6.89489, 6.72916, 6.83289, 6.75504, 6.55049, 6.93683,
@@ -144,16 +144,16 @@ protected:
 	gamma_Z_got = expected_gamma_Z;
     }
     void TearDown() {
-	gamma_Z_got = rcgpar::Matrix<double>();
+	gamma_Z_got = seamat::DenseMatrix<double>();
     }
 
     // Expecteds
-    static const rcgpar::Matrix<double> expected_reverted_gamma_Z;
+    static const seamat::DenseMatrix<double> expected_reverted_gamma_Z;
 
     // Test outputs
-    rcgpar::Matrix<double> gamma_Z_got;
+    seamat::DenseMatrix<double> gamma_Z_got;
 };
-const rcgpar::Matrix<double> RevertStepTest::expected_reverted_gamma_Z(std::vector<double>(std::initializer_list<double>(
+const seamat::DenseMatrix<double> RevertStepTest::expected_reverted_gamma_Z(std::vector<double>(std::initializer_list<double>(
     { 14.9683, 14.9075, 14.7546, 14.9101, 14.845,  14.6793, 14.7643, 14.6864, 14.4819, 14.8885,
       14.6988, 14.638,  14.4851, 14.6406, 14.5755, 14.4098, 14.4948, 14.4169, 14.2124, 14.259,
       12.5584, 12.4976, 12.3447, 12.1402, 12.0751, 11.9093, 7.77959, 7.70174, 7.49719, 12.4787,
@@ -177,14 +177,14 @@ protected:
 class RcgOptlMatTest : public ::testing::Test, protected LogLikelihoodTest, protected LogCountsTest, protected Alpha0Test, protected ExpectedBoundConstTest, protected FinalGammaZTest {
 protected:
     void SetUp() {
-        final_gamma_Z_got = rcgpar::Matrix<double>(logl.get_rows(), logl.get_cols(), std::log(1.0/(double)logl.get_rows()));
+        final_gamma_Z_got = seamat::DenseMatrix<double>(logl.get_rows(), logl.get_cols(), std::log(1.0/(double)logl.get_rows()));
     }
     void TearDown() {
-        final_gamma_Z_got = rcgpar::Matrix<double>();
+        final_gamma_Z_got = seamat::DenseMatrix<double>();
     }
 
     // Test outputs
-    rcgpar::Matrix<double> final_gamma_Z_got;
+    seamat::DenseMatrix<double> final_gamma_Z_got;
 };
 
 #endif
