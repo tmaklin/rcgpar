@@ -32,7 +32,6 @@
 #include <numeric>
 #include <fstream>
 
-#include "openmp_config.hpp"
 #include "mpi_config.hpp"
 
 namespace rcgpar {
