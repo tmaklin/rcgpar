@@ -27,11 +27,7 @@
 
 #include "Matrix.hpp"
 
-#include <omp.h>
-#include <algorithm>
-#pragma omp declare reduction(vec_double_plus : std::vector<double> :	\
-                              std::transform(omp_out.begin(), omp_out.end(), omp_in.begin(), omp_out.begin(), std::plus<double>())) \
-                    initializer(omp_priv = decltype(omp_orig)(omp_orig.size()))
+#include "rcgpar_openmp_config.hpp"
 
 namespace rcgpar {
 double digamma(double in);
