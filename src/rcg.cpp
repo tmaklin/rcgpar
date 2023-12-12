@@ -184,6 +184,7 @@ void rcg_optl_mat(const seamat::Matrix<double> &logl, const std::vector<double> 
 		  const std::vector<double> &alpha0,
 		  const long double bound_const, const double tol, const uint16_t max_iters,
 		  const bool mpi_mode, seamat::Matrix<double> &gamma_Z, std::ostream &log) {
+    double tolerance = tol;
     uint16_t n_groups = alpha0.size();
     uint32_t n_obs = log_times_observed.size();
 
@@ -239,13 +240,15 @@ void rcg_optl_mat(const seamat::Matrix<double> &logl, const std::vector<double> 
 	if (k % 5 == 0) {
 	    log << "  " <<  "iter: " << k << ", bound: " << bound << ", |g|: " << newnorm << '\n';
 	}
-	if (bound - oldbound < tol && !didreset) {
+	if (bound - oldbound < tolerance && !didreset) {
 	    // Logsumexp 3
 	    logsumexp(gamma_Z, oldm);
 	    log << std::endl;
 	    return;
 	}
-	if(newnorm < 0) break; // At the limit of floating point accuracy?
+	if (newnorm < 0) { // At the limit of floating point accuracy
+	    tolerance *= 10;
+	}
     }
     // Logsumexp 3
     logsumexp(gamma_Z, oldm);
