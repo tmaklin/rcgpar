@@ -245,6 +245,7 @@ void rcg_optl_mat(const seamat::Matrix<double> &logl, const std::vector<double> 
 	    log << std::endl;
 	    return;
 	}
+	if(newnorm < 0) break; // At the limit of floating point accuracy?
     }
     // Logsumexp 3
     logsumexp(gamma_Z, oldm);
