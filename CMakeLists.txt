@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.8.12)
-project(rcg-mpi)
+project(rcgpar)
+
 include(FetchContent)
 
 ## Determine build type
@@ -119,7 +120,7 @@ if(GIT_FOUND)
     ERROR_QUIET
     OUTPUT_STRIP_TRAILING_WHITESPACE
   )
-  message( STATUS "rcg-mpi version: ${_BUILD_VERSION}")
+  message( STATUS "rcgpar version: ${_BUILD_VERSION}")
 else()
   message(STATUS "GIT not found, version numbering disabled")
   set(_BUILD_VERSION "unknown")
