@@ -22,18 +22,12 @@
 
 // Riemannian conjugate gradient for parameter estimation.
 
-#include "rcgpar_mpi_config.hpp"
-
 #include <exception>
 #include <string>
 #include <cmath>
 #include <iostream>
 
 #include "rcg.hpp"
-
-#if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
-#include "MpiHandler.hpp"
-#endif
 
 namespace rcgpar {
 void check_input(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters) {
@@ -53,23 +47,6 @@ void check_input(const seamat::Matrix<double> &logl, const std::vector<double> &
     }
 }
 
-#if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
-void check_mpi(const MpiHandler &handler) {
-    if (handler.get_status() != MPI_SUCCESS) {
-	int len,eclass;
-	char mpi_error[MPI_MAX_ERROR_STRING];
-	MPI_Error_class(handler.get_status(), &eclass);
-	MPI_Error_string(handler.get_status(), mpi_error, &len);
-	throw std::runtime_error("MPI returned an error: " + std::string(mpi_error));
-    }
-    if (handler.get_n_tasks() > RCGPAR_MPI_MAX_PROCESSES) {
-	std::string msg("Number of MPI tasks is greater than the allowed " + std::to_string(RCGPAR_MPI_MAX_PROCESSES) +
-				 ".\nRecompile rcgpar with '-DCMAKE_MPI_MAX_PROCESSES=<big number>' to support more tasks.");
-	throw std::runtime_error(msg);
-    }
-}
-#endif
-
 seamat::DenseMatrix<double> rcg_optl_omp(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, std::ostream &log) {
     // Validate input data
     check_input(logl, log_times_observed, alpha0, tol, max_iters);
@@ -86,68 +63,7 @@ seamat::DenseMatrix<double> rcg_optl_omp(const seamat::Matrix<double> &logl, con
     return(gamma_Z);
 }
 
-#if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
 seamat::DenseMatrix<double> rcg_optl_mpi(const seamat::Matrix<double> &logl_full, const std::vector<double> &log_times_observed_full, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, std::ostream &log) {
-    // Input data dimensions
-    const uint16_t n_groups = alpha0.size();
-    uint32_t n_obs = log_times_observed_full.size();
-
-    // MPI handler
-    MpiHandler handler;
-    const int rank = handler.get_rank();
-
-    // Validate input data on root process and abort if incorrect
-    if (rank == 0) {
-      check_input(logl_full, log_times_observed_full, alpha0, tol, max_iters);
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    // Check that MPI is running and setup correctly
-    check_mpi(handler);
-
-    // Initialize variables for MPI
-    MPI_Bcast(&n_obs, 1, MPI_UINT32_T, 0, MPI_COMM_WORLD);
-    handler.initialize(n_obs);
-    const uint32_t n_obs_per_task = handler.obs_per_task(n_obs);
-    const int* displs = handler.get_displacements();
-    const int* sendcounts = handler.get_bufcounts();
-
-    std::vector<double> log_times_observed(n_obs_per_task);
-    MPI_Scatterv(&log_times_observed_full.front(), sendcounts, displs, MPI_DOUBLE, &log_times_observed.front(), n_obs_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-    // log likelihoods
-    seamat::DenseMatrix<double> logl_partial(n_groups, n_obs_per_task, 0.0);
-    for (uint16_t i = 0; i < n_groups; ++i) {
-	MPI_Scatterv(&logl_full.front() + i*n_obs, sendcounts, displs, MPI_DOUBLE, &logl_partial.front() + i*n_obs_per_task, n_obs_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    }
-
-    // Validate input data again on all processes to check that the scatters went through OK.
-    check_input(logl_partial, log_times_observed, alpha0, tol, max_iters);
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    // Initialize partial gamma_Z
-    seamat::DenseMatrix<double> gamma_Z_partial = seamat::DenseMatrix<double>(n_groups, n_obs_per_task, std::log(1.0/(double)n_groups));
-
-    // ELBO constant
-    double bound_const = 0.0;
-    if (rank == 0) {
-	bound_const = calc_bound_const(log_times_observed_full, alpha0);
-    }
-    MPI_Bcast(&bound_const, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-    // Estimate gamma_Z partials
-    rcg_optl_mat(logl_partial, log_times_observed, alpha0,
-		 bound_const, tol, max_iters,
-		 true, gamma_Z_partial, log);
-
-    // Construct gamma_Z from the partials
-    seamat::DenseMatrix<double> gamma_Z_full(n_groups, n_obs, 0.0);
-    for (uint16_t i = 0; i < n_groups; ++i) {
-	MPI_Gatherv(&gamma_Z_partial.front() + i*n_obs_per_task, n_obs_per_task, MPI_DOUBLE, &gamma_Z_full.front() + i*n_obs, sendcounts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    }
-    MPIX_Bcast_x(&gamma_Z_full.front(), n_groups*n_obs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-    return(gamma_Z_full);
+    throw std::runtime_error("`rcg_optl_mpi` is no longer supported by rcgpar, switch to rcg_optl_omp instead. `rcg_optl_mpi`  will be removed in the next major release."); 
 }
-#endif
 }
