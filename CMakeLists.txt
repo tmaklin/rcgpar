@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.8.12)
 project(rcg-mpi)
+include(FetchContent)
 
 ## Determine build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -82,6 +83,21 @@ endif()
 ## seamat
 if (DEFINED CMAKE_SEAMAT_HEADERS)
   message(STATUS "seamat headers provided in: ${CMAKE_SEAMAT_HEADERS}")
+else()
+  message(STATUS "Downloading seamat headers...")
+  FetchContent_Declare(seamat
+    GIT_REPOSITORY    https://github.com/tmaklin/seamat.git
+    GIT_TAG           v0.2.1
+    PREFIX            "external"
+    SOURCE_DIR        "${CMAKE_CURRENT_SOURCE_DIR}/external/seamat"
+    BUILD_IN_SOURCE   0
+    CMAKE_ARGS        -D CMAKE_BUILD_TESTS=0
+    BUILD_COMMAND     ""
+    CONFIGURE_COMMAND ""
+    INSTALL_COMMAND   ""
+    )
+  FetchContent_MakeAvailable(seamat)
+  set(CMAKE_SEAMAT_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/external/seamat/include)
 endif()
 include_directories(${CMAKE_SEAMAT_HEADERS})
 
@@ -115,26 +131,20 @@ if(CMAKE_BUILD_TESTS)
   if (DEFINED CMAKE_GOOGLETEST_HEADERS)
     message(STATUS "googletest headers provided in: ${CMAKE_GOOGLETEST_HEADERS}")
   else()
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/CMakeLists-googletest.txt.in ${CMAKE_CURRENT_BINARY_DIR}/external/googletest-download/CMakeLists.txt)
-    execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-      RESULT_VARIABLE result
-      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/external/googletest-download )
-    if(result)
-      message(FATAL_ERROR "CMake step for googletest failed: ${result}")
-    endif()
-    execute_process(COMMAND ${CMAKE_COMMAND} --build .
-      RESULT_VARIABLE result
-      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/external/googletest-download )
-    if(result)
-      message(FATAL_ERROR "Build step for googletest failed: ${result}")
-    endif()
-    set(CMAKE_GOOGLETEST_HEADERS ${CMAKE_CURRENT_BINARY_DIR}/external/googletest/googletest/include)
-    add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/external/googletest
-                     ${CMAKE_CURRENT_BINARY_DIR}/external/googletest/build)
-  endif()
-  set_target_properties(gmock PROPERTIES EXCLUDE_FROM_ALL 1)
-  set_target_properties(gmock_main PROPERTIES EXCLUDE_FROM_ALL 1)
-  include_directories("${CMAKE_GOOGLETEST_HEADERS}")
+    FetchContent_Declare(googletest
+      GIT_REPOSITORY    https://github.com/google/googletest.git
+      GIT_TAG           release-1.11.0
+      PREFIX            "external"
+      SOURCE_DIR        "${CMAKE_CURRENT_SOURCE_DIR}/external/googletest"
+      BINARY_DIR        "${CMAKE_CURRENT_BINARY_DIR}/external/googletest"
+      BUILD_IN_SOURCE   0
+      CMAKE_ARGS      -D CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+		      -D "CMAKE_C_FLAGS=${CMAKE_C_FLAGS}"
+		      -D "CMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}"
+		      -D "CMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+		      -D "CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+    INSTALL_COMMAND   ""
+    )
   enable_testing()
   add_executable(runUnitTests
     ${CMAKE_CURRENT_SOURCE_DIR}/test/src/rcg_unittest.cpp
@@ -148,14 +158,22 @@ if(CMAKE_BUILD_TESTS)
     add_test(runMpiTest runMpiTest)
   endif()
 endif()
+endif()
 
+## BitMagic
+if (DEFINED CMAKE_BITMAGIC_HEADERS)
+  message(STATUS "BitMagic headers provided in: ${CMAKE_BITMAGIC_HEADERS}")
+else()
+  message(FATAL_ERROR "Provide BitMagic headers with -DCMAKE_BITMAGIC_HEADERS")
+endif()
+include_directories(${CMAKE_BITMAGIC_HEADERS})
 
 ## Generate a version.h file containing build version and timestamp
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/version.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/version.h @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/rcgpar_version.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/rcgpar_version.h @ONLY)
 ## Configure OpenMP if it's supported on the system.
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/rcgpar_openmp_config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/include/rcgpar_openmp_config.hpp @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/rcgpar_openmp_config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/include/rcgpar_openmp_config.hpp @ONLY)
 ## Configure MPI if it's supported on the system.
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config/mpi_config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/include/mpi_config.hpp @ONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/rcgpar_mpi_config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/include/rcgpar_mpi_config.hpp @ONLY)
 
 ## Includes
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include
