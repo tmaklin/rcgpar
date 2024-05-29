@@ -20,7 +20,7 @@
 //
 #ifndef RCGPAR_MPIHANDLER_HPP
 #define RCGPAR_MPIHANDLER_HPP
-#include "mpi_config.hpp"
+#include "rcgpar_mpi_config.hpp"
 
 #include <cstddef>
 

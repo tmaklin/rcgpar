@@ -32,8 +32,7 @@
 #include <numeric>
 #include <fstream>
 
-#include "openmp_config.hpp"
-#include "mpi_config.hpp"
+#include "rcgpar_mpi_config.hpp"
 
 namespace rcgpar {
 double digamma(double x) {
