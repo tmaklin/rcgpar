@@ -29,15 +29,21 @@ set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 ## Check dependencies
+### Torch
+find_package(Torch REQUIRED)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+
 ### OpenMP
 find_package(OpenMP)
 if (OPENMP_FOUND)
   set(RCGPAR_OPENMP_SUPPORT 1)
+  set(SEAMAT_OPENMP_SUPPORT 1)
   set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -D_GLIBCXX_PARALLEL")
   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -D_GLIBCXX_PARALLEL")
   set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS} -D_GLIBCXX_PARALLEL")
 else()
   set(RCGPAR_OPENMP_SUPPORT 0)
+  set(SEAMAT_OPENMP_SUPPORT 0)
 endif()
 
 ### MPI
@@ -87,8 +93,8 @@ if (DEFINED CMAKE_SEAMAT_HEADERS)
 else()
   message(STATUS "Downloading seamat headers...")
   FetchContent_Declare(seamat
-    GIT_REPOSITORY    https://github.com/tmaklin/seamat.git
-    GIT_TAG           v0.2.1
+    GIT_REPOSITORY    https://github.com/Piketulus/seamat.git
+    GIT_TAG           v0.2.3
     PREFIX            "external"
     SOURCE_DIR        "${CMAKE_CURRENT_SOURCE_DIR}/external/seamat"
     BUILD_IN_SOURCE   0
@@ -99,6 +105,8 @@ else()
     )
   FetchContent_MakeAvailable(seamat)
   set(CMAKE_SEAMAT_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/external/seamat/include)
+  set(CMAKE_BITMAGIC_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/external/seamat/external/BitMagic-7.12.3/src/)
+  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/external/seamat/include/seamat_openmp_config.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/external/seamat/include/seamat_openmp_config.hpp @ONLY)
 endif()
 include_directories(${CMAKE_SEAMAT_HEADERS})
 
@@ -188,11 +196,12 @@ add_library(rcgutils ${CMAKE_CURRENT_SOURCE_DIR}/src/util.cpp)
 ### OpenMP parallellized rcg
 add_library(rcgomp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg_gpu.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp)
 
 ## Link unit tests with rcgomp
 if(CMAKE_BUILD_TESTS)
-  target_link_libraries(runUnitTests rcgomp rcgutils gtest gtest_main)
+  target_link_libraries(runUnitTests rcgomp rcgutils gtest gtest_main "${TORCH_LIBRARIES}")
 endif()
 
 if (MPI_FOUND)
@@ -200,22 +209,22 @@ if (MPI_FOUND)
   add_library(rcgmpi
     ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp)
-  target_link_libraries(rcgmpi rcgutils)
+  target_link_libraries(rcgmpi rcgutils "${TORCH_LIBRARIES}")
   add_dependencies(rcgmpi bigmpi)
   ## Unit tests
   if(CMAKE_BUILD_TESTS)
-    target_link_libraries(runMpiTest rcgmpi gtest gtest_main)
+    target_link_libraries(runMpiTest rcgmpi gtest gtest_main "${TORCH_LIBRARIES}")
   endif()
 endif()
 
 # Link libraries
 if (OPENMP_FOUND)
   if (MPI_FOUND)
-    target_link_libraries(rcgmpi OpenMP::OpenMP_CXX ${LIBRARY_OUTPUT_PATH}/libbigmpi.a) ## Hybrid parallellization
+    target_link_libraries(rcgmpi OpenMP::OpenMP_CXX ${LIBRARY_OUTPUT_PATH}/libbigmpi.a "${TORCH_LIBRARIES}") ## Hybrid parallellization
   endif()
   if (BUILD_TESTS)
-    target_link_libraries(rcgomp rcgutils runUnitTests OpenMP::OpenMP_CXX)
+    target_link_libraries(rcgomp rcgutils runUnitTests OpenMP::OpenMP_CXX "${TORCH_LIBRARIES}")
   else()
-    target_link_libraries(rcgomp rcgutils OpenMP::OpenMP_CXX)
+    target_link_libraries(rcgomp rcgutils OpenMP::OpenMP_CXX "${TORCH_LIBRARIES}")
   endif()
 endif()
