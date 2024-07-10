@@ -90,7 +90,7 @@ seamat::DenseMatrix<double> rcg_optl_omp(const seamat::Matrix<double> &logl, con
     return(gamma_Z);
 }
 
-seamat::DenseMatrix<double> rcg_optl_gpu(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, std::ostream &log) {
+seamat::DenseMatrix<double> rcg_optl_torch(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, std::ostream &log) {
     // Validate input data
     check_input(logl, log_times_observed, alpha0, tol, max_iters);
 
