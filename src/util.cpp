@@ -20,6 +20,9 @@
 //
 #include "rcgpar.hpp"
 
+#include <vector>
+#include <torch/torch.h>
+
 namespace rcgpar {
 std::vector<double> mixture_components(const seamat::Matrix<double> &probs, const std::vector<double> &log_times_observed) {
   std::vector<double> thetas(probs.get_rows(), 0.0);
@@ -32,5 +35,24 @@ std::vector<double> mixture_components(const seamat::Matrix<double> &probs, cons
     thetas[i] /= n_times_total;
   }
   return thetas;
+}
+
+std::vector<double> mixture_components_torch(const seamat::Matrix<double> &probs, const std::vector<double> &log_times_observed) {
+  std::vector<double> probs_vec = probs.get_data();
+  
+  // Choose the device
+  auto device = torch::cuda::is_available() ? torch::kCUDA : torch::kCPU;
+  torch::Dtype precision = torch::kFloat64;
+
+  uint32_t rows = probs.get_rows();
+  uint32_t cols = probs.get_cols();
+  
+  torch::Tensor probs_ten = torch::from_blob((double*)probs_vec.data(), {rows, cols}, precision).clone().to(device);
+  torch::Tensor log_times_observed_ten = torch::from_blob((double*)log_times_observed.data(), {cols}, precision).clone().to(device);
+  torch::Tensor n_times_total = torch::sum(torch::exp(log_times_observed_ten));
+  torch::Tensor thetas = torch::sum(torch::exp(probs_ten + log_times_observed_ten), 1) / n_times_total;
+  thetas = thetas.to(torch::kCPU);
+  std::vector<double> thetas_vec(thetas.data_ptr<double>(), thetas.data_ptr<double>() + thetas.numel());
+  return thetas_vec;
 }
 }

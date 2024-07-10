@@ -42,6 +42,8 @@ seamat::DenseMatrix<double> rcg_optl_gpu(const seamat::Matrix<double> &logl, con
 				const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, 
 				std::ostream &log);
 
+std::vector<double> mixture_components_torch(const seamat::Matrix<double> &probs, const std::vector<double> &log_times_observed);
+
 }
 
 #endif
