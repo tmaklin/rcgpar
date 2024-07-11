@@ -1,6 +1,7 @@
 #include <fstream>
 #include <torch/torch.h>
 
+namespace rcgpar {
 torch::Tensor em_algorithm(torch::Tensor &log_likelihoods, torch::Tensor &loglik_counts_tensor, double threshold, uint16_t max_iters, std::ostream &log, torch::ScalarType dtype) {
 
     torch::Device device = log_likelihoods.device();
@@ -12,7 +13,7 @@ torch::Tensor em_algorithm(torch::Tensor &log_likelihoods, torch::Tensor &loglik
     torch::Tensor log_weighted_likelihoods = torch::empty({num_rows, num_cols}, dtype).to(device);
 
     torch::Tensor theta = torch::ones({num_cols}, dtype).to(device) / num_cols;
-    torch::Tensor prev_loss = torch::tensor(std::numeric_limits<double>::infinity(), dtype).to(device);
+    torch::Tensor prev_loss = torch::tensor(1000000, dtype).to(device);
     torch::Tensor threshold_tensor = torch::tensor(threshold, dtype).to(device);
 
     for (uint16_t iteration = 0; iteration < max_iters; ++iteration) {
@@ -38,14 +39,15 @@ torch::Tensor em_algorithm(torch::Tensor &log_likelihoods, torch::Tensor &loglik
             break;
         }
         prev_loss.copy_(loss);
-
+        
         if (iteration % 5 == 0) {
             log << "iter: " << iteration << " loss: " << loss.item<double>() << '\n';
         }
-
+        
         // Update theta
         theta.copy_(new_theta);
     }
 
     return theta;
 }
+} // namespace rcgpar

@@ -148,25 +148,25 @@ std::vector<double> em_torch(const seamat::Matrix<double> &logl, const std::vect
     torch::ScalarType dtype;
     if (precision == "double") {
         dtype = torch::kFloat64;
-        torch::Tensor logl_ten = torch::from_blob((double*)logl_vec.data(), {n_groups, n_obs}, dtype).clone().to(device);
+        torch::Tensor logl_ten = torch::from_blob((double*)logl_vec.data(), {n_groups, n_obs}, dtype).clone().to(device).t();
         torch::Tensor log_times_observed_ten = torch::from_blob((double*)log_times_observed.data(), {n_obs}, dtype).clone().to(device);
 
         theta = em_algorithm(logl_ten, log_times_observed_ten, tol, max_iters, log, dtype);
+        theta = theta.to(torch::kCPU);
+        std::vector<double> theta_vec(theta.data_ptr<double>(), theta.data_ptr<double>() + theta.numel());
+        return(theta_vec);
     } else {
         dtype = torch::kFloat32;
         std::vector<float> logl_vec_float(logl_vec.begin(), logl_vec.end());
         std::vector<float> log_times_observed_float(log_times_observed.begin(), log_times_observed.end());
-        torch::Tensor logl_ten = torch::from_blob((float*)logl_vec_float.data(), {n_groups, n_obs}, dtype).clone().to(device);
+        torch::Tensor logl_ten = torch::from_blob((float*)logl_vec_float.data(), {n_groups, n_obs}, dtype).clone().to(device).t();
         torch::Tensor log_times_observed_ten = torch::from_blob((float*)log_times_observed_float.data(), {n_obs}, dtype).clone().to(device);
 
         theta = em_algorithm(logl_ten, log_times_observed_ten, tol, max_iters, log, dtype);
+        theta = theta.to(torch::kCPU);
+        std::vector<double> theta_vec(theta.data_ptr<float>(), theta.data_ptr<float>() + theta.numel());
+        return(theta_vec);
     }
-
-    theta = theta.to(torch::kCPU);
-
-    std::vector<double> theta_vec(theta.data_ptr<double>(), theta.data_ptr<double>() + theta.numel());
-
-    return(theta_vec);
 }
 
 #if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1

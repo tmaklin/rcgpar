@@ -197,6 +197,7 @@ add_library(rcgutils ${CMAKE_CURRENT_SOURCE_DIR}/src/util.cpp)
 add_library(rcgomp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg_gpu.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/em_gpu.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp)
 
 ## Link unit tests with rcgomp

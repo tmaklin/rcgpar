@@ -10,7 +10,7 @@
 
 namespace rcgpar {
 
-torch::Tensor em_algorithm(torch::Tensor &log_likelihoods, torch::Tensor &loglik_counts_tensor, torch::ScalarType dtype, double threshold, uint16_t max_iters, std::ostream &log);
+torch::Tensor em_algorithm(torch::Tensor &log_likelihoods, torch::Tensor &loglik_counts_tensor, double threshold, uint16_t max_iters, std::ostream &log, torch::ScalarType dtype);
 
 } // namespace rcgpar
 
