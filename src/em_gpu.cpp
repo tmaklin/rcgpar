@@ -1,3 +1,5 @@
+#include "em_gpu.hpp"
+
 #include <fstream>
 #include <torch/torch.h>
 
