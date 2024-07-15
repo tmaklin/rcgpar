@@ -75,7 +75,7 @@ Simply include the `rcgpar.hpp` header in your project. This header
 provides four functions: 'rcgpar::rcg\_optl\_omp' for OpenMP parallelization, 
 'rcgpar::rcg\_optl\_mpi' for MPI (+OpenMP, if enabled) parallelization,
 'rcgpar::rcg\_optl\_torch' for PyTorch acceleration, and
-'rcgpar::em\_torch' a differen algorithm with PyTorch acceleration.
+'rcgpar::em\_torch' a different algorithm with PyTorch acceleration.
 
 ### rcg\_optl\_omp, rcg\_optl\_mpi, rcg\_optl\_torch, and em\_torch
 These four functions perform the actual model fitting. All have to be called with the following
