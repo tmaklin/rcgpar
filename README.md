@@ -14,10 +14,10 @@ likelihood matrix in parallel.
 - [LibTorch](https://pytorch.org/get-started/locally/)
 
 #### Optional
-- CUDA Toolkit (if using LibTorch with CUDA support; version depending on downloaded LibTorch)
+- CUDA Toolkit (if using LibTorch with CUDA support; version depending on downloaded LibTorch) or ROCm (if using LibTorch with ROCm support; version depending on downloaded LibTorch)
 - Compiler with OpenMP support.
 
-Without a CUDA supported LibTorch and CUDA Toolkit there will be no GPU acceleration.
+Without a CUDA or ROCm supported LibTorch and CUDA Toolkit or ROCm there will be no GPU acceleration.
 
 ### Compiling from source
 Clone the repository to a suitable folder, enter the directory and run
