@@ -30,18 +30,13 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 ## Check dependencies
 ### Torch
-# Check if Torch has already been found
-if(NOT TARGET Torch::Torch)
-  if(CMAKE_LIBTORCH_PATH)
-    set(Torch_DIR ${CMAKE_LIBTORCH_PATH}/share/cmake/Torch)
-  else()
-    message(FATAL_ERROR "Please provide the path to the libtorch installation directory using -DCMAKE_LIBTORCH_PATH")
-  endif()
-  find_package(Torch REQUIRED)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+if(CMAKE_LIBTORCH_PATH)
+  set(Torch_DIR ${CMAKE_LIBTORCH_PATH}/share/cmake/Torch)
 else()
-  message(STATUS "Torch already found in parent project")
+  message(FATAL_ERROR "Please provide the path to the libtorch installation directory using -DCMAKE_LIBTORCH_PATH")
 endif()
+find_package(Torch REQUIRED)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
 ### OpenMP
 find_package(OpenMP)
