@@ -31,7 +31,7 @@ cd build
 #### OpenMP
 in the `build/` directory, run
 ```
-cmake -DCMAKE_PREFIX_PATH=/absolute/path/to/libtorch ..
+cmake -DCMAKE_LIBTORCH_PATH=/absolute/path/to/libtorch ..
 cmake --build .
 ```
 where `/absolute/path/to/libtorch` should be the absolute (!) path to the unzipped LibTorch distribution.
