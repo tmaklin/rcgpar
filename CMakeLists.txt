@@ -30,6 +30,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 ## Check dependencies
 ### Torch
+if(CMAKE_LIBTORCH_PATH)
+  set(Torch_DIR ${CMAKE_LIBTORCH_PATH}/share/cmake/Torch)
+else()
+  message(FATAL_ERROR "Please provide the path to the libtorch installation directory using -DCMAKE_LIBTORCH_PATH")
+endif()
 find_package(Torch REQUIRED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
