@@ -44,7 +44,7 @@ seamat::DenseMatrix<double> rcg_optl_torch(const seamat::Matrix<double> &logl, c
 
 std::vector<double> mixture_components_torch(const seamat::Matrix<double> &probs, const std::vector<double> &log_times_observed);
 
-std::vector<double> em_torch(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, 
+seamat::DenseMatrix<double> em_torch(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, 
 				const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, 
 				std::ostream &log, std::string precision);
 
