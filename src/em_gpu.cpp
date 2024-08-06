@@ -53,6 +53,6 @@ torch::Tensor em_algorithm(torch::Tensor &log_likelihoods, torch::Tensor &loglik
     log_weighted_likelihoods.copy_(log_likelihoods + torch::log(theta));
     torch::Tensor log_sum_exp = torch::logsumexp(log_weighted_likelihoods, 1, true);
     log_weighted_likelihoods.sub_(log_sum_exp);
-    return log_weighted_likelihoods;
+    return log_weighted_likelihoods.t();
 }
 } // namespace rcgpar
