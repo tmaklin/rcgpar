@@ -110,12 +110,9 @@ std::string precision:
     Either "float" or "double", which determines the precision of the algorithm.
 ```
 
-The optimizers (except for em\_torch) return a KxN `rcgpar::Matrix<double>` type row-major order
+The optimizers return a KxN `rcgpar::Matrix<double>` type row-major order
 matrix, where each row is a probability vector assigning the row to
 the mixture components.
-
-'em\_torch' returns immediately an N-dimensional probability vector
-containing the mixture component proportions (no need for 'mixture\_components')
 
 Note: rcg\_optl\_mpi assumes that the root process holds the full
 'logl' and 'log\_times\_observed values', which are then distributed
@@ -130,10 +127,10 @@ contributions of each mixture component. 'mixture\_components\(_torch)' takes
 the following input arguments:
 ```
 const rcgpar::Matrix<double> &probs:
-    The matrix returned from either rcg_optl_omp or rcg_optl_mpi.
+    The matrix returned from rcg_optl_omp/torch, em_torch, or rcg_optl_mpi.
 const std::vector<double> &log_times_observed:
     The N-dimensional vector of log times observed that was used
-	as input to the call to rcg_optl_omp or rcg_optl_mpi.
+	as input to the call to rcg_optl_omp/torch, em_torch, or rcg_optl_mpi.
 ```
 
 'mixture\_components\(_torch)' will return a N-dimensional probability vector

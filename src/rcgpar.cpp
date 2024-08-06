@@ -128,7 +128,7 @@ seamat::DenseMatrix<double> rcg_optl_torch(const seamat::Matrix<double> &logl, c
     return(gamma_Z_mat);
 }
 
-std::vector<double> em_torch(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, std::ostream &log, std::string precision) {
+seamat::DenseMatrix<double> em_torch(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, std::ostream &log, std::string precision) {
     // Validate input data
     check_input(logl, log_times_observed, alpha0, tol, max_iters);
 
@@ -143,7 +143,7 @@ std::vector<double> em_torch(const seamat::Matrix<double> &logl, const std::vect
         log << "Using GPU" << '\n';
     }
 
-    torch::Tensor theta;
+    torch::Tensor gamma_Z;
 
     torch::ScalarType dtype;
     if (precision == "double") {
@@ -151,10 +151,11 @@ std::vector<double> em_torch(const seamat::Matrix<double> &logl, const std::vect
         torch::Tensor logl_ten = torch::from_blob((double*)logl_vec.data(), {n_groups, n_obs}, dtype).clone().to(device).t();
         torch::Tensor log_times_observed_ten = torch::from_blob((double*)log_times_observed.data(), {n_obs}, dtype).clone().to(device);
 
-        theta = em_algorithm(logl_ten, log_times_observed_ten, tol, max_iters, log, dtype);
-        theta = theta.to(torch::kCPU);
-        std::vector<double> theta_vec(theta.data_ptr<double>(), theta.data_ptr<double>() + theta.numel());
-        return(theta_vec);
+        gamma_Z = em_algorithm(logl_ten, log_times_observed_ten, tol, max_iters, log, dtype);
+        gamma_Z = gamma_Z.to(torch::kCPU);
+        std::vector<double> gamma_Z_vec(gamma_Z.data_ptr<double>(), gamma_Z.data_ptr<double>() + gamma_Z.numel());
+        seamat::DenseMatrix<double> gamma_Z_mat(gamma_Z_vec, n_groups, n_obs);
+        return(gamma_Z_mat);
     } else {
         dtype = torch::kFloat32;
         std::vector<float> logl_vec_float(logl_vec.begin(), logl_vec.end());
@@ -162,10 +163,11 @@ std::vector<double> em_torch(const seamat::Matrix<double> &logl, const std::vect
         torch::Tensor logl_ten = torch::from_blob((float*)logl_vec_float.data(), {n_groups, n_obs}, dtype).clone().to(device).t();
         torch::Tensor log_times_observed_ten = torch::from_blob((float*)log_times_observed_float.data(), {n_obs}, dtype).clone().to(device);
 
-        theta = em_algorithm(logl_ten, log_times_observed_ten, tol, max_iters, log, dtype);
-        theta = theta.to(torch::kCPU);
-        std::vector<double> theta_vec(theta.data_ptr<float>(), theta.data_ptr<float>() + theta.numel());
-        return(theta_vec);
+        gamma_Z = em_algorithm(logl_ten, log_times_observed_ten, tol, max_iters, log, dtype);
+        gamma_Z = gamma_Z.to(torch::kCPU);
+        std::vector<double> gamma_Z_vec(gamma_Z.data_ptr<float>(), gamma_Z.data_ptr<float>() + gamma_Z.numel());
+        seamat::DenseMatrix<double> gamma_Z_mat(gamma_Z_vec, n_groups, n_obs);
+        return(gamma_Z_mat);
     }
 }
 
