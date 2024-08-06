@@ -152,7 +152,7 @@ seamat::DenseMatrix<double> em_torch(const seamat::Matrix<double> &logl, const s
         torch::Tensor log_times_observed_ten = torch::from_blob((double*)log_times_observed.data(), {n_obs}, dtype).clone().to(device);
 
         gamma_Z = em_algorithm(logl_ten, log_times_observed_ten, tol, max_iters, log, dtype);
-        gamma_Z = gamma_Z.to(torch::kCPU);
+        gamma_Z = gamma_Z.to(torch::kCPU).t().contiguous();
         std::vector<double> gamma_Z_vec(gamma_Z.data_ptr<double>(), gamma_Z.data_ptr<double>() + gamma_Z.numel());
         seamat::DenseMatrix<double> gamma_Z_mat(gamma_Z_vec, n_groups, n_obs);
         return(gamma_Z_mat);
@@ -164,7 +164,7 @@ seamat::DenseMatrix<double> em_torch(const seamat::Matrix<double> &logl, const s
         torch::Tensor log_times_observed_ten = torch::from_blob((float*)log_times_observed_float.data(), {n_obs}, dtype).clone().to(device);
 
         gamma_Z = em_algorithm(logl_ten, log_times_observed_ten, tol, max_iters, log, dtype);
-        gamma_Z = gamma_Z.to(torch::kCPU);
+        gamma_Z = gamma_Z.to(torch::kCPU).t().contiguous();
         std::vector<double> gamma_Z_vec(gamma_Z.data_ptr<float>(), gamma_Z.data_ptr<float>() + gamma_Z.numel());
         seamat::DenseMatrix<double> gamma_Z_mat(gamma_Z_vec, n_groups, n_obs);
         return(gamma_Z_mat);
