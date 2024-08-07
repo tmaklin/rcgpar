@@ -148,7 +148,7 @@ seamat::DenseMatrix<double> em_torch(const seamat::Matrix<double> &logl, const s
     torch::ScalarType dtype;
     if (precision == "double") {
         dtype = torch::kFloat64;
-        torch::Tensor logl_ten = torch::from_blob((double*)logl_vec.data(), {n_groups, n_obs}, dtype).clone().to(device).t();
+        torch::Tensor logl_ten = torch::from_blob((double*)logl_vec.data(), {n_groups, n_obs}, dtype).clone().to(device).t().contiguous();
         torch::Tensor log_times_observed_ten = torch::from_blob((double*)log_times_observed.data(), {n_obs}, dtype).clone().to(device);
 
         gamma_Z = em_algorithm(logl_ten, log_times_observed_ten, tol, max_iters, log, dtype);
@@ -160,7 +160,7 @@ seamat::DenseMatrix<double> em_torch(const seamat::Matrix<double> &logl, const s
         dtype = torch::kFloat32;
         std::vector<float> logl_vec_float(logl_vec.begin(), logl_vec.end());
         std::vector<float> log_times_observed_float(log_times_observed.begin(), log_times_observed.end());
-        torch::Tensor logl_ten = torch::from_blob((float*)logl_vec_float.data(), {n_groups, n_obs}, dtype).clone().to(device).t();
+        torch::Tensor logl_ten = torch::from_blob((float*)logl_vec_float.data(), {n_groups, n_obs}, dtype).clone().to(device).t().contiguous();
         torch::Tensor log_times_observed_ten = torch::from_blob((float*)log_times_observed_float.data(), {n_obs}, dtype).clone().to(device);
 
         gamma_Z = em_algorithm(logl_ten, log_times_observed_ten, tol, max_iters, log, dtype);
