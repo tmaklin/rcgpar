@@ -29,14 +29,24 @@
 
 namespace rcgpar {
 seamat::DenseMatrix<double> rcg_optl_omp(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed,
-			    const std::vector<double> &alpha0, const double &tol, uint16_t maxiters,
+			    const std::vector<double> &alpha0, const double &tol, size_t maxiters,
 			    std::ostream &log);
 
 seamat::DenseMatrix<double> rcg_optl_mpi(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed,
-			    const std::vector<double> &alpha0, const double &tol, uint16_t maxiters,
+			    const std::vector<double> &alpha0, const double &tol, size_t maxiters,
 			    std::ostream &log);
-std::vector<double> mixture_components(const seamat::Matrix<double> &probs,
-				       const std::vector<double> &log_times_observed);
+
+std::vector<double> mixture_components(const seamat::Matrix<double> &probs, const std::vector<double> &log_times_observed);
+
+seamat::DenseMatrix<double> rcg_optl_torch(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, 
+				const std::vector<double> &alpha0, const double &tol, size_t max_iters,
+				std::ostream &log);
+
+std::vector<double> mixture_components_torch(const seamat::Matrix<double> &probs, const std::vector<double> &log_times_observed);
+
+seamat::DenseMatrix<double> em_torch(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, 
+				const std::vector<double> &alpha0, const double &tol, size_t max_iters,
+				std::ostream &log, std::string precision);
 
 }
 

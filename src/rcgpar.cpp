@@ -29,21 +29,30 @@
 #include <cmath>
 #include <iostream>
 
+#include <vector>
+
+#include "rcgpar_torch_config.hpp"
+
 #include "rcg.hpp"
+
+#if defined(RCGPAR_TORCH_SUPPORT) && (RCGPAR_TORCH_SUPPORT) == 1
+#include "rcg_gpu.hpp"
+#include "em_gpu.hpp"
+#endif
 
 #if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
 #include "MpiHandler.hpp"
 #endif
 
 namespace rcgpar {
-void check_input(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters) {
-    uint16_t n_groups = logl.get_rows();
-    uint32_t n_obs = logl.get_cols();
+void check_input(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, size_t max_iters) {
+    size_t n_groups = logl.get_rows();
+    size_t n_obs = logl.get_cols();
     if (tol < 0) {
 	throw std::invalid_argument("Tolerance cannot be negative (type: double).");
     }
     if (max_iters == 0) {
-	throw std::invalid_argument("Max iters cannot be 0 (type: uint16_t).");
+	throw std::invalid_argument("Max iters cannot be 0 (type: size_t).");
     }
     if (n_groups != alpha0.size()) {
 	throw std::domain_error("Number of components (rows) in logl differs from the number of values in alpha0.");
@@ -70,7 +79,7 @@ void check_mpi(const MpiHandler &handler) {
 }
 #endif
 
-seamat::DenseMatrix<double> rcg_optl_omp(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, std::ostream &log) {
+seamat::DenseMatrix<double> rcg_optl_omp(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, size_t max_iters, std::ostream &log) {
     // Validate input data
     check_input(logl, log_times_observed, alpha0, tol, max_iters);
 
@@ -86,11 +95,101 @@ seamat::DenseMatrix<double> rcg_optl_omp(const seamat::Matrix<double> &logl, con
     return(gamma_Z);
 }
 
+seamat::DenseMatrix<double> rcg_optl_torch(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, size_t max_iters, std::ostream &log) {
+#if defined(RCGPAR_TORCH_SUPPORT) && (RCGPAR_TORCH_SUPPORT) == 1
+    // Validate input data
+    check_input(logl, log_times_observed, alpha0, tol, max_iters);
+
+    int64_t n_groups = alpha0.size();
+    int64_t n_obs = log_times_observed.size();
+
+    std::vector<double> logl_vec = logl.get_data();
+
+    // Choose the device
+    auto device = torch::cuda::is_available() ? torch::kCUDA : torch::kCPU;
+    if (device == torch::kCUDA) {
+        log << "Using GPU" << '\n';
+    }
+    torch::Dtype precision = torch::kFloat64;
+    torch::TensorOptions options(precision);
+    options = options.device(device);
+
+    torch::Tensor logl_ten = torch::from_blob((double*)logl_vec.data(), {n_groups, n_obs}, precision).clone().to(device);
+    torch::Tensor log_times_observed_ten = torch::from_blob((double*)log_times_observed.data(), {n_obs}, precision).clone().to(device);
+    torch::Tensor alpha0_ten = torch::from_blob((double*)alpha0.data(), {n_groups}, precision).clone().to(device);
+
+    // where gamma_Z is init at 1.0
+    torch::Tensor gamma_Z = torch::full({n_groups, n_obs}, std::log(1.0 / n_groups), options);
+
+    // Estimate gamma_Z
+    rcg_optl_mat_gpu(logl_ten, log_times_observed_ten, alpha0_ten, tol, max_iters, gamma_Z, options, log);
+
+    gamma_Z = gamma_Z.to(torch::kCPU);
+
+    // Convert gamma_Z to a DenseMatrix
+    std::vector<double> gamma_Z_vec(gamma_Z.data_ptr<double>(), gamma_Z.data_ptr<double>() + gamma_Z.numel());
+    seamat::DenseMatrix<double> gamma_Z_mat(gamma_Z_vec, n_groups, n_obs);
+
+    return(gamma_Z_mat);
+#else
+    throw std::runtime_error("rcgpar was not compiled with torch support.");
+    return seamat::DenseMatrix<double>();
+#endif
+}
+
+seamat::DenseMatrix<double> em_torch(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, size_t max_iters, std::ostream &log, std::string precision) {
+#if defined(RCGPAR_TORCH_SUPPORT) && (RCGPAR_TORCH_SUPPORT) == 1
+    // Validate input data
+    check_input(logl, log_times_observed, alpha0, tol, max_iters);
+
+    int64_t n_groups = alpha0.size();
+    int64_t n_obs = log_times_observed.size();
+
+    std::vector<double> logl_vec = logl.get_data();
+
+    // Choose the device
+    auto device = torch::cuda::is_available() ? torch::kCUDA : torch::kCPU;
+    if (device == torch::kCUDA) {
+        log << "Using GPU" << '\n';
+    }
+
+    torch::Tensor gamma_Z;
+
+    torch::ScalarType dtype;
+    if (precision == "double") {
+        dtype = torch::kFloat64;
+        torch::Tensor logl_ten = torch::from_blob((double*)logl_vec.data(), {n_groups, n_obs}, dtype).clone().to(device).t().contiguous();
+        torch::Tensor log_times_observed_ten = torch::from_blob((double*)log_times_observed.data(), {n_obs}, dtype).clone().to(device);
+
+        gamma_Z = em_algorithm(logl_ten, log_times_observed_ten, tol, max_iters, log, dtype);
+        gamma_Z = gamma_Z.to(torch::kCPU).t().contiguous();
+        std::vector<double> gamma_Z_vec(gamma_Z.data_ptr<double>(), gamma_Z.data_ptr<double>() + gamma_Z.numel());
+        seamat::DenseMatrix<double> gamma_Z_mat(gamma_Z_vec, n_groups, n_obs);
+        return(gamma_Z_mat);
+    } else {
+        dtype = torch::kFloat32;
+        std::vector<float> logl_vec_float(logl_vec.begin(), logl_vec.end());
+        std::vector<float> log_times_observed_float(log_times_observed.begin(), log_times_observed.end());
+        torch::Tensor logl_ten = torch::from_blob((float*)logl_vec_float.data(), {n_groups, n_obs}, dtype).clone().to(device).t().contiguous();
+        torch::Tensor log_times_observed_ten = torch::from_blob((float*)log_times_observed_float.data(), {n_obs}, dtype).clone().to(device);
+
+        gamma_Z = em_algorithm(logl_ten, log_times_observed_ten, tol, max_iters, log, dtype);
+        gamma_Z = gamma_Z.to(torch::kCPU).t().contiguous();
+        std::vector<double> gamma_Z_vec(gamma_Z.data_ptr<float>(), gamma_Z.data_ptr<float>() + gamma_Z.numel());
+        seamat::DenseMatrix<double> gamma_Z_mat(gamma_Z_vec, n_groups, n_obs);
+        return(gamma_Z_mat);
+    }
+#else
+    throw std::runtime_error("rcgpar was not compiled with torch support.");
+    return seamat::DenseMatrix<double>();
+#endif
+}
+
 #if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
-seamat::DenseMatrix<double> rcg_optl_mpi(const seamat::Matrix<double> &logl_full, const std::vector<double> &log_times_observed_full, const std::vector<double> &alpha0, const double &tol, uint16_t max_iters, std::ostream &log) {
+seamat::DenseMatrix<double> rcg_optl_mpi(const seamat::Matrix<double> &logl_full, const std::vector<double> &log_times_observed_full, const std::vector<double> &alpha0, const double &tol, size_t max_iters, std::ostream &log) {
     // Input data dimensions
-    const uint16_t n_groups = alpha0.size();
-    uint32_t n_obs = log_times_observed_full.size();
+    const size_t n_groups = alpha0.size();
+    size_t n_obs = log_times_observed_full.size();
 
     // MPI handler
     MpiHandler handler;
@@ -106,9 +205,9 @@ seamat::DenseMatrix<double> rcg_optl_mpi(const seamat::Matrix<double> &logl_full
     check_mpi(handler);
 
     // Initialize variables for MPI
-    MPI_Bcast(&n_obs, 1, MPI_UINT32_T, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&n_obs, 1, MPI_SIZE_T, 0, MPI_COMM_WORLD);
     handler.initialize(n_obs);
-    const uint32_t n_obs_per_task = handler.obs_per_task(n_obs);
+    const size_t n_obs_per_task = handler.obs_per_task(n_obs);
     const int* displs = handler.get_displacements();
     const int* sendcounts = handler.get_bufcounts();
 
@@ -117,7 +216,7 @@ seamat::DenseMatrix<double> rcg_optl_mpi(const seamat::Matrix<double> &logl_full
 
     // log likelihoods
     seamat::DenseMatrix<double> logl_partial(n_groups, n_obs_per_task, 0.0);
-    for (uint16_t i = 0; i < n_groups; ++i) {
+    for (size_t i = 0; i < n_groups; ++i) {
 	MPI_Scatterv(&logl_full.front() + i*n_obs, sendcounts, displs, MPI_DOUBLE, &logl_partial.front() + i*n_obs_per_task, n_obs_per_task, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     }
 
@@ -142,7 +241,7 @@ seamat::DenseMatrix<double> rcg_optl_mpi(const seamat::Matrix<double> &logl_full
 
     // Construct gamma_Z from the partials
     seamat::DenseMatrix<double> gamma_Z_full(n_groups, n_obs, 0.0);
-    for (uint16_t i = 0; i < n_groups; ++i) {
+    for (size_t i = 0; i < n_groups; ++i) {
 	MPI_Gatherv(&gamma_Z_partial.front() + i*n_obs_per_task, n_obs_per_task, MPI_DOUBLE, &gamma_Z_full.front() + i*n_obs, sendcounts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     }
     MPIX_Bcast_x(&gamma_Z_full.front(), n_groups*n_obs, MPI_DOUBLE, 0, MPI_COMM_WORLD);

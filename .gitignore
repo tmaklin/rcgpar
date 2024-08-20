@@ -1,5 +1,6 @@
 # Local files
 build/
+external/
 
 # Emacs autosaves
 *.*~
