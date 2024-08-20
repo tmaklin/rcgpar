@@ -71,8 +71,9 @@ parallelization when the library is compiled on a system that
 supports both protocols.
 
 ## Usage
-Simply include the `rcgpar.hpp` header in your project. This header
-provides four functions:
+Link against `librcgomp` and/or `librcggpu` and include the
+`rcgpar.hpp` header in your project. This header provides four
+functions:
 - 'rcgpar::rcg\_optl\_omp' using OpenMP
 - 'rcgpar::rcg\_optl\_mpi' using MPI (+OpenMP, if enabled)
 - 'rcgpar::rcg\_optl\_torch' using LibTorch
