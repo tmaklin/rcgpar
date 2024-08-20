@@ -1,9 +1,24 @@
+# rcgpar-gpu
+Adds onto rcgpar by adding two new implementations of inference algorithms for estimating mixture model components from a
+likelihood matrix using PyTorch for GPU acceleration.
+
 # rcgpar - Fit mixture models in HPC environments
 rcgpar provides MPI and OpenMP implementations of a variational
 inference algorithm for estimating mixture model components from a
 likelihood matrix in parallel.
 
 ## Installation
+### Requirements
+- C++17 compliant compiler.
+- cmake
+- [LibTorch](https://pytorch.org/get-started/locally/)
+
+#### Optional
+- CUDA Toolkit (if using LibTorch with CUDA support; version depending on downloaded LibTorch) or ROCm (if using LibTorch with ROCm support; version depending on downloaded LibTorch)
+- Compiler with OpenMP support.
+
+Without a CUDA or ROCm supported LibTorch and CUDA Toolkit or ROCm there will be no GPU acceleration.
+
 ### Compiling from source
 Clone the repository to a suitable folder, enter the directory and run
 ```
@@ -16,11 +31,12 @@ cd build
 #### OpenMP
 in the `build/` directory, run
 ```
-cmake ..
-make
+cmake -DCMAKE_LIBTORCH_PATH=/absolute/path/to/libtorch ..
+cmake --build .
 ```
+where `/absolute/path/to/libtorch` should be the absolute (!) path to the unzipped LibTorch distribution.
 
-creating the `librcgomp` library in `build/lib/`.
+This creates the `librcgomp` library in `build/lib/`.
 
 #### MPI
 You will need to use the appropriate platform-specifc commands
@@ -56,12 +72,13 @@ run the MPI test from the executable runMpiTest.
 
 ## Usage
 Simply include the `rcgpar.hpp` header in your project. This header
-provides two functions: 'rcgpar::rcg\_optl\_omp' for OpenMP parallelization
-and 'rcgpar::rcg\_optl\_mpi' for MPI (+OpenMP, if enabled) parallelization.
+provides four functions: 'rcgpar::rcg\_optl\_omp' for OpenMP parallelization, 
+'rcgpar::rcg\_optl\_mpi' for MPI (+OpenMP, if enabled) parallelization,
+'rcgpar::rcg\_optl\_torch' for PyTorch acceleration, and
+'rcgpar::em\_torch' a different algorithm with PyTorch acceleration.
 
-### rcg\_optl\_omp and rcg\_optl\_mpi
-These two functions perform the actual model fitting. Both
-'rcg\_optl\_omp' and 'rcg\_optl\_mpi' have to be called with the following
+### rcg\_optl\_omp, rcg\_optl\_mpi, rcg\_optl\_torch, and em\_torch
+These four functions perform the actual model fitting. All have to be called with the following
 arguments:
 ```
 const rcgpar::Matrix<double> &logl:
@@ -87,6 +104,11 @@ std::ostream &log:
     Print status messages here. Silence the messages by supplying a
 	std::ofstream that has not been assigned to any file.
 ```
+'em\_torch' requires the extra argument:
+```
+std::string precision:
+    Either "float" or "double", which determines the precision of the algorithm.
+```
 
 The optimizers return a KxN `rcgpar::Matrix<double>` type row-major order
 matrix, where each row is a probability vector assigning the row to
@@ -98,20 +120,20 @@ from the root process to other processes. Contrary to this, 'alpha0',
 'tol', and 'maxiters' are assumed to be present on all processes when
 calling rcg\_optl\_mpi.
 
-### mixture\_components
-Use 'rcgpar::mixture\_components' to transform the matrix from
-rcg\_optl\_omp/mpi into a probability vector containing the relative
-contributions of each mixture component. 'mixture\_components' takes
+### mixture\_components and mixture\_components\_torch
+Use 'rcgpar::mixture\_components\(_torch)' to transform the matrix from
+rcg\_optl\_omp/mpi/torch into a probability vector containing the relative
+contributions of each mixture component. 'mixture\_components\(_torch)' takes
 the following input arguments:
 ```
 const rcgpar::Matrix<double> &probs:
-    The matrix returned from either rcg_optl_omp or rcg_optl_mpi.
+    The matrix returned from rcg_optl_omp/torch, em_torch, or rcg_optl_mpi.
 const std::vector<double> &log_times_observed:
     The N-dimensional vector of log times observed that was used
-	as input to the call to rcg_optl_omp or rcg_optl_mpi.
+	as input to the call to rcg_optl_omp/torch, em_torch, or rcg_optl_mpi.
 ```
 
-'mixture\_components' will return a N-dimensional probability vector
+'mixture\_components\(_torch)' will return a N-dimensional probability vector
 containing the mixture component proportions.
 
 ### Creating the input matrix
