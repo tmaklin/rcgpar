@@ -47,44 +47,44 @@ double digamma(double x) {
 }
 
 void logsumexp(seamat::Matrix<double> &gamma_Z) {
-    uint32_t n_obs = gamma_Z.get_cols();
-    uint16_t n_groups = gamma_Z.get_rows();
+    size_t n_obs = gamma_Z.get_cols();
+    size_t n_groups = gamma_Z.get_rows();
 
 #pragma omp parallel for schedule(static)
-    for (uint32_t i = 0; i < n_obs; ++i) {
+    for (size_t i = 0; i < n_obs; ++i) {
 	double m = gamma_Z.log_sum_exp_col<double>(i);
-	for (uint16_t j = 0; j < n_groups; ++j) {
+	for (size_t j = 0; j < n_groups; ++j) {
 	    gamma_Z(j, i) -= m;
 	}
     }
 }
 
 void logsumexp(seamat::Matrix<double> &gamma_Z, std::vector<double> &m) {
-    uint32_t n_obs = gamma_Z.get_cols();
-    uint16_t n_groups = gamma_Z.get_rows();
+    size_t n_obs = gamma_Z.get_cols();
+    size_t n_groups = gamma_Z.get_rows();
 
 #pragma omp parallel for schedule(static)
-    for (uint32_t i = 0; i < n_obs; ++i) {
+    for (size_t i = 0; i < n_obs; ++i) {
 	m[i] = gamma_Z.log_sum_exp_col<double>(i);
     }
 
 #pragma omp parallel for schedule(static)
-    for (uint16_t i = 0; i < n_groups; ++i) {
-	for (uint32_t j = 0; j < n_obs; ++j) {
+    for (size_t i = 0; i < n_groups; ++i) {
+	for (size_t j = 0; j < n_obs; ++j) {
 	    gamma_Z(i, j) -= m[j];
 	}
     }
 }
 
 double mixt_negnatgrad(const seamat::Matrix<double> &gamma_Z, const std::vector<double> &N_k, const seamat::Matrix<double> &logl, seamat::Matrix<double> &dL_dphi, bool mpi_mode) {
-    uint32_t n_obs = gamma_Z.get_cols();
-    uint16_t n_groups = gamma_Z.get_rows();
+    size_t n_obs = gamma_Z.get_cols();
+    size_t n_groups = gamma_Z.get_rows();
 
     std::vector<double> colsums(n_obs, 0.0);
 #pragma omp parallel for schedule(static) reduction(vec_double_plus:colsums)
-    for (uint16_t i = 0; i < n_groups; ++i) {
+    for (size_t i = 0; i < n_groups; ++i) {
 	double digamma_N_k = digamma(N_k[i]) - 1.0;
-	for (uint32_t j = 0; j < n_obs; ++j) {
+	for (size_t j = 0; j < n_obs; ++j) {
 	    dL_dphi(i, j) = logl(i, j);
 	    dL_dphi(i, j) += digamma_N_k - gamma_Z(i, j);
 	    colsums[j] += dL_dphi(i, j) * std::exp(gamma_Z(i, j));
@@ -93,8 +93,8 @@ double mixt_negnatgrad(const seamat::Matrix<double> &gamma_Z, const std::vector<
 
     double newnorm = 0.0;
 #pragma omp parallel for schedule(static) reduction(+:newnorm)
-    for (uint16_t i = 0; i < n_groups; ++i) {
-	for (uint32_t j = 0; j < n_obs; ++j) {
+    for (size_t i = 0; i < n_groups; ++i) {
+	for (size_t j = 0; j < n_obs; ++j) {
 	    // dL_dgamma(i, j) would be q_Z(i, j) * (dL_dphi(i, j) - colsums[j])
 	    newnorm += std::exp(gamma_Z(i, j)) * (dL_dphi(i, j) - colsums[j]) * dL_dphi(i, j);
 	}
@@ -111,11 +111,11 @@ void update_N_k(const seamat::Matrix<double> &gamma_Z, const std::vector<double>
 
 long double ELBO_rcg_mat(const seamat::Matrix<double> &logl, const seamat::Matrix<double> &gamma_Z, const std::vector<double> &counts, const std::vector<double> &N_k, const double bound_const, const bool mpi_mode) {
     long double bound = 0.0;
-    uint16_t n_groups = gamma_Z.get_rows();
-    uint32_t n_obs = gamma_Z.get_cols();
+    size_t n_groups = gamma_Z.get_rows();
+    size_t n_obs = gamma_Z.get_cols();
 #pragma omp parallel for schedule(static) reduction(+:bound)
-    for (uint16_t i = 0; i < n_groups; ++i) {
-	for (uint32_t j = 0; j < n_obs; ++j) {
+    for (size_t i = 0; i < n_groups; ++i) {
+	for (size_t j = 0; j < n_obs; ++j) {
 	    bound += std::exp(gamma_Z(i, j) + counts[j])*(logl(i, j) - gamma_Z(i, j));
 	}
     }
@@ -127,11 +127,11 @@ long double ELBO_rcg_mat(const seamat::Matrix<double> &logl, const seamat::Matri
 }
 
 void revert_step(seamat::Matrix<double> &gamma_Z, const std::vector<double> &oldm) {
-    uint16_t n_groups = gamma_Z.get_rows();
-    uint32_t n_obs = gamma_Z.get_cols();
+    size_t n_groups = gamma_Z.get_rows();
+    size_t n_obs = gamma_Z.get_cols();
 #pragma omp parallel for schedule(static)
-    for (uint16_t i = 0; i < n_groups; ++i) {
-	for (uint32_t j = 0; j < n_obs; ++j) {
+    for (size_t i = 0; i < n_groups; ++i) {
+	for (size_t j = 0; j < n_obs; ++j) {
 	    gamma_Z(i, j) += oldm[j];
 	}
     }
@@ -139,17 +139,17 @@ void revert_step(seamat::Matrix<double> &gamma_Z, const std::vector<double> &old
 
 double calc_bound_const(const std::vector<double> &log_times_observed, const std::vector<double> &alpha0) {
     double counts_sum = 0.0;
-    uint32_t n_obs = log_times_observed.size();
+    size_t n_obs = log_times_observed.size();
 #pragma omp parallel for schedule(static) reduction(+:counts_sum)
-    for (uint32_t i = 0; i < n_obs; ++i) {
+    for (size_t i = 0; i < n_obs; ++i) {
 	counts_sum += std::exp(log_times_observed[i]);
     }
 
     double alpha0_sum = 0.0;
     double lgamma_alpha0_sum = 0.0;
-    uint16_t n_groups = alpha0.size();
+    size_t n_groups = alpha0.size();
 #pragma omp parallel for schedule(static) reduction(+:alpha0_sum) reduction(+:lgamma_alpha0_sum)
-    for (uint32_t i = 0; i < n_groups; ++i) {
+    for (size_t i = 0; i < n_groups; ++i) {
 	alpha0_sum += alpha0[i];
 	lgamma_alpha0_sum += std::lgamma(alpha0[i]);
     }
@@ -161,11 +161,11 @@ double calc_bound_const(const std::vector<double> &log_times_observed, const std
 
 void rcg_optl_mat(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed,
 		  const std::vector<double> &alpha0,
-		  const long double bound_const, const double tol, const uint16_t max_iters,
+		  const long double bound_const, const double tol, const size_t max_iters,
 		  const bool mpi_mode, seamat::Matrix<double> &gamma_Z, std::ostream &log) {
     double tolerance = tol;
-    uint16_t n_groups = alpha0.size();
-    uint32_t n_obs = log_times_observed.size();
+    size_t n_groups = alpha0.size();
+    size_t n_obs = log_times_observed.size();
 
     // Initialize variables.
     seamat::DenseMatrix<double> step(n_groups, n_obs, 0.0);
@@ -179,7 +179,7 @@ void rcg_optl_mat(const seamat::Matrix<double> &logl, const std::vector<double> 
     update_N_k(gamma_Z, log_times_observed, alpha0, N_k, mpi_mode);
 
     bool didreset = false;
-    for (uint16_t k = 0; k < max_iters; ++k) {
+    for (size_t k = 0; k < max_iters; ++k) {
 	double newnorm = mixt_negnatgrad(gamma_Z, N_k, logl, step);
 	double beta_FR = newnorm/oldnorm;
 	oldnorm = newnorm;
