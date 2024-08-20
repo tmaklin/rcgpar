@@ -72,10 +72,16 @@ supports both protocols.
 
 ## Usage
 Simply include the `rcgpar.hpp` header in your project. This header
-provides four functions: 'rcgpar::rcg\_optl\_omp' for OpenMP parallelization, 
-'rcgpar::rcg\_optl\_mpi' for MPI (+OpenMP, if enabled) parallelization,
-'rcgpar::rcg\_optl\_torch' for PyTorch acceleration, and
-'rcgpar::em\_torch' a different algorithm with PyTorch acceleration.
+provides four functions:
+- 'rcgpar::rcg\_optl\_omp' using OpenMP
+- 'rcgpar::rcg\_optl\_mpi' using MPI (+OpenMP, if enabled)
+- 'rcgpar::rcg\_optl\_torch' using LibTorch
+- 'rcgpar::em\_torch' a different algorithm using LibTorch.
+
+The LibTorch algorithms will run on the GPU if one is
+present. Otherwise, they will run on the CPU. These algorithms are
+faster even when ran on the CPU but `rcg_optl_torch` consumes more
+memory than `rcg_optl_omp`.
 
 ### rcg\_optl\_omp, rcg\_optl\_mpi, rcg\_optl\_torch, and em\_torch
 These four functions perform the actual model fitting. All have to be called with the following
