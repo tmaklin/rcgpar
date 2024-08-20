@@ -1,7 +1,7 @@
 // rcgpar: parallel estimation of mixture model components
 // https://github.com/tmaklin/rcgpar
 //
-// Copyright (C) 2021 Tommi Mäklin (tommi@maklin.fi)
+// Copyright (C) 2024 rcgpar contributors (tommi@maklin.fi)
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -20,8 +20,9 @@
 //
 #include "rcgpar.hpp"
 
+#include "rcgpar_torch_config.hpp"
+
 #include <vector>
-#include <torch/torch.h>
 
 namespace rcgpar {
 std::vector<double> mixture_components(const seamat::Matrix<double> &probs, const std::vector<double> &log_times_observed) {
@@ -38,6 +39,7 @@ std::vector<double> mixture_components(const seamat::Matrix<double> &probs, cons
 }
 
 std::vector<double> mixture_components_torch(const seamat::Matrix<double> &probs, const std::vector<double> &log_times_observed) {
+#if defined(RCGPAR_TORCH_SUPPORT) && (RCGPAR_TORCH_SUPPORT) == 1
   std::vector<double> probs_vec = probs.get_data();
   
   // Choose the device
@@ -54,5 +56,9 @@ std::vector<double> mixture_components_torch(const seamat::Matrix<double> &probs
   thetas = thetas.to(torch::kCPU);
   std::vector<double> thetas_vec(thetas.data_ptr<double>(), thetas.data_ptr<double>() + thetas.numel());
   return thetas_vec;
+#else
+  throw std::runtime_error("rcgpar was not compiled with torch support.");
+  return std::vector<double>();
+#endif
 }
 }

@@ -30,11 +30,15 @@
 #include <iostream>
 
 #include <vector>
-#include <torch/torch.h>
+
+#include "rcgpar_torch_config.hpp"
 
 #include "rcg.hpp"
+
+#if defined(RCGPAR_TORCH_SUPPORT) && (RCGPAR_TORCH_SUPPORT) == 1
 #include "rcg_gpu.hpp"
 #include "em_gpu.hpp"
+#endif
 
 #if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
 #include "MpiHandler.hpp"
@@ -92,6 +96,7 @@ seamat::DenseMatrix<double> rcg_optl_omp(const seamat::Matrix<double> &logl, con
 }
 
 seamat::DenseMatrix<double> rcg_optl_torch(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, size_t max_iters, std::ostream &log) {
+#if defined(RCGPAR_TORCH_SUPPORT) && (RCGPAR_TORCH_SUPPORT) == 1
     // Validate input data
     check_input(logl, log_times_observed, alpha0, tol, max_iters);
 
@@ -126,9 +131,14 @@ seamat::DenseMatrix<double> rcg_optl_torch(const seamat::Matrix<double> &logl, c
     seamat::DenseMatrix<double> gamma_Z_mat(gamma_Z_vec, n_groups, n_obs);
 
     return(gamma_Z_mat);
+#else
+    throw std::runtime_error("rcgpar was not compiled with torch support.");
+    return seamat::DenseMatrix<double>();
+#endif
 }
 
 seamat::DenseMatrix<double> em_torch(const seamat::Matrix<double> &logl, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, const double &tol, size_t max_iters, std::ostream &log, std::string precision) {
+#if defined(RCGPAR_TORCH_SUPPORT) && (RCGPAR_TORCH_SUPPORT) == 1
     // Validate input data
     check_input(logl, log_times_observed, alpha0, tol, max_iters);
 
@@ -169,6 +179,10 @@ seamat::DenseMatrix<double> em_torch(const seamat::Matrix<double> &logl, const s
         seamat::DenseMatrix<double> gamma_Z_mat(gamma_Z_vec, n_groups, n_obs);
         return(gamma_Z_mat);
     }
+#else
+    throw std::runtime_error("rcgpar was not compiled with torch support.");
+    return seamat::DenseMatrix<double>();
+#endif
 }
 
 #if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
