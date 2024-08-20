@@ -1,42 +1,51 @@
-# rcgpar-gpu
-Adds onto rcgpar by adding two new implementations of inference algorithms for estimating mixture model components from a
-likelihood matrix using PyTorch for GPU acceleration.
-
 # rcgpar - Fit mixture models in HPC environments
-rcgpar provides MPI and OpenMP implementations of a variational
+rcgpar provides MPI, OpenMP, and GPU implementations of a variational
 inference algorithm for estimating mixture model components from a
 likelihood matrix in parallel.
 
 ## Installation
+## Compiling from source
 ### Requirements
 - C++17 compliant compiler.
 - cmake
-- [LibTorch](https://pytorch.org/get-started/locally/)
 
 #### Optional
-- CUDA Toolkit (if using LibTorch with CUDA support; version depending on downloaded LibTorch) or ROCm (if using LibTorch with ROCm support; version depending on downloaded LibTorch)
 - Compiler with OpenMP support.
+- [LibTorch](https://pytorch.org/get-started/locally/)
+- CUDA Toolkit or ROCm
 
-Without a CUDA or ROCm supported LibTorch and CUDA Toolkit or ROCm there will be no GPU acceleration.
-
-### Compiling from source
-Clone the repository to a suitable folder, enter the directory and run
+### Compiling
+Clone the rcgpar repository
 ```
+git clone https://github.com/tmaklin/rcgpar
+```
+enter the directory and run
+```
+cd rcgpar
 mkdir build
 cd build
 ```
 
 ... and follow the instructions below.
 
-#### OpenMP
+#### CPU estimation only
 in the `build/` directory, run
 ```
-cmake -DCMAKE_LIBTORCH_PATH=/absolute/path/to/libtorch ..
-cmake --build .
+cmake ..
+make
 ```
-where `/absolute/path/to/libtorch` should be the absolute (!) path to the unzipped LibTorch distribution.
 
 This creates the `librcgomp` library in `build/lib/`.
+
+#### GPU acceleration
+instead of the above, run
+```
+cmake -DCMAKE_LIBTORCH_PATH=/absolute/path/to/libtorch ..
+make
+```
+where `/absolute/path/to/libtorch` should be the absolute (!) path to the LibTorch distribution.
+
+This creates the `librcgomp` and `librcggpu` libraries in `build/lib/`.
 
 #### MPI
 You will need to use the appropriate platform-specifc commands
