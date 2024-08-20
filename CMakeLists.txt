@@ -31,12 +31,24 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 ## Check dependencies
 ### Torch
 if(CMAKE_LIBTORCH_PATH)
+  message(STATUS "Torch libraries provided in: ${CMAKE_LIBTORCH_PATH}")
   set(Torch_DIR ${CMAKE_LIBTORCH_PATH}/share/cmake/Torch)
-else()
-  message(FATAL_ERROR "Please provide the path to the libtorch installation directory using -DCMAKE_LIBTORCH_PATH")
 endif()
-find_package(Torch REQUIRED)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+
+find_package(Torch)
+if (TORCH_FOUND)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+  set(RCGPAR_TORCH_SUPPORT 1)
+  include_directories(${TORCH_INCLUDE_DIRS})
+  message(STATUS "Compiling with GPU and CPU support")
+else()
+  set(RCGPAR_TORCH_SUPPORT 0)
+  if (DEFINED CMAKE_LIBTORCH_PATH)
+    message(FATAL_ERROR "Could not find libtorch in: ${CMAKE_LIBTORCH_PATH}")
+  else()
+    message(STATUS "Compiling with CPU support only")
+  endif()
+endif()
 
 ### OpenMP
 find_package(OpenMP)
@@ -188,6 +200,8 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/rcgpar_version.h.in ${CMAKE_C
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/rcgpar_openmp_config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/include/rcgpar_openmp_config.hpp @ONLY)
 ## Configure MPI if it's supported on the system.
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/rcgpar_mpi_config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/include/rcgpar_mpi_config.hpp @ONLY)
+## Configure Torch
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/rcgpar_torch_config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/include/rcgpar_torch_config.hpp @ONLY)
 
 ## Includes
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -199,15 +213,27 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include
 add_library(rcgutils ${CMAKE_CURRENT_SOURCE_DIR}/src/util.cpp)
 
 ### OpenMP parallellized rcg
-add_library(rcgomp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg_gpu.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/em_gpu.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp)
+if (TORCH_FOUND)
+  add_library(rcgomp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp)
+  add_library(rcggpu
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg_gpu.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/em_gpu.cpp)
+  target_link_libraries(rcgomp rcggpu)
+else()
+  add_library(rcgomp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp)
+endif()
 
 ## Link unit tests with rcgomp
 if(CMAKE_BUILD_TESTS)
-  target_link_libraries(runUnitTests rcgomp rcgutils gtest gtest_main "${TORCH_LIBRARIES}")
+  if (TORCH_FOUND)
+    target_link_libraries(runUnitTests rcgomp rcgutils gtest gtest_main "${TORCH_LIBRARIES}")
+  else()
+    target_link_libraries(runUnitTests rcgomp rcgutils gtest gtest_main)
+  endif()
 endif()
 
 if (MPI_FOUND)
@@ -215,24 +241,44 @@ if (MPI_FOUND)
   add_library(rcgmpi
     ${CMAKE_CURRENT_SOURCE_DIR}/src/rcg.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/rcgpar.cpp)
-  target_link_libraries(rcgmpi rcgutils "${TORCH_LIBRARIES}")
+  if (TORCH_FOUND)
+    target_link_libraries(rcgmpi rcgutils "${TORCH_LIBRARIES}")
+  else()
+    target_link_libraries(rcgmpi rcgutils)
+  endif()
   add_dependencies(rcgmpi bigmpi)
   ## Unit tests
   if(CMAKE_BUILD_TESTS)
-    target_link_libraries(runMpiTest rcgmpi gtest gtest_main "${TORCH_LIBRARIES}")
+    if (TORCH_FOUND)
+      target_link_libraries(runMpiTest rcgmpi gtest gtest_main "${TORCH_LIBRARIES}")
+    else()
+      target_link_libraries(runMpiTest rcgmpi gtest gtest_main)
+    endif()
   endif()
 endif()
 
 # Link libraries
 if (OPENMP_FOUND)
   if (MPI_FOUND)
-    target_link_libraries(rcgmpi OpenMP::OpenMP_CXX ${LIBRARY_OUTPUT_PATH}/libbigmpi.a "${TORCH_LIBRARIES}") ## Hybrid parallellization
+    if (TORCH_FOUND)
+      target_link_libraries(rcgmpi OpenMP::OpenMP_CXX ${LIBRARY_OUTPUT_PATH}/libbigmpi.a "${TORCH_LIBRARIES}") ## Hybrid parallellization
+    else()
+      target_link_libraries(rcgmpi OpenMP::OpenMP_CXX ${LIBRARY_OUTPUT_PATH}/libbigmpi.a) ## Hybrid parallellization
+    endif()
   endif()
   if (BUILD_TESTS)
     target_link_libraries(rcgutils "${TORCH_LIBRARIES}")
-    target_link_libraries(rcgomp rcgutils runUnitTests OpenMP::OpenMP_CXX "${TORCH_LIBRARIES}")
+    if (TORCH_FOUND)
+      target_link_libraries(rcgomp rcgutils runUnitTests OpenMP::OpenMP_CXX "${TORCH_LIBRARIES}")
+    else()
+      target_link_libraries(rcgomp rcgutils runUnitTests OpenMP::OpenMP_CXX)
+    endif()
   else()
     target_link_libraries(rcgutils "${TORCH_LIBRARIES}")
-    target_link_libraries(rcgomp rcgutils OpenMP::OpenMP_CXX "${TORCH_LIBRARIES}")
+    if (TORCH_FOUND)
+      target_link_libraries(rcgomp rcgutils OpenMP::OpenMP_CXX "${TORCH_LIBRARIES}")
+    else()
+      target_link_libraries(rcgomp rcgutils OpenMP::OpenMP_CXX)
+    endif()
   endif()
 endif()
