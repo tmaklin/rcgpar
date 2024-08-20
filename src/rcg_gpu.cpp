@@ -41,7 +41,7 @@ torch::Tensor calc_bound_const(torch::Tensor &log_times_observed, torch::Tensor 
     return bound_const;
 }
 
-void rcg_optl_mat_gpu(torch::Tensor &logl, torch::Tensor &log_times_observed, torch::Tensor &alpha0, double tol, uint16_t max_iters, torch::Tensor &gamma_Z, torch::TensorOptions options, std::ostream &log) {
+void rcg_optl_mat_gpu(torch::Tensor &logl, torch::Tensor &log_times_observed, torch::Tensor &alpha0, double tol, size_t max_iters, torch::Tensor &gamma_Z, torch::TensorOptions options, std::ostream &log) {
 
     int n_obs = logl.size(1);
     
@@ -56,7 +56,7 @@ void rcg_optl_mat_gpu(torch::Tensor &logl, torch::Tensor &log_times_observed, to
     torch::Tensor N_k = update_N_k(gamma_Z, log_times_observed, alpha0);
 
     bool didreset = false;
-    for (uint16_t k = 0; k < max_iters; ++k) {
+    for (size_t k = 0; k < max_iters; ++k) {
         torch::Tensor newnorm = mixt_negnatgrad(gamma_Z, N_k, logl, step);
         torch::Tensor beta_FR = newnorm / oldnorm;
         oldnorm.copy_(newnorm);

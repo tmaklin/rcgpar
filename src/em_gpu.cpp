@@ -4,12 +4,12 @@
 #include <torch/torch.h>
 
 namespace rcgpar {
-torch::Tensor em_algorithm(torch::Tensor &log_likelihoods, torch::Tensor &loglik_counts_tensor, double threshold, uint16_t max_iters, std::ostream &log, torch::ScalarType dtype) {
+torch::Tensor em_algorithm(torch::Tensor &log_likelihoods, torch::Tensor &loglik_counts_tensor, double threshold, size_t max_iters, std::ostream &log, torch::ScalarType dtype) {
 
     torch::Device device = log_likelihoods.device();
 
-    int num_rows = log_likelihoods.size(0);
-    int num_cols = log_likelihoods.size(1);
+    int64_t num_rows = log_likelihoods.size(0);
+    int64_t num_cols = log_likelihoods.size(1);
 
     // pre allocate log_weighted_likelihoods
     torch::Tensor log_weighted_likelihoods = torch::empty({num_rows, num_cols}, dtype).to(device);
@@ -18,7 +18,7 @@ torch::Tensor em_algorithm(torch::Tensor &log_likelihoods, torch::Tensor &loglik
     torch::Tensor prev_loss = torch::tensor(1000000, dtype).to(device);
     torch::Tensor threshold_tensor = torch::tensor(threshold, dtype).to(device);
 
-    for (uint16_t iteration = 0; iteration < max_iters; ++iteration) {
+    for (size_t iteration = 0; iteration < max_iters; ++iteration) {
         // E-step: Compute responsibilities
         log_weighted_likelihoods.copy_(log_likelihoods + torch::log(theta));
         torch::Tensor log_sum_exp = torch::logsumexp(log_weighted_likelihoods, 1, true);

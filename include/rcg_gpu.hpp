@@ -20,7 +20,7 @@ torch::Tensor ELBO_rcg_mat(torch::Tensor &logl, torch::Tensor &gamma_Z, torch::T
 
 torch::Tensor calc_bound_const(torch::Tensor &log_times_observed, torch::Tensor &alpha0);
 
-void rcg_optl_mat_gpu(torch::Tensor &logl, torch::Tensor &log_times_observed, torch::Tensor &alpha0, double tol, uint16_t max_iters, torch::Tensor &gamma_Z, torch::TensorOptions options, std::ostream &log);
+void rcg_optl_mat_gpu(torch::Tensor &logl, torch::Tensor &log_times_observed, torch::Tensor &alpha0, double tol, size_t max_iters, torch::Tensor &gamma_Z, torch::TensorOptions options, std::ostream &log);
 
 } // namespace rcgpar
 
