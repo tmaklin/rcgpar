@@ -70,16 +70,6 @@ you need more, recompile the project with
 parallelization when the library is compiled on a system that
 supports both protocols.
 
-### Compiling and running tests
-rcgpar uses the [googletest](https://github.com/google/googletest)
-framework to test the libraries. Tests can be built by compiling the
-program in debug mode by appending the `-DCMAKE_BUILD_TESTS=1` flag to
-the cmake call. Tests will be created in `build/bin/` and all tests
-(except the MPI test) can be run from the runUnitTests executable.
-
-Note: you will need to use mpirun (or some other appropriate call) to
-run the MPI test from the executable runMpiTest.
-
 ## Usage
 Simply include the `rcgpar.hpp` header in your project. This header
 provides four functions: 'rcgpar::rcg\_optl\_omp' for OpenMP parallelization, 
