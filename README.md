@@ -4,6 +4,7 @@ inference algorithm for estimating mixture model components from a
 likelihood matrix in parallel.
 
 ## Installation
+rcgpar is currently only available compiled from source.
 ## Compiling from source
 ### Requirements
 - C++17 compliant compiler.
