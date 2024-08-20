@@ -1,5 +1,5 @@
 # rcgpar - Fit mixture models in HPC environments
-rcgpar provides MPI, OpenMP, and GPU implementations of a variational
+rcgpar provides CPU and GPU implementations of a variational
 inference algorithm for estimating mixture model components from a
 likelihood matrix in parallel.
 
@@ -48,34 +48,11 @@ where `/absolute/path/to/libtorch` should be the absolute (!) path to the LibTor
 
 This creates the `librcgomp` and `librcggpu` libraries in `build/lib/`.
 
-#### MPI
-You will need to use the appropriate platform-specifc commands
-to set up your MPI environment. For example, to set up rcgpar using
-[Open MPI](https://www.open-mpi.org/) enter the `build/` directory and run
-```
-module load mpi/openmp
-cmake -DCMAKE_ENABLE_MPI_SUPPORT=1 -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx ..
-make
-```
-
-creating the `librcgmpi` library in `build/lib/`. If OpenMP is also
-supported, the `librcgomp` library will also be created.
-
-librcgmpi is compiled by default to support up to 1024 processes. If
-you need more, recompile the project with
-`-DCMAKE_MPI_MAX_PROCESSES=<big number>` added to the cmake command.
-
-#### Hybrid OpenMP + MPI
-`librcgmpi` automatically provides hybrid OpenMP + MPI
-parallelization when the library is compiled on a system that
-supports both protocols.
-
 ## Usage
 Link against `librcgomp` and/or `librcggpu` and include the
 `rcgpar.hpp` header in your project. This header provides four
 functions:
 - 'rcgpar::rcg\_optl\_omp' using OpenMP
-- 'rcgpar::rcg\_optl\_mpi' using MPI (+OpenMP, if enabled)
 - 'rcgpar::rcg\_optl\_torch' using LibTorch
 - 'rcgpar::em\_torch' a different algorithm using LibTorch.
 

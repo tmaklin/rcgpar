@@ -32,8 +32,6 @@
 #include <numeric>
 #include <fstream>
 
-#include "rcgpar_mpi_config.hpp"
-
 namespace rcgpar {
 double digamma(double x) {
     double result = 0, xx, xx2, xx4;
@@ -102,24 +100,12 @@ double mixt_negnatgrad(const seamat::Matrix<double> &gamma_Z, const std::vector<
 	}
     }
 
-    if (mpi_mode) {
-#if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
-	long double newnorm_partial = newnorm;
-	MPI_Allreduce(&newnorm_partial, &newnorm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-#endif
-    }
     return newnorm;
 }
 
 void update_N_k(const seamat::Matrix<double> &gamma_Z, const std::vector<double> &log_times_observed, const std::vector<double> &alpha0, std::vector<double> &N_k, bool mpi_mode) {
     // exp_right_multiply() clears the current N_k
     gamma_Z.exp_right_multiply(log_times_observed, N_k);
-    if (mpi_mode) {
-#if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
-        std::vector<double> N_k_partial = N_k;
-        MPI_Allreduce(&N_k_partial.front(), &N_k.front(), N_k.size(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-#endif
-    }
     std::transform(N_k.begin(), N_k.end(), alpha0.begin(), N_k.begin(), std::plus<double>());
 }
 
@@ -134,12 +120,6 @@ long double ELBO_rcg_mat(const seamat::Matrix<double> &logl, const seamat::Matri
 	}
     }
 
-    if (mpi_mode) {
-#if defined(RCGPAR_MPI_SUPPORT) && (RCGPAR_MPI_SUPPORT) == 1
-	long double bound_partial = bound;
-	MPI_Allreduce(&bound_partial, &bound, 1, MPI_LONG_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-#endif
-    }
     bound += std::accumulate(N_k.begin(), N_k.end(), (double)0.0, [](double acc, double elem){ return acc + std::lgamma(elem); });
     bound += bound_const;
 
