@@ -110,7 +110,7 @@ if (DEFINED CMAKE_SEAMAT_HEADERS)
 else()
   message(STATUS "Downloading seamat headers...")
   FetchContent_Declare(seamat
-    GIT_REPOSITORY    https://github.com/Piketulus/seamat.git
+    GIT_REPOSITORY    https://github.com/tmaklin/seamat.git
     GIT_TAG           v0.2.3
     PREFIX            "external"
     SOURCE_DIR        "${CMAKE_CURRENT_SOURCE_DIR}/external/seamat"
