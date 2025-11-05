@@ -41,10 +41,15 @@ pub fn logsumexp(
 pub fn newnorm<B: Backend<FloatElem = f32>>(
     gamma_Z: Tensor::<B, 2>,
     dl_dphi: Tensor::<B, 2>,
-) -> Result<(), E> {
-    todo!("Implement newnorm");
+) -> Result<f32, E> {
+    let temp = gamma_Z.exp().mul(dl_dphi.clone());
 
-    Ok(())
+    let colsums = temp.clone().sum_dim(0);
+    let colsums_squeezed: Tensor::<B, 2> = colsums.clone().reshape(Shape::new([1, dl_dphi.clone().dims()[1]]));
+
+    let newnorm = temp.mul(dl_dphi.sub(colsums_squeezed)).sum().into_scalar();
+
+    Ok(newnorm)
 }
 
 pub fn mixt_negnatgrad<B: Backend, D: Device>(
@@ -52,6 +57,7 @@ pub fn mixt_negnatgrad<B: Backend, D: Device>(
     gamma_Z: Tensor::<B, 2>,
     n_k: Tensor::<B, 1>,
 ) -> Result<Tensor::<B, 2>, E> {
+
     let n_k_data = n_k.clone().into_data();
     let digamma_n_k_vals = n_k_data.iter().map(|x: f32| (digamma(x as f64) - 1_f64) as f32).collect::<Vec<f32>>();
     let digamma_n_k = Tensor::<B, 1>::from_data(digamma_n_k_vals.as_slice(), &n_k.device());
@@ -152,5 +158,44 @@ mod tests {
         let expected_data = expected.into_data();
 
         got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1e-5) });
+    }
+
+    #[test]
+    fn newnorm() {
+        use burn::backend::ndarray::NdArray;
+        use burn_tensor::backend::Device;
+        use burn::backend::ndarray::NdArrayDevice;
+        use burn_tensor::Tensor;
+        use burn_tensor::Int;
+
+        use super::newnorm;
+
+        let device = Default::default();
+        type Backend = NdArray<f32>;
+
+        let gamma_Z = Tensor::<Backend, 2>::from_data(
+            [
+                [ -0.861124, -0.824187, -0.737067, -0.830991, -0.792902, -0.702885, -0.76075,  -0.719832, -0.622649, -0.742541 ],
+                [ -1.01295,  -0.976009, -0.888889, -0.982813, -0.944725, -0.854708, -0.912572, -0.871654, -0.774472, -1.26242 ],
+                [ -2.33926,  -2.30233,  -2.21521,  -2.67719,  -2.6391,   -2.54908,  -6.91527,  -6.87435,  -6.77717,  -2.22068 ],
+                [ -2.13905,  -2.47017,  -6.69137,  -2.10891,  -2.43888,  -6.65719,  -2.03867,  -2.36581,  -6.57695,  -2.02046 ],
+            ],
+            &device,
+        );
+
+        let dl_dphi = Tensor::<Backend, 2>::from_data(
+            [
+                [ 8.33935, 8.30241, 8.21529, 8.30921, 8.27113, 8.18111, 8.23897, 8.19806, 8.10087, 8.22076 ],
+                [ 8.27279, 8.23585, 8.14873, 8.24266, 8.20457, 8.11455, 8.17241, 8.1315,  8.03431, 8.1606 ],
+                [ 7.88108, 7.84415, 7.75703, 7.85735, 7.81926, 7.72924, 7.86197, 7.82105, 7.72387, 7.7625 ],
+                [ 7.93521, 7.90467, 7.89242, 7.90508, 7.87339, 7.85823, 7.83484, 7.80032, 7.778,   7.81663 ],
+            ],
+            &device,
+        );
+
+        let expected: f32 = 0.193162;
+        let got = newnorm::<Backend>(gamma_Z, dl_dphi).unwrap();
+
+        assert_approx_eq!(expected, got, 1e-4);
     }
 }
