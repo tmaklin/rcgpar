@@ -26,7 +26,8 @@
 
 use burn_tensor::backend::Backend;
 use burn_tensor::backend::Device;
-use burn_tensor::Tensor;
+use burn_tensor::{Shape, Tensor};
+use statrs::function::gamma::digamma;
 
 type E = Box<dyn std::error::Error>;
 
@@ -34,7 +35,6 @@ pub fn logsumexp(
 
 ) -> Result<(), E> {
     todo!("Implement logsumexp");
-
     Ok(())
 }
 
@@ -51,10 +51,15 @@ pub fn mixt_negnatgrad<B: Backend, D: Device>(
     logl: Tensor::<B, 2>,
     gamma_Z: Tensor::<B, 2>,
     n_k: Tensor::<B, 1>,
-) -> Result<(), E> {
-    todo!("Implement mixt_negnatgrad");
+) -> Result<Tensor::<B, 2>, E> {
+    let n_k_data = n_k.clone().into_data();
+    let digamma_n_k_vals = n_k_data.iter().map(|x: f32| (digamma(x as f64) - 1_f64) as f32).collect::<Vec<f32>>();
+    let digamma_n_k = Tensor::<B, 1>::from_data(digamma_n_k_vals.as_slice(), &n_k.device());
+    let digamma_n_k_squeezed: Tensor::<B, 2> = digamma_n_k.reshape(Shape::new([logl.dims()[0], 1]));
 
-    Ok(())
+    let dl_dphi: Tensor::<B, 2> = logl.add(digamma_n_k_squeezed).sub(gamma_Z.clone());
+
+    Ok(dl_dphi)
 }
 
 pub fn update_N_k(
