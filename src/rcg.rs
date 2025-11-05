@@ -43,7 +43,7 @@ pub fn logsumexp<B: Backend>(
     Ok(res)
 }
 
-pub fn newnorm<B: Backend<FloatElem = f32>>(
+pub fn compute_norm<B: Backend<FloatElem = f32>>(
     gamma_Z: Tensor::<B, 2>,
     dl_dphi: Tensor::<B, 2>,
 ) -> Result<f32, E> {
@@ -185,14 +185,14 @@ mod tests {
     }
 
     #[test]
-    fn newnorm() {
+    fn compute_norm() {
         use burn::backend::ndarray::NdArray;
         use burn_tensor::backend::Device;
         use burn::backend::ndarray::NdArrayDevice;
         use burn_tensor::Tensor;
         use burn_tensor::Int;
 
-        use super::newnorm;
+        use super::compute_norm;
 
         let device = Default::default();
         type Backend = NdArray<f32>;
@@ -218,7 +218,7 @@ mod tests {
         );
 
         let expected: f32 = 0.193162;
-        let got = newnorm::<Backend>(gamma_Z, dl_dphi).unwrap();
+        let got = compute_norm::<Backend>(gamma_Z, dl_dphi).unwrap();
 
         assert_approx_eq!(expected, got, 1e-4);
     }
