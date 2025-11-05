@@ -32,11 +32,15 @@ use statrs::function::gamma::ln_gamma;
 
 type E = Box<dyn std::error::Error>;
 
-pub fn logsumexp(
-
-) -> Result<(), E> {
-    todo!("Implement logsumexp");
-    Ok(())
+pub fn logsumexp<B: Backend>(
+    input: Tensor::<B, 2>,
+    dim: usize,
+) -> Result<Tensor<B, 1>, E> {
+    let max = input.clone().max_dim(dim).unsqueeze();
+    let res = (input - max.clone()).exp().sum_dim(dim).log();
+    let res = res + max;
+    let res = res.squeeze();
+    Ok(res)
 }
 
 pub fn newnorm<B: Backend<FloatElem = f32>>(
@@ -359,5 +363,49 @@ mod tests {
         let got = calc_bound_const::<Backend>(log_counts, alpha0).unwrap();
 
         assert_approx_eq!(expected, got, 4_f32);
+    }
+
+    #[test]
+    fn logsumexp() {
+        use burn::backend::ndarray::NdArray;
+        use burn_tensor::backend::Device;
+        use burn::backend::ndarray::NdArrayDevice;
+        use burn_tensor::{Shape, Tensor};
+        use burn_tensor::Int;
+
+        use super::logsumexp;
+
+        let device = Default::default();
+        type Backend = NdArray<f32>;
+
+        let old_gamma_Z = Tensor::<Backend, 2>::from_data(
+            [
+                [ -0.861124, -0.824187, -0.737067, -0.830991, -0.792902, -0.702885, -0.76075,  -0.719832, -0.622649, -0.742541 ],
+                [ -1.01295,  -0.976009, -0.888889, -0.982813, -0.944725, -0.854708, -0.912572, -0.871654, -0.774472, -1.26242 ],
+                [ -2.33926,  -2.30233,  -2.21521,  -2.67719,  -2.6391,   -2.54908,  -6.91527,  -6.87435,  -6.77717,  -2.22068 ],
+                [ -2.13905,  -2.47017,  -6.69137,  -2.10891,  -2.43888,  -6.65719,  -2.03867,  -2.36581,  -6.57695,  -2.02046 ],
+            ],
+            &device,
+        );
+
+        let expected = Tensor::<Backend, 2>::from_data(
+            [
+                [ -0.681538, -0.662494, -0.617806, -0.667704, -0.648392, -0.603055, -0.635526, -0.615577, -0.568692, -0.557316 ],
+                [ -0.951042, -0.931998, -0.887311, -0.937208, -0.917896, -0.872559, -0.905031, -0.885081, -0.838196, -1.18688 ],
+                [ -3.09143,  -3.07238,  -3.0277,   -3.43766,  -3.41835,  -3.37301,  -7.62022,  -7.60027,  -7.55338,  -2.96721 ],
+                [ -2.77441,  -3.11543,  -7.28548,  -2.76058,  -3.10133,  -7.27073,  -2.7284,   -3.06852,  -7.23637,  -2.65019 ],
+            ],
+            &device,
+        );
+
+        let m = logsumexp::<Backend>(old_gamma_Z.clone(), 0).unwrap();
+
+        let m_squeezed: Tensor::<Backend, 2> = m.reshape(Shape::new([1, old_gamma_Z.clone().dims()[1]]));
+        let got = old_gamma_Z.sub(m_squeezed);
+
+        let got_data = got.into_data();
+        let expected_data = expected.into_data();
+
+        got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1e-7) });
     }
 }
