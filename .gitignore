@@ -4,3 +4,8 @@ external/
 
 # Emacs autosaves
 *.*~
+
+
+# Added by cargo
+
+/target

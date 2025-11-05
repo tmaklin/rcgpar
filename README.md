@@ -1,3 +1,6 @@
+# Work-in-progress
+This branch contains a Rust port of the original C++ code.
+
 # rcgpar - Fit mixture models in HPC environments
 rcgpar provides CPU and GPU implementations of a variational
 inference algorithm for estimating mixture model components from a
