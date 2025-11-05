@@ -97,11 +97,17 @@ pub fn elbo_rcg_mat<B: Backend<FloatElem = f32>>(
     Ok(newbound)
 }
 
-pub fn calc_bound_const(
+pub fn calc_bound_const<B: Backend<FloatElem = f32>>(
+    log_counts: Tensor::<B, 1>,
+    alpha0: Tensor::<B, 1>,
+) -> Result<f32, E> {
+    let counts_sum: f64 = log_counts.exp().sum().into_scalar() as f64;
+    let alpha0_sum: f64 = alpha0.clone().sum().into_scalar() as f64;
+    let alpha0_data = alpha0.into_data();
+    let lgamma_alpha0_sum = alpha0_data.iter().map(|x: f32| (ln_gamma(x as f64))).sum::<f64>();
 
-) -> Result<(), E> {
-    todo!("Implement calc_bound_const");
-    Ok(())
+    let bound_const = ln_gamma(alpha0_sum) + ln_gamma(alpha0_sum + counts_sum) - lgamma_alpha0_sum;
+    Ok(bound_const as f32)
 }
 
 pub fn rcg_optl_mat(
@@ -313,11 +319,45 @@ mod tests {
             &device,
         );
 
-        let bound_const = -85494_f32;
-        let expected: f32 = -699.064 - bound_const;
+        let bound_const = 85494_f32;
+        let expected: f32 = -699.064 + bound_const;
 
         let got = elbo_rcg_mat::<Backend>(logl, gamma_Z, log_counts, n_k).unwrap();
 
         assert_approx_eq!(expected, got, 1e-1);
+    }
+
+    #[test]
+    fn calc_bound_const() {
+        use burn::backend::ndarray::NdArray;
+        use burn_tensor::backend::Device;
+        use burn::backend::ndarray::NdArrayDevice;
+        use burn_tensor::Tensor;
+        use burn_tensor::Int;
+
+        use super::calc_bound_const;
+
+        let device = Default::default();
+        type Backend = NdArray<f32>;
+
+        let log_counts = Tensor::<Backend, 1>::from_data(
+            [
+                7.681099, 7.04316, 6.849066, 5.278115, 5.164786, 5.062595, 6.947937, 6.863803, 7.277248, 7.666222
+            ],
+            &device,
+        );
+
+        let alpha0 = Tensor::<Backend, 1>::from_data(
+            [
+                1.0, 1.0, 1.0, 1.0
+            ],
+            &device,
+        );
+
+        let expected = 85494_f32;
+
+        let got = calc_bound_const::<Backend>(log_counts, alpha0).unwrap();
+
+        assert_approx_eq!(expected, got, 4_f32);
     }
 }
