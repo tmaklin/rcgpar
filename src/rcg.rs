@@ -68,11 +68,14 @@ pub fn mixt_negnatgrad<B: Backend, D: Device>(
     Ok(dl_dphi)
 }
 
-pub fn update_N_k(
-
-) -> Result<(), E> {
-    todo!("Implement update_N_k");
-    Ok(())
+pub fn update_n_k<B: Backend>(
+    gamma_Z: Tensor::<B, 2>,
+    log_counts: Tensor::<B, 1>,
+    alpha0: Tensor::<B, 1>,
+) -> Result<Tensor::<B, 1>, E> {
+    let log_counts_squeezed: Tensor::<B, 2> = log_counts.reshape(Shape::new([1, gamma_Z.clone().dims()[1]]));
+    let n_k: Tensor::<B, 1> = gamma_Z.add(log_counts_squeezed).exp().sum_dim(1).reshape(Shape::new([alpha0.clone().dims()[0]])).add(alpha0);
+    Ok(n_k)
 }
 
 pub fn elbo_rcg_mat(
@@ -197,5 +200,57 @@ mod tests {
         let got = newnorm::<Backend>(gamma_Z, dl_dphi).unwrap();
 
         assert_approx_eq!(expected, got, 1e-4);
+    }
+
+    #[test]
+    fn update_n_k() {
+        use burn::backend::ndarray::NdArray;
+        use burn_tensor::backend::Device;
+        use burn::backend::ndarray::NdArrayDevice;
+        use burn_tensor::Tensor;
+        use burn_tensor::Int;
+
+        use super::update_n_k;
+
+        let device = Default::default();
+        type Backend = NdArray<f32>;
+
+        let gamma_Z = Tensor::<Backend, 2>::from_data(
+            [
+                [ -0.681538, -0.662494, -0.617806, -0.667704, -0.648392, -0.603055, -0.635526, -0.615577, -0.568692, -0.557316 ],
+                [ -0.951042, -0.931998, -0.887311, -0.937208, -0.917896, -0.872559, -0.905031, -0.885081, -0.838196, -1.18688 ],
+                [ -3.09143,  -3.07238,  -3.0277,   -3.43766,  -3.41835,  -3.37301,  -7.62022,  -7.60027,  -7.55338,  -2.96721 ],
+                [ -2.77441,  -3.11543,  -7.28548,  -2.76058,  -3.10133,  -7.27073,  -2.7284,   -3.06852,  -7.23637,  -2.65019 ],
+            ],
+            &device,
+        );
+
+        let log_counts = Tensor::<Backend, 1>::from_data(
+            [
+                7.681099, 7.04316, 6.849066, 5.278115, 5.164786, 5.062595, 6.947937, 6.863803, 7.277248, 7.666222
+            ],
+            &device,
+        );
+
+        let alpha0 = Tensor::<Backend, 1>::from_data(
+            [
+                1.0, 1.0, 1.0, 1.0
+            ],
+            &device,
+        );
+
+        let expected = Tensor::<Backend, 1>::from_data(
+            [
+                5585.01, 3983.44, 327.192, 472.355
+            ],
+            &device,
+        );
+
+        let got = update_n_k::<Backend>(gamma_Z, log_counts, alpha0).unwrap();
+
+        let got_data = got.into_data();
+        let expected_data = expected.into_data();
+
+        got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1e-2) });
     }
 }
