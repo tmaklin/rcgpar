@@ -57,7 +57,7 @@ pub fn newnorm<B: Backend<FloatElem = f32>>(
     Ok(newnorm)
 }
 
-pub fn mixt_negnatgrad<B: Backend, D: Device>(
+pub fn mixt_negnatgrad<B: Backend>(
     logl: Tensor::<B, 2>,
     gamma_Z: Tensor::<B, 2>,
     n_k: Tensor::<B, 1>,
@@ -130,7 +130,6 @@ mod tests {
     fn mixt_negnatgrad() {
         use burn::backend::ndarray::NdArray;
         use burn_tensor::backend::Device;
-        use burn::backend::ndarray::NdArrayDevice;
         use burn_tensor::Tensor;
         use burn_tensor::Int;
 
@@ -177,7 +176,7 @@ mod tests {
             &device,
         );
 
-        let got = mixt_negnatgrad::<Backend, NdArrayDevice>(logl, gamma_Z, n_k).unwrap();
+        let got = mixt_negnatgrad::<Backend>(logl, gamma_Z, n_k).unwrap();
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();
