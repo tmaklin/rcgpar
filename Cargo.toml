@@ -14,3 +14,7 @@ repository = "https://github.com/tmaklin/rcgpar"
 license = "LGPL-2.1-or-later"
 
 [dependencies]
+burn = { version = "0.19", features = ["ndarray"] }
+burn-tensor = "0.19"
+[dev-dependencies]
+assert_approx_eq = "1.1"

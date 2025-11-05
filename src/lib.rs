@@ -21,6 +21,8 @@
 //! rcgpar provides implementations for several optimization algorithms that
 //! infer the `K` mixture model weights for a `N x K` log-likelihood matrix.
 
+pub mod rcg;
+
 type E = Box<dyn std::error::Error>;
 
 /// Optimize model weights (placeholder)
