@@ -25,7 +25,6 @@
 //!
 
 use burn_tensor::backend::Backend;
-use burn_tensor::backend::Device;
 use burn_tensor::{Shape, Tensor};
 use statrs::function::gamma::digamma;
 use statrs::function::gamma::ln_gamma;
@@ -114,11 +113,98 @@ pub fn calc_bound_const<B: Backend<FloatElem = f32>>(
     Ok(bound_const as f32)
 }
 
-pub fn rcg_optl_mat(
+pub fn rcg_optl_mat<B: Backend<FloatElem = f32>>(
+    logl: Tensor::<B, 2>,
+    log_counts: Tensor::<B, 1>,
+    alpha0: Tensor::<B, 1>,
+) -> Result<Tensor::<B, 2>, E> {
+    let res = logl.clone();
 
-) -> Result<(), E> {
-    todo!("Implement rcg_optl_mat");
-    Ok(())
+    let n_targets = logl.clone().dims()[0];
+    let n_obs = logl.clone().dims()[1];
+
+    let mut gamma_Z = logl.zeros_like() + (1_f32 / (n_targets as f32)).ln();
+    let mut oldstep = logl.zeros_like();
+
+    // let gamma_Z_data = n_targets.iter().map(|_| n_obs.iter().map(|_| 1_f32/(n_obs as f32)).collect::<Vec<f32>>()).collect::<Vec<Vec<f32>>>();
+
+    let mut iter = 0;
+    let max_iters = 100;
+    let mut tolerance = 1e-7_f32;
+
+    let mut bound = -10000_f32;
+    let mut oldbound = -10000_f32;
+
+    let bound_const = calc_bound_const(log_counts.clone(), alpha0.clone())?;
+    let mut n_k = update_n_k(gamma_Z.clone(), log_counts.clone(), alpha0.clone())?;
+
+    let mut oldnorm = 1_f32;
+    let mut didreset = false;
+
+    while iter < max_iters {
+        let mut step = mixt_negnatgrad(logl.clone(), gamma_Z.clone(), n_k.clone())?;
+        let newnorm = compute_norm(gamma_Z.clone(), step.clone())?.max(1e-7);
+        let beta_FR = (newnorm.abs().ln() - oldnorm.abs().ln()).exp();
+        oldnorm = newnorm.max(1e-7);
+
+        if didreset {
+            oldstep = logl.zeros_like();
+        } else {
+            oldstep = oldstep.clone() * beta_FR;
+            step = step.clone().add(oldstep.clone());
+        }
+        didreset = false;
+
+        gamma_Z = gamma_Z.add(step.clone());
+
+        let mut oldm = logsumexp(gamma_Z.clone(), 0)?;
+        let mut oldm_squeezed: Tensor::<B, 2> = oldm.reshape(Shape::new([1, n_obs]));
+        gamma_Z = gamma_Z.clone().sub(oldm_squeezed.clone());
+
+        n_k = update_n_k(gamma_Z.clone(), log_counts.clone(), alpha0.clone())?;
+        oldbound = bound;
+        bound = bound_const + elbo_rcg_mat(logl.clone(), gamma_Z.clone(), log_counts.clone(), n_k.clone())?;
+
+        if bound < oldbound {
+            didreset = true;
+            gamma_Z = gamma_Z.clone().add(oldm_squeezed); // revert step
+            if beta_FR > 0_f32 {
+                gamma_Z = gamma_Z.clone().sub(oldstep.clone());
+            }
+
+            oldm = logsumexp(gamma_Z.clone(), 0)?;
+            oldm_squeezed = oldm.reshape(Shape::new([1, n_obs]));
+            gamma_Z = gamma_Z.clone().sub(oldm_squeezed.clone());
+            n_k = update_n_k(gamma_Z.clone(), log_counts.clone(), alpha0.clone())?;
+
+            bound = bound_const + elbo_rcg_mat(logl.clone(), gamma_Z.clone(), log_counts.clone(), n_k.clone())?;
+        } else {
+            oldstep = step;
+        }
+
+        if iter % 5 == 0 {
+            eprintln!("\titer: {iter}, bound: {bound}, |g|: {newnorm}");
+        }
+
+        if (bound - oldbound).abs() < tolerance && !didreset {
+            oldm = logsumexp(gamma_Z.clone(), 0)?;
+            oldm_squeezed = oldm.reshape(Shape::new([1, n_obs]));
+            gamma_Z = gamma_Z.clone().sub(oldm_squeezed.clone());
+            break;
+        }
+
+        if newnorm < 0_f32 {
+            tolerance *= 10_f32;
+        }
+
+        iter += 1;
+    }
+
+    let m = logsumexp(gamma_Z.clone(), 0)?;
+    let m_squeezed = m.reshape(Shape::new([1, n_obs]));
+    gamma_Z = gamma_Z.clone().sub(m_squeezed.clone());
+
+    Ok(gamma_Z)
 }
 
 // Tests
@@ -406,5 +492,71 @@ mod tests {
         let expected_data = expected.into_data();
 
         got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1e-7) });
+    }
+
+    #[test]
+    fn rcg_optl_mat() {
+        use burn::backend::ndarray::NdArray;
+        use burn_tensor::backend::Device;
+        use burn::backend::ndarray::NdArrayDevice;
+        use burn_tensor::{Shape, Tensor};
+        use burn_tensor::Int;
+
+        use super::rcg_optl_mat;
+
+        let device = Default::default();
+        type Backend = NdArray<f32>;
+
+        let logl = Tensor::<Backend, 2>::from_data(
+            [
+                [ -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503 ],
+                [ -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.371713 ],
+                [ -0.0100503, -0.0100503, -0.0100503, -0.371713,  -0.371713,  -0.371713,  -4.60517,   -4.60517,   -4.60517,   -0.0100503 ],
+                [ -0.0100503, -0.371713,  -4.60517,   -0.0100503, -0.371713,  -4.60517,   -0.0100503, -0.371713,  -4.60517,   -0.0100503 ],
+            ],
+            &device,
+        );
+
+        let log_counts = Tensor::<Backend, 1>::from_data(
+            [
+                7.681099, 7.04316, 6.849066, 5.278115, 5.164786, 5.062595, 6.947937, 6.863803, 7.277248, 7.666222
+            ],
+            &device,
+        );
+
+        let alpha0 = Tensor::<Backend, 1>::from_data(
+            [
+                1.0, 1.0, 1.0, 1.0
+            ],
+            &device,
+        );
+
+        let expected = Tensor::<Backend, 2>::from_data(
+            [
+                [ -0.0010899, -0.00104044, -0.000928571, -0.00104519, -0.000995734, -0.000883857, -0.000944069, -0.000894604, -0.000782716, -0.000853449 ],
+                [ -7.15745,   -7.1574,     -7.15729,     -7.15741,    -7.15736,     -7.15725,     -7.15731,     -7.15726,     -7.15715,     -7.51888 ],
+                [ -8.82298,   -8.82293,    -8.82282,     -9.1846,     -9.18455,     -9.18444,     -13.418,      -13.4179,     -13.4178,     -8.82274 ],
+                [ -8.72199,   -9.0836,     -13.3169,     -8.72195,    -9.08356,     -13.3169,     -8.72184,     -9.08346,     -13.3168,     -8.72175 ],
+            ],
+            &device,
+        );
+
+        let n_times_total: f32 = log_counts.clone().exp().sum().into_scalar();
+        let log_counts_squeezed: Tensor::<Backend, 2> = log_counts.clone().reshape(Shape::new([1, logl.clone().dims()[1]]));
+
+        let got = rcg_optl_mat::<Backend>(logl, log_counts, alpha0).unwrap();
+
+        // Extra test for mixture components, remove this when it's moved to a separate function
+        let expected_thetas = vec![0.999543_f32, 0.00073079_f32, 9.66135e-05_f32, 0.000112505_f32];
+        let thetas = got.clone().add(log_counts_squeezed).exp().sum_dim(1) / n_times_total;
+
+        let got_data = got.into_data();
+        let expected_data = expected.into_data();
+        let thetas_data: Vec<f32> = thetas.into_data().iter().map(|x: f32| x as f32).collect();
+
+        got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1e-1) });
+
+        // Extra test for mixture components, remove this when it's moved to a separate function
+        thetas_data.iter().zip(expected_thetas.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 1e-3) });
     }
 }
