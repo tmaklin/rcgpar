@@ -42,16 +42,16 @@ pub fn logsumexp<B: Backend>(
     Ok(res)
 }
 
-pub fn compute_norm<B: Backend<FloatElem = f32>>(
+pub fn compute_norm<B: Backend>(
     gamma_Z: Tensor::<B, 2>,
     dl_dphi: Tensor::<B, 2>,
-) -> Result<f32, E> {
+) -> Result<Tensor::<B, 1>, E> {
     let temp = gamma_Z.exp().mul(dl_dphi.clone());
 
     let colsums = temp.clone().sum_dim(0);
     let colsums_squeezed: Tensor::<B, 2> = colsums.clone().reshape(Shape::new([1, dl_dphi.clone().dims()[1]]));
 
-    let newnorm = temp.mul(dl_dphi.sub(colsums_squeezed)).sum().into_scalar();
+    let newnorm = temp.mul(dl_dphi.sub(colsums_squeezed)).sum();
 
     Ok(newnorm)
 }
@@ -143,7 +143,7 @@ pub fn rcg_optl_mat<B: Backend<FloatElem = f32>>(
 
     while iter < max_iters {
         let mut step = mixt_negnatgrad(logl.clone(), gamma_Z.clone(), n_k.clone())?;
-        let newnorm = compute_norm(gamma_Z.clone(), step.clone())?.max(1e-7);
+        let newnorm = compute_norm(gamma_Z.clone(), step.clone())?.into_scalar().max(1e-7);
         let beta_FR = (newnorm.abs().ln() - oldnorm.abs().ln()).exp();
         oldnorm = newnorm.max(1e-7);
 
@@ -314,7 +314,7 @@ mod tests {
         );
 
         let expected: f32 = 0.193162;
-        let got = compute_norm::<Backend>(gamma_Z, dl_dphi).unwrap();
+        let got = compute_norm::<Backend>(gamma_Z, dl_dphi).unwrap().into_scalar();
 
         assert_approx_eq!(expected, got, 1e-4);
     }
