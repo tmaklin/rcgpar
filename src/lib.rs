@@ -30,7 +30,24 @@ pub mod rcg;
 
 type E = Box<dyn std::error::Error>;
 
-/// Optimize model weights (placeholder)
+/// Infer mixing proportions for a weighted log-likelihood matrix
+///
+/// Returns the mixing proportions that best fit the model corresponding to
+/// `log_likelihood` with integer weights for each column given in `counts`.
+/// Typically, `counts` is the number of times the likelihood vector in each
+/// column was observed but can be any weight vector.
+///
+/// Floating point precision can be set to 32 bits via `use_f32`.
+///
+/// ## Prior
+/// Prior for the mixing proportions is given via `prior`. Values in `prior` can
+/// be interpreted as the observation counts from each category that were
+/// observed before generating the log likelihood matrix `logl` for the current data.
+///
+/// Assumes a conjugate Dirichlet model, meaning that the mixing proportions
+/// from a previously fitted model (weighted by the total observation count) can
+/// be used as a prior when estimating a new dataset.
+///
 pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
     log_likelihood: &[Vec<F>],
     counts: &[U],
@@ -43,7 +60,8 @@ pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
     let n_rows = log_likelihood[0].len();
     let n_cols = log_likelihood.len();
 
-    // TODO Figure out a cleaner way to write selecting f32 vs. f64 precision.
+    // TODO Cleaner way to write selecting f32 vs. f64 precision in optimize().
+    //
     let proportions = if use_f32 {
         let logl_floats = log_likelihood.iter().flat_map(|x| x.iter().map(|y| y.to_f32().unwrap()).collect::<Vec<f32>>()).collect::<Vec<f32>>();
         let log_counts_floats = counts.iter().map(|x| x.to_f32().unwrap().ln()).collect::<Vec<f32>>();
