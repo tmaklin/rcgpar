@@ -22,6 +22,8 @@
 //! infer the `K` mixture model weights for a `N x K` log-likelihood matrix.
 
 use burn::backend::ndarray::NdArray;
+#[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
+use burn::backend::wgpu::Wgpu;
 use burn_tensor::Tensor;
 use num::traits::{Float, PrimInt};
 use num::FromPrimitive;
@@ -29,6 +31,17 @@ use num::FromPrimitive;
 pub mod rcg;
 
 type E = Box<dyn std::error::Error>;
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum BurnBackend {
+    #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
+    /// WGPU backend for [burn](https://docs.rs/burn/).
+    GPU,
+    #[default]
+    /// Use the NdArray backend for [burn](https://docs.rs/burn/).
+    CPU,
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct OptimizerOpts {
@@ -38,6 +51,8 @@ pub struct OptimizerOpts {
     pub max_iters: usize,
     /// - Use 64-bit floating point numbers instead of 32-bit.
     pub use_f64: bool,
+    /// - Run on CPU or GPU.
+    pub device: BurnBackend,
 }
 
 impl Default for OptimizerOpts {
@@ -47,10 +62,12 @@ impl Default for OptimizerOpts {
     /// opts.tolerance = 1e-7_f64;
     /// opts.max_iters = 5000_usize;
     /// opts.use_f64 = true;
+    /// opts.device = rcgpar::BurnBackend::CPU;
     /// # let expected = rcgpar::OptimizerOpts::default();
     /// # assert_eq!(opts.tolerance, expected.tolerance);
     /// # assert_eq!(opts.max_iters, expected.max_iters);
     /// # assert_eq!(opts.use_f64, expected.use_f64);
+    /// # assert_eq!(opts.device, expected.device);
     /// ```
     ///
     fn default() -> OptimizerOpts {
@@ -58,9 +75,11 @@ impl Default for OptimizerOpts {
             tolerance: 1e-7_f64,
             max_iters: 5000_usize,
             use_f64: true,
+            device: BurnBackend::CPU,
         }
     }
 }
+
 /// Infer mixing proportions for a weighted log-likelihood matrix
 ///
 /// Returns the mixing proportions that best fit the model corresponding to
@@ -99,40 +118,74 @@ pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
     let n_rows = log_likelihood[0].len();
     let n_cols = log_likelihood.len();
 
-    // TODO Cleaner way to write selecting f32 vs. f64 precision in optimize().
+    // TODO Cleaner way to write selecting f32 vs. f64 precision and devices in optimize().
     //
     let proportions = if !options.use_f64 {
         let logl_floats = log_likelihood.iter().flat_map(|x| x.iter().map(|y| y.to_f32().unwrap()).collect::<Vec<f32>>()).collect::<Vec<f32>>();
         let log_counts_floats = counts.iter().map(|x| x.to_f32().unwrap().ln()).collect::<Vec<f32>>();
         let alpha0_floats = prior.iter().map(|x| x.to_f32().unwrap()).collect::<Vec<f32>>();
 
-        let device = Default::default();
-        type Backend = NdArray<f32>;
 
-        let logl_flat = Tensor::<Backend, 1>::from_data(logl_floats.as_slice(), &device);
-        let logl = logl_flat.reshape([n_cols, n_rows]);
+        #[allow(unreachable_patterns)]
+        match options.device {
+            BurnBackend::CPU => {
+                let device = burn::backend::ndarray::NdArrayDevice::default();
+                type Backend = NdArray<f32>;
+                let logl_flat = Tensor::<Backend, 1>::from_data(logl_floats.as_slice(), &device);
+                let logl = logl_flat.reshape([n_cols, n_rows]);
 
-        let log_counts = Tensor::<Backend, 1>::from_data(log_counts_floats.as_slice(), &device);
-        let alpha0 = Tensor::<Backend, 1>::from_data(alpha0_floats.as_slice(), &device);
+                let log_counts = Tensor::<Backend, 1>::from_data(log_counts_floats.as_slice(), &device);
+                let alpha0 = Tensor::<Backend, 1>::from_data(alpha0_floats.as_slice(), &device);
 
-        let probs = rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0)?;
-        rcg::mixture_components(probs, log_counts)?.into_data().iter().map(|x| FromPrimitive::from_f32(x).unwrap()).collect::<Vec<F>>()
+                let probs = rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0)?;
+                rcg::mixture_components(probs, log_counts)?.into_data().iter().map(|x| FromPrimitive::from_f32(x).unwrap()).collect::<Vec<F>>()
+            },
+            #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
+            BurnBackend::GPU => {
+                let device = burn::backend::wgpu::WgpuDevice::default();
+                type Backend = Wgpu<f32>;
+                let logl_flat = Tensor::<Backend, 1>::from_data(logl_floats.as_slice(), &device);
+                let logl = logl_flat.reshape([n_cols, n_rows]);
+
+                let log_counts = Tensor::<Backend, 1>::from_data(log_counts_floats.as_slice(), &device);
+                let alpha0 = Tensor::<Backend, 1>::from_data(alpha0_floats.as_slice(), &device);
+
+                let probs = rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0)?;
+                rcg::mixture_components(probs, log_counts)?.into_data().iter().map(|x| FromPrimitive::from_f32(x).unwrap()).collect::<Vec<F>>()
+            },
+        }
     } else {
         let logl_floats = log_likelihood.iter().flat_map(|x| x.iter().map(|y| y.to_f64().unwrap()).collect::<Vec<f64>>()).collect::<Vec<f64>>();
         let log_counts_floats = counts.iter().map(|x| x.to_f64().unwrap().ln()).collect::<Vec<f64>>();
         let alpha0_floats = prior.iter().map(|x| x.to_f64().unwrap()).collect::<Vec<f64>>();
 
-        let device = Default::default();
-        type Backend = NdArray<f64>;
+        match options.device {
+            BurnBackend::CPU => {
+                let device = burn::backend::ndarray::NdArrayDevice::default();
+                type Backend = NdArray<f64>;
+                let logl_flat = Tensor::<Backend, 1>::from_data(logl_floats.as_slice(), &device);
+                let logl = logl_flat.reshape([n_cols, n_rows]);
 
-        let logl_flat = Tensor::<Backend, 1>::from_data(logl_floats.as_slice(), &device);
-        let logl = logl_flat.reshape([n_cols, n_rows]);
+                let log_counts = Tensor::<Backend, 1>::from_data(log_counts_floats.as_slice(), &device);
+                let alpha0 = Tensor::<Backend, 1>::from_data(alpha0_floats.as_slice(), &device);
 
-        let log_counts = Tensor::<Backend, 1>::from_data(log_counts_floats.as_slice(), &device);
-        let alpha0 = Tensor::<Backend, 1>::from_data(alpha0_floats.as_slice(), &device);
+                let probs = rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0)?;
+                rcg::mixture_components(probs, log_counts)?.into_data().iter().map(|x| FromPrimitive::from_f64(x).unwrap()).collect::<Vec<F>>()
+            },
+            #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
+            BurnBackend::GPU => {
+                let device = burn::backend::wgpu::WgpuDevice::default();
+                type Backend = Wgpu<f64>;
+                let logl_flat = Tensor::<Backend, 1>::from_data(logl_floats.as_slice(), &device);
+                let logl = logl_flat.reshape([n_cols, n_rows]);
 
-        let probs = rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0)?;
-        rcg::mixture_components(probs, log_counts)?.into_data().iter().map(|x| FromPrimitive::from_f64(x).unwrap()).collect::<Vec<F>>()
+                let log_counts = Tensor::<Backend, 1>::from_data(log_counts_floats.as_slice(), &device);
+                let alpha0 = Tensor::<Backend, 1>::from_data(alpha0_floats.as_slice(), &device);
+
+                let probs = rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0)?;
+                rcg::mixture_components(probs, log_counts)?.into_data().iter().map(|x| FromPrimitive::from_f64(x).unwrap()).collect::<Vec<F>>()
+            },
+        }
     };
 
     Ok(proportions)
@@ -150,6 +203,7 @@ mod tests {
         use burn_tensor::Tensor;
         use burn_tensor::Int;
 
+        use super::BurnBackend;
         use super::OptimizerOpts;
         use super::optimize;
 
@@ -165,7 +219,7 @@ mod tests {
 
         let expected: Vec<f64> = vec![0.9990609232614853, 0.0007300889486079688, 9.656361438673255e-5, 0.00011242417552052694];
 
-        let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, use_f64: true };
+        let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, use_f64: true, device: BurnBackend::CPU };
         let got = optimize(&log_likelihood, &counts, &prior_counts, Some(opts)).unwrap();
 
         got.iter().zip(expected.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 1e-17) });
@@ -178,6 +232,7 @@ mod tests {
         use burn_tensor::Tensor;
         use burn_tensor::Int;
 
+        use super::BurnBackend;
         use super::OptimizerOpts;
         use super::optimize;
 
@@ -193,7 +248,7 @@ mod tests {
 
         let expected: Vec<f32> = vec![0.9990609232614853, 0.0007300889486079688, 9.656361438673255e-5, 0.00011242417552052694];
 
-        let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, use_f64: false };
+        let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, use_f64: false, device: BurnBackend::CPU };
         let got = optimize(&log_likelihood, &counts, &prior_counts, Some(opts)).unwrap();
 
         got.iter().zip(expected.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 1e-4); assert!((x - y).abs() > 1e-8) });

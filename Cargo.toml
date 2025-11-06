@@ -13,8 +13,13 @@ homepage = "https://github.com/tmaklin/rcgpar"
 repository = "https://github.com/tmaklin/rcgpar"
 license = "LGPL-2.1-or-later"
 
+[features]
+wgpu = ["burn/wgpu"]
+webgpu = ["burn/webgpu"]
+vulkan = ["burn/vulkan"]
+
 [dependencies]
-burn = { version = "0.19", features = ["ndarray"] }
+burn = { version = "0.19", default-features = false, features = ["ndarray"] }
 burn-tensor = "0.19"
 num = "0.4"
 statrs = "0.18"
