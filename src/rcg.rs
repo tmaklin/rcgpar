@@ -120,44 +120,41 @@ pub fn calc_bound_const<B: Backend>(
     Ok(bound_const)
 }
 
-pub fn rcg_optl_mat<B: Backend<FloatElem = f32>>(
+pub fn rcg_optl_mat<B: Backend>(
     logl: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,
     alpha0: Tensor::<B, 1>,
 ) -> Result<Tensor::<B, 2>, E> {
-    let res = logl.clone();
+    let device = logl.clone().device();
 
     let n_targets = logl.clone().dims()[0];
     let n_obs = logl.clone().dims()[1];
 
-    let mut gamma_Z = logl.zeros_like() + (1_f32 / (n_targets as f32)).ln();
+    let mut gamma_Z = logl.zeros_like() + (1_f64 / (n_targets as f64)).ln();
     let mut oldstep = logl.zeros_like();
-
-    // let gamma_Z_data = n_targets.iter().map(|_| n_obs.iter().map(|_| 1_f32/(n_obs as f32)).collect::<Vec<f32>>()).collect::<Vec<Vec<f32>>>();
 
     let mut iter = 0;
     let max_iters = 100;
-    let mut tolerance = 1e-7_f32;
+    let mut tolerance = Tensor::<B, 1>::from_data([1e-7_f64], &device);
 
-    let mut bound = -10000_f32;
-    let mut oldbound = -10000_f32;
+    let mut bound = Tensor::<B, 1>::from_data([-10000_f64], &device);
 
-    let bound_const = calc_bound_const(log_counts.clone(), alpha0.clone())?.into_scalar();
+    let bound_const = calc_bound_const(log_counts.clone(), alpha0.clone())?;
     let mut n_k = update_n_k(gamma_Z.clone(), log_counts.clone(), alpha0.clone())?;
 
-    let mut oldnorm = 1_f32;
+    let mut oldnorm = Tensor::<B, 1>::from_data([1_f64], &device);
     let mut didreset = false;
 
     while iter < max_iters {
         let mut step = mixt_negnatgrad(logl.clone(), gamma_Z.clone(), n_k.clone())?;
-        let newnorm = compute_norm(gamma_Z.clone(), step.clone())?.into_scalar().max(1e-7);
-        let beta_FR = (newnorm.abs().ln() - oldnorm.abs().ln()).exp();
-        oldnorm = newnorm.max(1e-7);
+        let newnorm = compute_norm(gamma_Z.clone(), step.clone())?.abs().add_scalar(1e-7);
+        let beta_FR = (newnorm.clone().log() - oldnorm.clone().log()).exp();
+        oldnorm = newnorm.clone();
 
         if didreset {
             oldstep = logl.zeros_like();
         } else {
-            oldstep = oldstep.clone() * beta_FR;
+            oldstep = oldstep.clone().mul_scalar(beta_FR.clone().into_scalar());
             step = step.clone().add(oldstep.clone());
         }
         didreset = false;
@@ -169,13 +166,13 @@ pub fn rcg_optl_mat<B: Backend<FloatElem = f32>>(
         gamma_Z = gamma_Z.clone().sub(oldm_squeezed.clone());
 
         n_k = update_n_k(gamma_Z.clone(), log_counts.clone(), alpha0.clone())?;
-        oldbound = bound;
-        bound = bound_const + elbo_rcg_mat(logl.clone(), gamma_Z.clone(), log_counts.clone(), n_k.clone())?.into_scalar();
+        let oldbound = bound;
+        bound = bound_const.clone() + elbo_rcg_mat(logl.clone(), gamma_Z.clone(), log_counts.clone(), n_k.clone())?.into_scalar();
 
-        if bound < oldbound {
+        if bound.clone().lower(oldbound.clone()).all().into_data().iter().next().unwrap() {
             didreset = true;
             gamma_Z = gamma_Z.clone().add(oldm_squeezed); // revert step
-            if beta_FR > 0_f32 {
+            if beta_FR.clone().greater(beta_FR.clone().zeros_like()).all().into_data().iter().next().unwrap() {
                 gamma_Z = gamma_Z.clone().sub(oldstep.clone());
             }
 
@@ -184,24 +181,24 @@ pub fn rcg_optl_mat<B: Backend<FloatElem = f32>>(
             gamma_Z = gamma_Z.clone().sub(oldm_squeezed.clone());
             n_k = update_n_k(gamma_Z.clone(), log_counts.clone(), alpha0.clone())?;
 
-            bound = bound_const + elbo_rcg_mat(logl.clone(), gamma_Z.clone(), log_counts.clone(), n_k.clone())?.into_scalar();
+            bound = bound_const.clone() + elbo_rcg_mat(logl.clone(), gamma_Z.clone(), log_counts.clone(), n_k.clone())?.into_scalar();
         } else {
             oldstep = step;
         }
 
-        if iter % 5 == 0 {
-            eprintln!("\titer: {iter}, bound: {bound}, |g|: {newnorm}");
-        }
+        // if iter % 5 == 0 {
+        //     eprintln!("\titer: {iter}, bound: {bound}, |g|: {newnorm}");
+        // }
 
-        if (bound - oldbound).abs() < tolerance && !didreset {
+        if bound.clone().sub(oldbound.clone()).abs().lower(tolerance.clone()).all().into_data().iter().next().unwrap() && !didreset {
             oldm = logsumexp(gamma_Z.clone(), 0)?;
             oldm_squeezed = oldm.reshape(Shape::new([1, n_obs]));
             gamma_Z = gamma_Z.clone().sub(oldm_squeezed.clone());
             break;
         }
 
-        if newnorm < 0_f32 {
-            tolerance *= 10_f32;
+        if newnorm.clone().lower(newnorm.clone().zeros_like()).all().into_data().iter().next().unwrap() {
+            tolerance = tolerance.clone().mul_scalar(10_f64);
         }
 
         iter += 1;
