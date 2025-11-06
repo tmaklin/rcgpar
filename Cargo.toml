@@ -16,6 +16,7 @@ license = "LGPL-2.1-or-later"
 [dependencies]
 burn = { version = "0.19", features = ["ndarray"] }
 burn-tensor = "0.19"
+num = "0.4"
 statrs = "0.18"
 
 [dev-dependencies]
