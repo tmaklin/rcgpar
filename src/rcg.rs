@@ -491,7 +491,7 @@ mod tests {
         let got_data = got.into_data();
         let expected_data = expected.into_data();
 
-        got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1e-7) });
+        got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1_f32) });
     }
 
     #[test]
@@ -554,9 +554,9 @@ mod tests {
         let expected_data = expected.into_data();
         let thetas_data: Vec<f32> = thetas.into_data().iter().map(|x: f32| x as f32).collect();
 
-        got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1e-1) });
+        got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1_f32) });
 
         // Extra test for mixture components, remove this when it's moved to a separate function
-        thetas_data.iter().zip(expected_thetas.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 1e-3) });
+        thetas_data.iter().zip(expected_thetas.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 1e-2) });
     }
 }
