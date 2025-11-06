@@ -99,17 +99,25 @@ pub fn elbo_rcg_mat<B: Backend>(
     Ok(newbound)
 }
 
-pub fn calc_bound_const<B: Backend<FloatElem = f32>>(
+pub fn calc_bound_const<B: Backend>(
     log_counts: Tensor::<B, 1>,
     alpha0: Tensor::<B, 1>,
-) -> Result<f32, E> {
-    let counts_sum: f64 = log_counts.exp().sum().into_scalar() as f64;
-    let alpha0_sum: f64 = alpha0.clone().sum().into_scalar() as f64;
-    let alpha0_data = alpha0.into_data();
-    let lgamma_alpha0_sum = alpha0_data.iter().map(|x: f32| (ln_gamma(x as f64))).sum::<f64>();
+) -> Result<Tensor::<B, 1>, E> {
+    let counts_sum = log_counts.exp().sum().into_data().iter().collect::<Vec<f64>>()[0];
+    let alpha0_sum = alpha0.clone().sum().into_data().iter().collect::<Vec<f64>>()[0];
+    let alpha0_data = alpha0.clone().into_data();
+    let lgamma_alpha0_sum = alpha0_data.iter().map(|x: f32| ln_gamma(x as f64)).sum::<f64>();
 
-    let bound_const = ln_gamma(alpha0_sum) + ln_gamma(alpha0_sum + counts_sum) - lgamma_alpha0_sum;
-    Ok(bound_const as f32)
+    let bound_const_float = ln_gamma(alpha0_sum) + ln_gamma(alpha0_sum + counts_sum) - lgamma_alpha0_sum;
+
+    let bound_const = Tensor::<B, 1>::from_data(
+        [
+            bound_const_float
+        ],
+        &alpha0.device(),
+    );
+
+    Ok(bound_const)
 }
 
 pub fn rcg_optl_mat<B: Backend<FloatElem = f32>>(
@@ -134,7 +142,7 @@ pub fn rcg_optl_mat<B: Backend<FloatElem = f32>>(
     let mut bound = -10000_f32;
     let mut oldbound = -10000_f32;
 
-    let bound_const = calc_bound_const(log_counts.clone(), alpha0.clone())?;
+    let bound_const = calc_bound_const(log_counts.clone(), alpha0.clone())?.into_scalar();
     let mut n_k = update_n_k(gamma_Z.clone(), log_counts.clone(), alpha0.clone())?;
 
     let mut oldnorm = 1_f32;
@@ -454,7 +462,7 @@ mod tests {
 
         let expected = 85494_f32;
 
-        let got = calc_bound_const::<Backend>(log_counts, alpha0).unwrap();
+        let got = calc_bound_const::<Backend>(log_counts, alpha0).unwrap().into_scalar();
 
         assert_approx_eq!(expected, got, 4_f32);
     }
