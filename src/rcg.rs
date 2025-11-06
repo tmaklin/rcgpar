@@ -82,20 +82,19 @@ pub fn update_n_k<B: Backend>(
     Ok(n_k)
 }
 
-pub fn elbo_rcg_mat<B: Backend<FloatElem = f32>>(
+pub fn elbo_rcg_mat<B: Backend>(
     logl: Tensor::<B, 2>,
     gamma_Z: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,
     n_k: Tensor::<B, 1>,
-) -> Result<f32, E> {
+) -> Result<Tensor::<B, 1>, E> {
     let log_counts_squeezed: Tensor::<B, 2> = log_counts.reshape(Shape::new([1, gamma_Z.clone().dims()[1]]));
+
     let n_k_data = n_k.into_data();
-    let lgamma_n_k_vals = n_k_data.iter().map(|x: f32| (ln_gamma(x as f64)) as f32).collect::<Vec<f32>>();
+    let lgamma_n_k_sum = n_k_data.iter().map(|x: f64| ln_gamma(x)).sum::<f64>();
 
     let bound = gamma_Z.clone().add(log_counts_squeezed).exp().mul(logl.sub(gamma_Z)).sum();
-    let lgamma_sum = lgamma_n_k_vals.into_iter().sum::<f32>();
-
-    let newbound: f32 = bound.into_scalar() + lgamma_sum;
+    let newbound = bound.add_scalar(lgamma_n_k_sum);
 
     Ok(newbound)
 }
@@ -163,7 +162,7 @@ pub fn rcg_optl_mat<B: Backend<FloatElem = f32>>(
 
         n_k = update_n_k(gamma_Z.clone(), log_counts.clone(), alpha0.clone())?;
         oldbound = bound;
-        bound = bound_const + elbo_rcg_mat(logl.clone(), gamma_Z.clone(), log_counts.clone(), n_k.clone())?;
+        bound = bound_const + elbo_rcg_mat(logl.clone(), gamma_Z.clone(), log_counts.clone(), n_k.clone())?.into_scalar();
 
         if bound < oldbound {
             didreset = true;
@@ -177,7 +176,7 @@ pub fn rcg_optl_mat<B: Backend<FloatElem = f32>>(
             gamma_Z = gamma_Z.clone().sub(oldm_squeezed.clone());
             n_k = update_n_k(gamma_Z.clone(), log_counts.clone(), alpha0.clone())?;
 
-            bound = bound_const + elbo_rcg_mat(logl.clone(), gamma_Z.clone(), log_counts.clone(), n_k.clone())?;
+            bound = bound_const + elbo_rcg_mat(logl.clone(), gamma_Z.clone(), log_counts.clone(), n_k.clone())?.into_scalar();
         } else {
             oldstep = step;
         }
@@ -421,7 +420,7 @@ mod tests {
         let bound_const = 85494_f32;
         let expected: f32 = -699.064 + bound_const;
 
-        let got = elbo_rcg_mat::<Backend>(logl, gamma_Z, log_counts, n_k).unwrap();
+        let got = elbo_rcg_mat::<Backend>(logl, gamma_Z, log_counts, n_k).unwrap().into_scalar();
 
         assert_approx_eq!(expected, got, 1e-1);
     }
