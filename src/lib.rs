@@ -125,8 +125,6 @@ pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
         let log_counts_floats = counts.iter().map(|x| x.to_f32().unwrap().ln()).collect::<Vec<f32>>();
         let alpha0_floats = prior.iter().map(|x| x.to_f32().unwrap()).collect::<Vec<f32>>();
 
-
-        #[allow(unreachable_patterns)]
         match options.device {
             BurnBackend::CPU => {
                 let device = burn::backend::ndarray::NdArrayDevice::default();
