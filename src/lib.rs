@@ -30,6 +30,37 @@ pub mod rcg;
 
 type E = Box<dyn std::error::Error>;
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct OptimizerOpts {
+    /// - Terminate optimization if values change by less than `tolerance`
+    pub tolerance: f64,
+    /// - Maximum number of iterations to run optimizer for.
+    pub max_iters: usize,
+    /// - Use 64-bit floating point numbers instead of 32-bit.
+    pub use_f64: bool,
+}
+
+impl Default for OptimizerOpts {
+    /// Default to these values:
+    /// ```rust
+    /// let mut opts = rcgpar::OptimizerOpts::default();
+    /// opts.tolerance = 1e-7_f64;
+    /// opts.max_iters = 5000_usize;
+    /// opts.use_f64 = true;
+    /// # let expected = rcgpar::OptimizerOpts::default();
+    /// # assert_eq!(opts.tolerance, expected.tolerance);
+    /// # assert_eq!(opts.max_iters, expected.max_iters);
+    /// # assert_eq!(opts.use_f64, expected.use_f64);
+    /// ```
+    ///
+    fn default() -> OptimizerOpts {
+        OptimizerOpts {
+            tolerance: 1e-7_f64,
+            max_iters: 5000_usize,
+            use_f64: true,
+        }
+    }
+}
 /// Infer mixing proportions for a weighted log-likelihood matrix
 ///
 /// Returns the mixing proportions that best fit the model corresponding to
@@ -37,7 +68,13 @@ type E = Box<dyn std::error::Error>;
 /// Typically, `counts` is the number of times the likelihood vector in each
 /// column was observed but can be any weight vector.
 ///
-/// Floating point precision can be set to 32 bits via `use_f32`.
+/// ## Options
+/// Use `opts` to change the following:
+/// - Modify optimizer tolerance via `opts.tolerance`.
+/// - Modify maximum number of iterations via `opts.max_iters`.
+/// - Floating point precision can be set to 64 bits via `opts.use_f64`.
+///
+/// See [OptimizerOpts] for more details.
 ///
 /// ## Prior
 /// Prior for the mixing proportions is given via `prior`. Values in `prior` can
@@ -52,17 +89,19 @@ pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
     log_likelihood: &[Vec<F>],
     counts: &[U],
     prior: &[F],
-    use_f32: bool,
+    opts: Option<OptimizerOpts>,
 ) -> Result<Vec<F>, E> {
     assert_eq!(log_likelihood[0].len(), counts.len());
     assert_eq!(log_likelihood.len(), prior.len());
+
+    let options = opts.unwrap_or_default();
 
     let n_rows = log_likelihood[0].len();
     let n_cols = log_likelihood.len();
 
     // TODO Cleaner way to write selecting f32 vs. f64 precision in optimize().
     //
-    let proportions = if use_f32 {
+    let proportions = if !options.use_f64 {
         let logl_floats = log_likelihood.iter().flat_map(|x| x.iter().map(|y| y.to_f32().unwrap()).collect::<Vec<f32>>()).collect::<Vec<f32>>();
         let log_counts_floats = counts.iter().map(|x| x.to_f32().unwrap().ln()).collect::<Vec<f32>>();
         let alpha0_floats = prior.iter().map(|x| x.to_f32().unwrap()).collect::<Vec<f32>>();
@@ -111,6 +150,7 @@ mod tests {
         use burn_tensor::Tensor;
         use burn_tensor::Int;
 
+        use super::OptimizerOpts;
         use super::optimize;
 
         let log_likelihood: Vec<Vec<f64>> =
@@ -124,7 +164,9 @@ mod tests {
         let prior_counts: Vec<f64> = vec![1.0, 1.0, 1.0, 1.0];
 
         let expected: Vec<f64> = vec![0.9990609232614853, 0.0007300889486079688, 9.656361438673255e-5, 0.00011242417552052694];
-        let got = optimize(&log_likelihood, &counts, &prior_counts, false).unwrap();
+
+        let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, use_f64: true };
+        let got = optimize(&log_likelihood, &counts, &prior_counts, Some(opts)).unwrap();
 
         got.iter().zip(expected.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 1e-17) });
     }
@@ -136,6 +178,7 @@ mod tests {
         use burn_tensor::Tensor;
         use burn_tensor::Int;
 
+        use super::OptimizerOpts;
         use super::optimize;
 
         let log_likelihood: Vec<Vec<f32>> =
@@ -149,7 +192,9 @@ mod tests {
         let prior_counts: Vec<f32> = vec![1.0, 1.0, 1.0, 1.0];
 
         let expected: Vec<f32> = vec![0.9990609232614853, 0.0007300889486079688, 9.656361438673255e-5, 0.00011242417552052694];
-        let got = optimize(&log_likelihood, &counts, &prior_counts, true).unwrap();
+
+        let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, use_f64: false };
+        let got = optimize(&log_likelihood, &counts, &prior_counts, Some(opts)).unwrap();
 
         got.iter().zip(expected.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 1e-4); assert!((x - y).abs() > 1e-8) });
     }
