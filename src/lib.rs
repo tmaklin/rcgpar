@@ -137,7 +137,7 @@ pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
                 let log_counts = Tensor::<Backend, 1>::from_data(log_counts_floats.as_slice(), &device);
                 let alpha0 = Tensor::<Backend, 1>::from_data(alpha0_floats.as_slice(), &device);
 
-                let probs = rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0)?;
+                let probs = rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0, options.tolerance, options.max_iters)?;
                 rcg::mixture_components(probs, log_counts)?.into_data().iter().map(|x| FromPrimitive::from_f32(x).unwrap()).collect::<Vec<F>>()
             },
             #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
@@ -150,7 +150,7 @@ pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
                 let log_counts = Tensor::<Backend, 1>::from_data(log_counts_floats.as_slice(), &device);
                 let alpha0 = Tensor::<Backend, 1>::from_data(alpha0_floats.as_slice(), &device);
 
-                let probs = rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0)?;
+                let probs = rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0, options.tolerance, options.max_iters)?;
                 rcg::mixture_components(probs, log_counts)?.into_data().iter().map(|x| FromPrimitive::from_f32(x).unwrap()).collect::<Vec<F>>()
             },
         }
@@ -169,7 +169,7 @@ pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
                 let log_counts = Tensor::<Backend, 1>::from_data(log_counts_floats.as_slice(), &device);
                 let alpha0 = Tensor::<Backend, 1>::from_data(alpha0_floats.as_slice(), &device);
 
-                let probs = rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0)?;
+                let probs = rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0, options.tolerance, options.max_iters)?;
                 rcg::mixture_components(probs, log_counts)?.into_data().iter().map(|x| FromPrimitive::from_f64(x).unwrap()).collect::<Vec<F>>()
             },
             #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
@@ -182,7 +182,7 @@ pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
                 let log_counts = Tensor::<Backend, 1>::from_data(log_counts_floats.as_slice(), &device);
                 let alpha0 = Tensor::<Backend, 1>::from_data(alpha0_floats.as_slice(), &device);
 
-                let probs = rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0)?;
+                let probs = rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0, options.tolerance, options.max_iters)?;
                 rcg::mixture_components(probs, log_counts)?.into_data().iter().map(|x| FromPrimitive::from_f64(x).unwrap()).collect::<Vec<F>>()
             },
         }

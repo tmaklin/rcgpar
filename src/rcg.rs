@@ -124,6 +124,8 @@ pub fn rcg_optl_mat<B: Backend>(
     logl: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,
     alpha0: Tensor::<B, 1>,
+    tolerance: f64,
+    max_iters: usize,
 ) -> Result<Tensor::<B, 2>, E> {
     let device = logl.clone().device();
 
@@ -134,8 +136,7 @@ pub fn rcg_optl_mat<B: Backend>(
     let mut oldstep = logl.zeros_like();
 
     let mut iter = 0;
-    let max_iters = 100;
-    let mut tolerance = Tensor::<B, 1>::from_data([1e-7_f64], &device);
+    let mut tol = Tensor::<B, 1>::from_data([tolerance], &device);
 
     let mut bound = Tensor::<B, 1>::from_data([-10000_f64], &device);
 
@@ -190,7 +191,7 @@ pub fn rcg_optl_mat<B: Backend>(
         //     eprintln!("\titer: {iter}, bound: {bound}, |g|: {newnorm}");
         // }
 
-        if bound.clone().sub(oldbound.clone()).abs().lower(tolerance.clone()).all().into_data().iter().next().unwrap() && !didreset {
+        if bound.clone().sub(oldbound.clone()).abs().lower(tol.clone()).all().into_data().iter().next().unwrap() && !didreset {
             oldm = logsumexp(gamma_Z.clone(), 0)?;
             oldm_squeezed = oldm.reshape(Shape::new([1, n_obs]));
             gamma_Z = gamma_Z.clone().sub(oldm_squeezed.clone());
@@ -198,7 +199,7 @@ pub fn rcg_optl_mat<B: Backend>(
         }
 
         if newnorm.clone().lower(newnorm.clone().zeros_like()).all().into_data().iter().next().unwrap() {
-            tolerance = tolerance.clone().mul_scalar(10_f64);
+            tol = tol.clone().mul_scalar(10_f64);
         }
 
         iter += 1;
@@ -555,7 +556,7 @@ mod tests {
             &device,
         );
 
-        let got = rcg_optl_mat::<Backend>(logl, log_counts, alpha0).unwrap();
+        let got = rcg_optl_mat::<Backend>(logl, log_counts, alpha0, 1e-7_f64, 100_usize).unwrap();
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();
