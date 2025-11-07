@@ -115,7 +115,6 @@ pub fn rcg_optl_mat<B: Backend>(
     alpha0: Tensor::<B, 1>,
     tolerance: f64,
     max_iters: usize,
-    device: &Device<B>,
 ) -> Result<Tensor::<B, 2>, E> {
     let n_targets = logl.dims()[0];
     let n_obs = logl.dims()[1];
@@ -540,7 +539,7 @@ mod tests {
             &device,
         );
 
-        let got = rcg_optl_mat::<Backend>(logl, log_counts, alpha0, 1e-7_f64, 100_usize, &device).unwrap();
+        let got = rcg_optl_mat::<Backend>(logl, log_counts, alpha0, 1e-7_f64, 100_usize).unwrap();
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();

@@ -134,7 +134,7 @@ fn run_optimizer<B: Backend, F: Float + FromPrimitive, U: PrimInt>(
     let alpha0 = Tensor::<B, 1>::from_data(alpha0_floats.as_slice(), device);
 
     let probs = match options.algorithm {
-        optimizer::Algorithm::RCG => optimizer::rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0, options.tolerance, options.max_iters, device)?,
+        optimizer::Algorithm::RCG => optimizer::rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0, options.tolerance, options.max_iters)?,
         optimizer::Algorithm::EM => optimizer::em::em_algorithm(logl, log_counts.clone(), options.tolerance, options.max_iters, device)?,
     };
 
