@@ -93,16 +93,6 @@ pub fn em_algorithm<B: Backend>(
     Ok(gamma_Z)
 }
 
-pub fn mixture_components<B: Backend>(
-    gamma_Z: Tensor::<B, 2>,
-    log_counts: Tensor::<B, 1>,
-) -> Result<Tensor::<B, 1>, E> {
-    let n_times_total = log_counts.clone().exp().sum().log().into_scalar();
-    let log_counts_squeezed: Tensor::<B, 2> = log_counts.clone().reshape(Shape::new([1, gamma_Z.clone().dims()[1]]));
-    let thetas = gamma_Z.clone().add(log_counts_squeezed).exp().sum_dim(1).log().sub_scalar(n_times_total).exp().reshape(Shape::new([gamma_Z.clone().dims()[0], 1]));
-    Ok(thetas)
-}
-
 // Tests
 #[cfg(test)]
 mod tests {
@@ -117,7 +107,6 @@ mod tests {
         use burn_tensor::Int;
 
         use super::em_algorithm;
-        use super::mixture_components;
 
         let device = Default::default();
         type Backend = NdArray<f32>;

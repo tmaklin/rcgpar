@@ -31,8 +31,7 @@ use burn_tensor::backend::Backend;
 use num::traits::{Float, PrimInt};
 use num::FromPrimitive;
 
-pub mod rcg;
-pub mod em;
+pub mod optimizer;
 
 type E = Box<dyn std::error::Error>;
 
@@ -128,8 +127,8 @@ fn run_optimizer<B: Backend, F: Float + FromPrimitive, U: PrimInt>(
     let alpha0_floats: Vec<f32> = alpha0_f.iter().map(|x| x.to_f32().unwrap()).collect();
     let alpha0 = Tensor::<B, 1>::from_data(alpha0_floats.as_slice(), device);
 
-    let probs = rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0, options.tolerance, options.max_iters, device)?;
-    Ok(rcg::mixture_components(probs, log_counts)?.into_data().iter().map(|x: f64| FromPrimitive::from_f64(x).unwrap()).collect::<Vec<F>>())
+    let probs = optimizer::rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0, options.tolerance, options.max_iters, device)?;
+    Ok(optimizer::mixture_components(probs, log_counts)?.into_data().iter().map(|x: f64| FromPrimitive::from_f64(x).unwrap()).collect::<Vec<F>>())
 }
 
 /// Infer mixing proportions for a weighted log-likelihood matrix
