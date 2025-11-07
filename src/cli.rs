@@ -44,6 +44,10 @@ pub enum Commands {
         #[arg(long = "device", required = false, help = "Which backend to run on (default: NdArray with 64 bit floats on CPU).")]
         device: Option<rcgpar::BurnBackend>,
 
+        // Device
+        #[arg(long = "algorithm", required = false, help = "Optimizer algorithm to use (default: rcg)")]
+        algorithm: Option<rcgpar::optimizer::Algorithm>,
+
         // RCG parameters
         // // Tolerance when checking for convergence
         #[arg(long = "tolerance", default_value_t = 1e-7, help_heading = "RCG parameters", help = "Tolerance when checking for convergence in RCG.")]

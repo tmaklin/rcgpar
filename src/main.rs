@@ -94,6 +94,7 @@ fn main() {
             logl_path,
             weights_path,
             device,
+            algorithm,
             tolerance,
             max_iters,
             num_threads,
@@ -109,6 +110,7 @@ fn main() {
             options.tolerance = *tolerance;
             options.max_iters = *max_iters;
             options.device = device.clone().unwrap_or_default();
+            options.algorithm = algorithm.clone().unwrap_or_default();
 
             let proportions = rcgpar::optimize(&logl, &weights, &prior, Some(options)).unwrap();
 
