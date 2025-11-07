@@ -108,7 +108,7 @@ fn main() {
             let mut options: rcgpar::OptimizerOpts = Default::default();
             options.tolerance = *tolerance;
             options.max_iters = *max_iters;
-            options.device = rcgpar::BurnBackend::CPU64;
+            options.device = device.clone().unwrap_or_default();
 
             let proportions = rcgpar::optimize(&logl, &weights, &prior, Some(options)).unwrap();
 
