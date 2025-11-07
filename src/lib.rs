@@ -56,6 +56,22 @@ pub enum BurnBackend {
     CPU64,
 }
 
+impl std::str::FromStr for BurnBackend {
+    type Err = String; // Define an error type for parsing failures
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "cpu32" => Ok(BurnBackend::CPU32),
+            "cpu64" => Ok(BurnBackend::CPU64),
+            #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
+            "gpu32" => Ok(BurnBackend::GPU32),
+            #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
+            "gpu64" => Ok(BurnBackend::GPU64),
+            _ => Err(format!("'{}' is not a valid BurnBackend variant", s)),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub struct OptimizerOpts {
