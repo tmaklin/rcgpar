@@ -28,6 +28,30 @@ use burn_tensor::backend::Backend;
 
 type E = Box<dyn std::error::Error>;
 
+/// Optimizer algorithms
+///
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum Algorithm {
+    /// Expectation maximization
+    EM,
+    /// Riemannian conjugate gradient descent
+    #[default]
+    RCG,
+}
+
+impl std::str::FromStr for Algorithm {
+    type Err = String; // Define an error type for parsing failures
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "rcg" => Ok(Algorithm::RCG),
+            "em" => Ok(Algorithm::EM),
+            _ => Err(format!("'{}' is not a valid Algorithm variant", s)),
+        }
+    }
+}
+
 /// Compute mixture components from a fitted probability matrix
 pub fn mixture_components<B: Backend>(
     gamma_Z: Tensor::<B, 2>,

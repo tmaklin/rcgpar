@@ -33,6 +33,8 @@ use num::FromPrimitive;
 
 pub mod optimizer;
 
+use optimizer::Algorithm;
+
 type E = Box<dyn std::error::Error>;
 
 /// Backend type for [burn](https://docs.rs/burn)
@@ -80,6 +82,8 @@ pub struct OptimizerOpts {
     pub max_iters: usize,
     /// - Run on CPU or GPU.
     pub device: BurnBackend,
+    /// - Optimizer algorithm to use.
+    pub algorithm: Algorithm,
 }
 
 impl Default for OptimizerOpts {
@@ -89,10 +93,12 @@ impl Default for OptimizerOpts {
     /// opts.tolerance = 1e-7_f64;
     /// opts.max_iters = 5000_usize;
     /// opts.device = rcgpar::BurnBackend::CPU64;
+    /// opts.algorithm = rcgpar::optimizer::Algorithm::RCG;
     /// # let expected = rcgpar::OptimizerOpts::default();
     /// # assert_eq!(opts.tolerance, expected.tolerance);
     /// # assert_eq!(opts.max_iters, expected.max_iters);
     /// # assert_eq!(opts.device, expected.device);
+    /// # assert_eq!(opts.algorithm, expected.algorithm);
     /// ```
     ///
     fn default() -> OptimizerOpts {
@@ -100,6 +106,7 @@ impl Default for OptimizerOpts {
             tolerance: 1e-7_f64,
             max_iters: 5000_usize,
             device: BurnBackend::CPU64,
+            algorithm: Algorithm::RCG,
         }
     }
 }
@@ -126,7 +133,11 @@ fn run_optimizer<B: Backend, F: Float + FromPrimitive, U: PrimInt>(
     let alpha0_floats: Vec<f32> = alpha0_f.iter().map(|x| x.to_f32().unwrap()).collect();
     let alpha0 = Tensor::<B, 1>::from_data(alpha0_floats.as_slice(), device);
 
-    let probs = optimizer::rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0, options.tolerance, options.max_iters, device)?;
+    let probs = match options.algorithm {
+        optimizer::Algorithm::RCG => optimizer::rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0, options.tolerance, options.max_iters, device)?,
+        optimizer::Algorithm::EM => optimizer::em::em_algorithm(logl, log_counts.clone(), options.tolerance, options.max_iters, device)?,
+    };
+
     Ok(optimizer::mixture_components(probs, log_counts)?.into_data().iter().map(|x: f64| FromPrimitive::from_f64(x).unwrap()).collect::<Vec<F>>())
 }
 
@@ -212,6 +223,7 @@ mod tests {
         use super::BurnBackend;
         use super::OptimizerOpts;
         use super::optimize;
+        use super::optimizer::Algorithm;
 
         let log_likelihood: Vec<Vec<f64>> =
             vec![
@@ -225,7 +237,7 @@ mod tests {
 
         let expected: Vec<f64> = vec![0.9990609231670258, 0.0007300890279000023, 9.656363112888921e-5, 0.00011242417394518503];
 
-        let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, device: BurnBackend::CPU64 };
+        let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, device: BurnBackend::CPU64, algorithm: Algorithm::RCG };
         let got = optimize(&log_likelihood, &counts, &prior_counts, Some(opts)).unwrap();
 
         got.iter().zip(expected.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 1e-17) });
@@ -241,6 +253,7 @@ mod tests {
         use super::BurnBackend;
         use super::OptimizerOpts;
         use super::optimize;
+        use super::optimizer::Algorithm;
 
         let log_likelihood: Vec<Vec<f32>> =
             vec![
@@ -254,7 +267,7 @@ mod tests {
 
         let expected: Vec<f32> = vec![0.9990609232614853, 0.0007300889486079688, 9.656361438673255e-5, 0.00011242417552052694];
 
-        let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, device: BurnBackend::CPU32 };
+        let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, device: BurnBackend::CPU32, algorithm: Algorithm::RCG };
         let got = optimize(&log_likelihood, &counts, &prior_counts, Some(opts)).unwrap();
 
         got.iter().zip(expected.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 1e-4); assert!((x - y).abs() > 1e-8) });
