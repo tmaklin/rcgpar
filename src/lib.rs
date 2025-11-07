@@ -39,14 +39,15 @@ type E = Box<dyn std::error::Error>;
 ///
 /// Number after enum name denotes floating point width.
 ///
+/// Compile with the following features to enable:
+/// - GPU32 and GPU64: `wgpu`, `webgpu`, or `vulkan`.
+///
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum BurnBackend {
     /// [WebGPU](https://www.w3.org/TR/webgpu/), best cross-platform GPU support, 32 bit precision.
-    #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
     GPU32,
     /// [WebGPU](https://www.w3.org/TR/webgpu/), best cross-platform GPU support, 64 bit precision.
-    #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
     GPU64,
 
     /// [NdArray](https://docs.rs/ndarray), runs on most CPU architectures, 32 bit precision.
@@ -63,9 +64,7 @@ impl std::str::FromStr for BurnBackend {
         match s {
             "cpu32" => Ok(BurnBackend::CPU32),
             "cpu64" => Ok(BurnBackend::CPU64),
-            #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
             "gpu32" => Ok(BurnBackend::GPU32),
-            #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
             "gpu64" => Ok(BurnBackend::GPU64),
             _ => Err(format!("'{}' is not a valid BurnBackend variant", s)),
         }
@@ -190,6 +189,9 @@ pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
             type Backend = Wgpu<f64>;
             run_optimizer::<Backend, F, U>(&log_likelihood, counts, prior, &options, &device)?
         },
+        // TODO Return error instead of panic when requesting a backend that is not supported
+        #[cfg(not(any(feature = "wgpu", feature = "webgpu", feature = "vulkan")))]
+        BurnBackend::GPU32 | BurnBackend::GPU64 => panic!("rcgpar was not compiled with WGPU support"),
     };
 
     Ok(proportions)
