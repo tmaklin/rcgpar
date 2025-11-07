@@ -48,49 +48,45 @@ pub fn compute_norm<B: Backend>(
     dl_dphi: Tensor::<B, 2>,
 ) -> Result<f64, E> {
     let temp = gamma_z.exp().mul(dl_dphi.clone());
-    let colsums = temp.clone().sum_dim(0).reshape(Shape::new([1, dl_dphi.clone().dims()[1]]));
+    let colsums = temp.clone().sum_dim(0).reshape(Shape::new([1, dl_dphi.dims()[1]]));
     let newnorm = temp.mul(dl_dphi.sub(colsums)).sum().into_data().iter::<f64>().next().unwrap();
     Ok(newnorm)
 }
 
 pub fn mixt_negnatgrad<B: Backend>(
     logl: Tensor::<B, 2>,
-    gamma_Z: Tensor::<B, 2>,
+    gamma_z: Tensor::<B, 2>,
     n_k: Tensor::<B, 1>,
 ) -> Result<Tensor::<B, 2>, E> {
-
     let n_k_data = n_k.clone().into_data();
     let digamma_n_k_vals = n_k_data.iter().map(|x: f32| (digamma(x as f64) - 1_f64) as f32).collect::<Vec<f32>>();
-    let digamma_n_k = Tensor::<B, 1>::from_data(digamma_n_k_vals.as_slice(), &n_k.device());
-    let digamma_n_k_squeezed: Tensor::<B, 2> = digamma_n_k.reshape(Shape::new([logl.dims()[0], 1]));
-
-    let dl_dphi: Tensor::<B, 2> = logl.add(digamma_n_k_squeezed).sub(gamma_Z.clone());
-
+    let digamma_n_k = Tensor::<B, 1>::from_data(digamma_n_k_vals.as_slice(), &n_k.device()).reshape(Shape::new([logl.dims()[0], 1]));
+    let dl_dphi: Tensor::<B, 2> = logl.add(digamma_n_k).sub(gamma_z);
     Ok(dl_dphi)
 }
 
 pub fn update_n_k<B: Backend>(
-    gamma_Z: Tensor::<B, 2>,
+    gamma_z: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,
     alpha0: Tensor::<B, 1>,
 ) -> Result<Tensor::<B, 1>, E> {
-    let log_counts_squeezed: Tensor::<B, 2> = log_counts.reshape(Shape::new([1, gamma_Z.clone().dims()[1]]));
-    let n_k: Tensor::<B, 1> = gamma_Z.add(log_counts_squeezed).exp().sum_dim(1).reshape(Shape::new([alpha0.clone().dims()[0]])).add(alpha0);
+    let log_counts_squeezed: Tensor::<B, 2> = log_counts.reshape(Shape::new([1, gamma_z.dims()[1]]));
+    let n_k: Tensor::<B, 1> = gamma_z.add(log_counts_squeezed).exp().sum_dim(1).reshape(Shape::new([alpha0.dims()[0]])).add(alpha0);
     Ok(n_k)
 }
 
 pub fn elbo_rcg_mat<B: Backend>(
     logl: Tensor::<B, 2>,
-    gamma_Z: Tensor::<B, 2>,
+    gamma_z: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,
     n_k: Tensor::<B, 1>,
 ) -> Result<Tensor::<B, 1>, E> {
-    let log_counts_squeezed: Tensor::<B, 2> = log_counts.reshape(Shape::new([1, gamma_Z.clone().dims()[1]]));
+    let log_counts_squeezed: Tensor::<B, 2> = log_counts.reshape(Shape::new([1, gamma_z.dims()[1]]));
 
     let n_k_data = n_k.into_data();
     let lgamma_n_k_sum = n_k_data.iter().map(|x: f64| ln_gamma(x)).sum::<f64>();
 
-    let bound = gamma_Z.clone().add(log_counts_squeezed).exp().mul(logl.sub(gamma_Z)).sum();
+    let bound = gamma_z.clone().add(log_counts_squeezed).exp().mul(logl.sub(gamma_z)).sum();
     let newbound = bound.add_scalar(lgamma_n_k_sum);
 
     Ok(newbound)
@@ -125,8 +121,8 @@ pub fn rcg_optl_mat<B: Backend>(
     max_iters: usize,
     device: &Device<B>,
 ) -> Result<Tensor::<B, 2>, E> {
-    let n_targets = logl.clone().dims()[0];
-    let n_obs = logl.clone().dims()[1];
+    let n_targets = logl.dims()[0];
+    let n_obs = logl.dims()[1];
 
     let mut gamma_Z = logl.zeros_like() + (1_f64 / (n_targets as f64)).ln();
     let mut oldstep = logl.zeros_like();
@@ -151,16 +147,15 @@ pub fn rcg_optl_mat<B: Backend>(
         if didreset {
             oldstep = logl.zeros_like();
         } else {
-            oldstep = oldstep.clone().mul_scalar(beta_FR);
-            step = step.clone().add(oldstep.clone());
+            oldstep = oldstep.mul_scalar(beta_FR);
+            step = step.add(oldstep.clone());
         }
         didreset = false;
 
         gamma_Z = gamma_Z.add(step.clone());
 
-        let mut oldm = logsumexp(gamma_Z.clone(), 0)?;
-        let mut oldm_squeezed: Tensor::<B, 2> = oldm.reshape(Shape::new([1, n_obs]));
-        gamma_Z = gamma_Z.clone().sub(oldm_squeezed.clone());
+        let mut oldm = logsumexp(gamma_Z.clone(), 0)?.reshape(Shape::new([1, n_obs]));
+        gamma_Z = gamma_Z.sub(oldm.clone());
 
         n_k = update_n_k(gamma_Z.clone(), log_counts.clone(), alpha0.clone())?;
         let oldbound = bound;
@@ -168,14 +163,13 @@ pub fn rcg_optl_mat<B: Backend>(
 
         if bound.clone().lower(oldbound.clone()).all().into_data().iter().next().unwrap() {
             didreset = true;
-            gamma_Z = gamma_Z.clone().add(oldm_squeezed); // revert step
+            gamma_Z = gamma_Z.add(oldm); // revert step
             if beta_FR > 0_f64 {
-                gamma_Z = gamma_Z.clone().sub(oldstep.clone());
+                gamma_Z = gamma_Z.sub(oldstep.clone());
             }
 
-            oldm = logsumexp(gamma_Z.clone(), 0)?;
-            oldm_squeezed = oldm.reshape(Shape::new([1, n_obs]));
-            gamma_Z = gamma_Z.clone().sub(oldm_squeezed.clone());
+            oldm = logsumexp(gamma_Z.clone(), 0)?.reshape(Shape::new([1, n_obs]));
+            gamma_Z = gamma_Z.sub(oldm);
             n_k = update_n_k(gamma_Z.clone(), log_counts.clone(), alpha0.clone())?;
 
             bound = bound_const.clone() + elbo_rcg_mat(logl.clone(), gamma_Z.clone(), log_counts.clone(), n_k.clone())?.into_scalar();
@@ -188,22 +182,20 @@ pub fn rcg_optl_mat<B: Backend>(
         // }
 
         if bound.clone().sub(oldbound.clone()).abs().lower(tol.clone()).all().into_data().iter().next().unwrap() && !didreset {
-            oldm = logsumexp(gamma_Z.clone(), 0)?;
-            oldm_squeezed = oldm.reshape(Shape::new([1, n_obs]));
-            gamma_Z = gamma_Z.clone().sub(oldm_squeezed.clone());
+            oldm = logsumexp(gamma_Z.clone(), 0)?.reshape(Shape::new([1, n_obs]));
+            gamma_Z = gamma_Z.sub(oldm);
             break;
         }
 
         if newnorm < oldnorm {
-            tol = tol.clone().mul_scalar(10_f64);
+            tol = tol.mul_scalar(10_f64);
         }
 
         iter += 1;
     }
 
-    let m = logsumexp(gamma_Z.clone(), 0)?;
-    let m_squeezed = m.reshape(Shape::new([1, n_obs]));
-    gamma_Z = gamma_Z.clone().sub(m_squeezed.clone());
+    let m = logsumexp(gamma_Z.clone(), 0)?.reshape(Shape::new([1, n_obs]));
+    gamma_Z = gamma_Z.sub(m);
 
     Ok(gamma_Z)
 }
@@ -213,8 +205,8 @@ pub fn mixture_components<B: Backend>(
     log_counts: Tensor::<B, 1>,
 ) -> Result<Tensor::<B, 1>, E> {
     let n_times_total = log_counts.clone().exp().sum().log().into_scalar();
-    let log_counts_squeezed: Tensor::<B, 2> = log_counts.clone().reshape(Shape::new([1, gamma_Z.clone().dims()[1]]));
-    let thetas = gamma_Z.clone().add(log_counts_squeezed).exp().sum_dim(1).log().sub_scalar(n_times_total).exp().reshape(Shape::new([gamma_Z.clone().dims()[0], 1]));
+    let log_counts_squeezed: Tensor::<B, 2> = log_counts.reshape(Shape::new([1, gamma_Z.dims()[1]]));
+    let thetas = gamma_Z.clone().add(log_counts_squeezed).exp().sum_dim(1).log().sub_scalar(n_times_total).exp().reshape(Shape::new([gamma_Z.dims()[0], 1]));
     Ok(thetas)
 }
 
