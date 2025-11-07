@@ -44,16 +44,12 @@ pub fn logsumexp<B: Backend>(
 }
 
 pub fn compute_norm<B: Backend>(
-    gamma_Z: Tensor::<B, 2>,
+    gamma_z: Tensor::<B, 2>,
     dl_dphi: Tensor::<B, 2>,
-) -> Result<Tensor::<B, 1>, E> {
-    let temp = gamma_Z.exp().mul(dl_dphi.clone());
-
-    let colsums = temp.clone().sum_dim(0);
-    let colsums_squeezed: Tensor::<B, 2> = colsums.clone().reshape(Shape::new([1, dl_dphi.clone().dims()[1]]));
-
-    let newnorm = temp.mul(dl_dphi.sub(colsums_squeezed)).sum();
-
+) -> Result<f64, E> {
+    let temp = gamma_z.exp().mul(dl_dphi.clone());
+    let colsums = temp.clone().sum_dim(0).reshape(Shape::new([1, dl_dphi.clone().dims()[1]]));
+    let newnorm = temp.mul(dl_dphi.sub(colsums)).sum().into_data().iter::<f64>().next().unwrap();
     Ok(newnorm)
 }
 
@@ -143,19 +139,19 @@ pub fn rcg_optl_mat<B: Backend>(
     let bound_const = calc_bound_const(log_counts.clone(), alpha0.clone())?;
     let mut n_k = update_n_k(gamma_Z.clone(), log_counts.clone(), alpha0.clone())?;
 
-    let mut oldnorm = Tensor::<B, 1>::from_data([1_f64], &device);
+    let mut oldnorm: f64 = 1_f64;
     let mut didreset = false;
 
     while iter < max_iters {
         let mut step = mixt_negnatgrad(logl.clone(), gamma_Z.clone(), n_k.clone())?;
-        let newnorm = compute_norm(gamma_Z.clone(), step.clone())?.abs().add_scalar(1e-7);
-        let beta_FR = (newnorm.clone().log() - oldnorm.clone().log()).exp();
-        oldnorm = newnorm.clone();
+        let newnorm: f64 = compute_norm(gamma_Z.clone(), step.clone())?.abs().max(1e-7);
+        let beta_FR: f64 = (newnorm.ln() - oldnorm.ln()).exp();
+        oldnorm = newnorm;
 
         if didreset {
             oldstep = logl.zeros_like();
         } else {
-            oldstep = oldstep.clone().mul_scalar(beta_FR.clone().into_scalar());
+            oldstep = oldstep.clone().mul_scalar(beta_FR);
             step = step.clone().add(oldstep.clone());
         }
         didreset = false;
@@ -173,7 +169,7 @@ pub fn rcg_optl_mat<B: Backend>(
         if bound.clone().lower(oldbound.clone()).all().into_data().iter().next().unwrap() {
             didreset = true;
             gamma_Z = gamma_Z.clone().add(oldm_squeezed); // revert step
-            if beta_FR.clone().greater(beta_FR.clone().zeros_like()).all().into_data().iter().next().unwrap() {
+            if beta_FR > 0_f64 {
                 gamma_Z = gamma_Z.clone().sub(oldstep.clone());
             }
 
@@ -198,7 +194,7 @@ pub fn rcg_optl_mat<B: Backend>(
             break;
         }
 
-        if newnorm.clone().lower(newnorm.clone().zeros_like()).all().into_data().iter().next().unwrap() {
+        if newnorm < oldnorm {
             tol = tol.clone().mul_scalar(10_f64);
         }
 
@@ -318,8 +314,8 @@ mod tests {
             &device,
         );
 
-        let expected: f32 = 0.193162;
-        let got = compute_norm::<Backend>(gamma_Z, dl_dphi).unwrap().into_scalar();
+        let expected: f64 = 0.193162;
+        let got = compute_norm::<Backend>(gamma_Z, dl_dphi).unwrap();
 
         assert_approx_eq!(expected, got, 1e-4);
     }
