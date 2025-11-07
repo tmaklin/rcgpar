@@ -51,20 +51,21 @@ pub fn em_algorithm<B: Backend>(
 ) -> Result<Tensor::<B, 2>, E> {
     let n_targets = logl.clone().dims()[0];
     let n_obs = logl.clone().dims()[1];
+    assert_eq!(n_obs, log_counts.clone().dims()[0]);
 
-    let mut prev_loss = Tensor::<B, 1>::from_data([0.0], device);
+    let mut prev_loss = Tensor::<B, 1>::from_data([100000.0], device);
     let tol = Tensor::<B, 1>::from_data([tolerance], device);
 
     let mut logl_weighted = logl.zeros_like();
     let log_counts_squeezed: Tensor::<B, 2> = log_counts.clone().reshape(Shape::new([1, n_obs]));
-    let mut thetas = log_counts.zeros_like();
-    thetas = thetas.sub_scalar((n_targets as f64).ln());
+    let mut thetas = Tensor::<B, 1>::zeros(Shape::new([n_targets]), device);
+    thetas = thetas.sub_scalar((n_targets as f64).ln()).exp();
 
     let mut iter = 0;
     while iter < max_iters {
         // E step
-        let thetas_squeezed: Tensor::<B, 2> = thetas.clone().reshape(Shape::new([1, n_obs]));
-        logl_weighted = logl_weighted.add(thetas_squeezed);
+        let thetas_squeezed: Tensor::<B, 2> = thetas.clone().log().reshape(Shape::new([n_targets, 1]));
+        logl_weighted = logl.clone().add(thetas_squeezed);
         let lse = logsumexp(logl_weighted.clone(), 0)?;
         let lse_squeezed : Tensor::<B, 2> = lse.clone().reshape(Shape::new([1, n_obs]));
         logl_weighted = logl_weighted.sub(lse_squeezed);
@@ -73,7 +74,7 @@ pub fn em_algorithm<B: Backend>(
         logl_weighted = logl_weighted.add(log_counts_squeezed.clone());
         logl_weighted = logl_weighted.exp();
 
-        thetas = logl_weighted.clone().sum_dim(0).reshape(Shape::new([1, n_obs])).div_scalar(log_counts.clone().exp().sum().into_scalar());
+        thetas = logl_weighted.clone().sum_dim(1).reshape(Shape::new([n_targets])).div_scalar(log_counts.clone().exp().sum().into_scalar());
 
         let loss = -lse.add(log_counts.clone()).exp().sum();
 
@@ -83,10 +84,10 @@ pub fn em_algorithm<B: Backend>(
         prev_loss = loss;
         iter += 1;
     }
-    let thetas_squeezed: Tensor::<B, 2> = thetas.clone().reshape(Shape::new([1, n_obs]));
-    let logl_weighted = logl.clone().add(thetas_squeezed);
+    let thetas_squeezed: Tensor::<B, 2> = thetas.clone().log().reshape(Shape::new([n_targets, 1]));
+    logl_weighted = logl.clone().add(thetas_squeezed);
     let lse = logsumexp(logl_weighted.clone(), 0)?;
-    let lse_squeezed : Tensor::<B, 2> = lse.reshape(Shape::new([1, n_obs]));
+    let lse_squeezed : Tensor::<B, 2> = lse.clone().reshape(Shape::new([1, n_obs]));
     let gamma_Z = logl_weighted.sub(lse_squeezed);
 
     Ok(gamma_Z)
@@ -147,21 +148,19 @@ mod tests {
 
         let expected = Tensor::<Backend, 2>::from_data(
             [
-                [ -0.0010899, -0.00104044, -0.000928571, -0.00104519, -0.000995734, -0.000883857, -0.000944069, -0.000894604, -0.000782716, -0.000853449 ],
-                [ -7.15745,   -7.1574,     -7.15729,     -7.15741,    -7.15736,     -7.15725,     -7.15731,     -7.15726,     -7.15715,     -7.51888 ],
-                [ -8.82298,   -8.82293,    -8.82282,     -9.1846,     -9.18455,     -9.18444,     -13.418,      -13.4179,     -13.4178,     -8.82274 ],
-                [ -8.72199,   -9.0836,     -13.3169,     -8.72195,    -9.08356,     -13.3169,     -8.72184,     -9.08346,     -13.3168,     -8.72175 ],
+                [-0.0013959194, -0.0013959194, -0.0013959194, -0.0013959194, -0.0013959194, -0.0013959194, -0.0013959194, -0.0013959194, -0.0013959194, -0.0009725131],
+                [-6.5748825, -6.5748825, -6.5748825, -6.5748825, -6.5748825, -6.5748825, -6.5748825, -6.5748825, -6.5748825, -6.936122],
+                [-42.378433, -42.378433, -42.378433, -42.740093, -42.740093, -42.740093, -46.973553, -46.973553, -46.973553, -42.37801],
+                [-37.232487, -37.594147, -41.827606, -37.232487, -37.594147, -41.827606, -37.232487, -37.594147, -41.827606, -37.232063]
             ],
             &device,
         );
 
         let got = em_algorithm::<Backend>(logl, log_counts.clone(), 1e-7_f64, 100_usize, &device).unwrap();
-        let components = mixture_components(got.clone(), log_counts).unwrap();
-        eprintln!("{:?}", components);
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();
 
-        got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1_f32) });
+        got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1e-7_f32) });
     }
 }
