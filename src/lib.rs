@@ -32,6 +32,7 @@ use num::traits::{Float, PrimInt};
 use num::FromPrimitive;
 
 pub mod rcg;
+pub mod em;
 
 type E = Box<dyn std::error::Error>;
 
