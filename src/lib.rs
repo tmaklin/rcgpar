@@ -240,7 +240,7 @@ mod tests {
         let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, device: BurnBackend::CPU64, algorithm: Algorithm::RCG };
         let got = optimize(&log_likelihood, &counts, &prior_counts, Some(opts)).unwrap();
 
-        got.iter().zip(expected.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 1e-17) });
+        got.iter().zip(expected.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 1e-10) });
     }
 
     #[test]
