@@ -124,7 +124,7 @@ pub fn rcg_optl_mat<B: Backend>(
     let n_targets = logl.dims()[0];
     let n_obs = logl.dims()[1];
 
-    let mut gamma_Z = logl.zeros_like() + (1_f64 / (n_targets as f64)).ln();
+    let mut gamma_z = logl.zeros_like() + (1_f64 / (n_targets as f64)).ln();
     let mut oldstep = logl.zeros_like();
 
     let mut iter = 0;
@@ -133,46 +133,46 @@ pub fn rcg_optl_mat<B: Backend>(
     let mut bound = Tensor::<B, 1>::from_data([-10000_f64], &device);
 
     let bound_const = calc_bound_const(log_counts.clone(), alpha0.clone())?;
-    let mut n_k = update_n_k(gamma_Z.clone(), log_counts.clone(), alpha0.clone())?;
+    let mut n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone())?;
 
     let mut oldnorm: f64 = 1_f64;
     let mut didreset = false;
 
     while iter < max_iters {
-        let mut step = mixt_negnatgrad(logl.clone(), gamma_Z.clone(), n_k.clone())?;
-        let newnorm: f64 = compute_norm(gamma_Z.clone(), step.clone())?.abs().max(1e-7);
-        let beta_FR: f64 = (newnorm.ln() - oldnorm.ln()).exp();
+        let mut step = mixt_negnatgrad(logl.clone(), gamma_z.clone(), n_k.clone())?;
+        let newnorm: f64 = compute_norm(gamma_z.clone(), step.clone())?.abs().max(1e-7);
+        let beta_fr: f64 = (newnorm.ln() - oldnorm.ln()).exp();
         oldnorm = newnorm;
 
         if didreset {
             oldstep = logl.zeros_like();
         } else {
-            oldstep = oldstep.mul_scalar(beta_FR);
+            oldstep = oldstep.mul_scalar(beta_fr);
             step = step.add(oldstep.clone());
         }
         didreset = false;
 
-        gamma_Z = gamma_Z.add(step.clone());
+        gamma_z = gamma_z.add(step.clone());
 
-        let mut oldm = logsumexp(gamma_Z.clone(), 0)?.reshape(Shape::new([1, n_obs]));
-        gamma_Z = gamma_Z.sub(oldm.clone());
+        let mut oldm = logsumexp(gamma_z.clone(), 0)?.reshape(Shape::new([1, n_obs]));
+        gamma_z = gamma_z.sub(oldm.clone());
 
-        n_k = update_n_k(gamma_Z.clone(), log_counts.clone(), alpha0.clone())?;
+        n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone())?;
         let oldbound = bound;
-        bound = bound_const.clone() + elbo_rcg_mat(logl.clone(), gamma_Z.clone(), log_counts.clone(), n_k.clone())?.into_scalar();
+        bound = bound_const.clone() + elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone())?.into_scalar();
 
         if bound.clone().lower(oldbound.clone()).all().into_data().iter().next().unwrap() {
             didreset = true;
-            gamma_Z = gamma_Z.add(oldm); // revert step
-            if beta_FR > 0_f64 {
-                gamma_Z = gamma_Z.sub(oldstep.clone());
+            gamma_z = gamma_z.add(oldm); // revert step
+            if beta_fr > 0_f64 {
+                gamma_z = gamma_z.sub(oldstep.clone());
             }
 
-            oldm = logsumexp(gamma_Z.clone(), 0)?.reshape(Shape::new([1, n_obs]));
-            gamma_Z = gamma_Z.sub(oldm);
-            n_k = update_n_k(gamma_Z.clone(), log_counts.clone(), alpha0.clone())?;
+            oldm = logsumexp(gamma_z.clone(), 0)?.reshape(Shape::new([1, n_obs]));
+            gamma_z = gamma_z.sub(oldm);
+            n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone())?;
 
-            bound = bound_const.clone() + elbo_rcg_mat(logl.clone(), gamma_Z.clone(), log_counts.clone(), n_k.clone())?.into_scalar();
+            bound = bound_const.clone() + elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone())?.into_scalar();
         } else {
             oldstep = step;
         }
@@ -182,8 +182,8 @@ pub fn rcg_optl_mat<B: Backend>(
         // }
 
         if bound.clone().sub(oldbound.clone()).abs().lower(tol.clone()).all().into_data().iter().next().unwrap() && !didreset {
-            oldm = logsumexp(gamma_Z.clone(), 0)?.reshape(Shape::new([1, n_obs]));
-            gamma_Z = gamma_Z.sub(oldm);
+            oldm = logsumexp(gamma_z.clone(), 0)?.reshape(Shape::new([1, n_obs]));
+            gamma_z = gamma_z.sub(oldm);
             break;
         }
 
@@ -194,19 +194,19 @@ pub fn rcg_optl_mat<B: Backend>(
         iter += 1;
     }
 
-    let m = logsumexp(gamma_Z.clone(), 0)?.reshape(Shape::new([1, n_obs]));
-    gamma_Z = gamma_Z.sub(m);
+    let m = logsumexp(gamma_z.clone(), 0)?.reshape(Shape::new([1, n_obs]));
+    gamma_z = gamma_z.sub(m);
 
-    Ok(gamma_Z)
+    Ok(gamma_z)
 }
 
 pub fn mixture_components<B: Backend>(
-    gamma_Z: Tensor::<B, 2>,
+    gamma_z: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,
 ) -> Result<Tensor::<B, 1>, E> {
     let n_times_total = log_counts.clone().exp().sum().log().into_scalar();
-    let log_counts_squeezed: Tensor::<B, 2> = log_counts.reshape(Shape::new([1, gamma_Z.dims()[1]]));
-    let thetas = gamma_Z.clone().add(log_counts_squeezed).exp().sum_dim(1).log().sub_scalar(n_times_total).exp().reshape(Shape::new([gamma_Z.dims()[0], 1]));
+    let log_counts_squeezed: Tensor::<B, 2> = log_counts.reshape(Shape::new([1, gamma_z.dims()[1]]));
+    let thetas = gamma_z.clone().add(log_counts_squeezed).exp().sum_dim(1).log().sub_scalar(n_times_total).exp().reshape(Shape::new([gamma_z.dims()[0], 1]));
     Ok(thetas)
 }
 
