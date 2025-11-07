@@ -24,7 +24,6 @@
 //! This implementation is based on the rcg_gpu Torch code written by Joel.
 //!
 
-use burn_tensor::Device;
 use burn_tensor::backend::Backend;
 use burn_tensor::{Shape, Tensor};
 use statrs::function::gamma::digamma;
