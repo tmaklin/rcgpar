@@ -35,11 +35,10 @@ type E = Box<dyn std::error::Error>;
 pub fn logsumexp<B: Backend>(
     input: Tensor::<B, 2>,
     dim: usize,
-) -> Result<Tensor<B, 1>, E> {
-    let max = input.clone().max_dim(dim).unsqueeze();
+) -> Result<Tensor<B, 2>, E> {
+    let max = input.clone().max_dim(dim);
     let res = (input - max.clone()).exp().sum_dim(dim).log();
     let res = res + max;
-    let res = res.squeeze();
     Ok(res)
 }
 
@@ -149,7 +148,7 @@ pub fn rcg_optl_mat<B: Backend>(
 
         gamma_z = gamma_z.add(step.clone());
 
-        let mut oldm = logsumexp(gamma_z.clone(), 0)?.reshape(Shape::new([1, n_obs]));
+        let mut oldm = logsumexp(gamma_z.clone(), 0)?;
         gamma_z = gamma_z.sub(oldm.clone());
 
         n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone())?;
@@ -163,7 +162,7 @@ pub fn rcg_optl_mat<B: Backend>(
                 gamma_z = gamma_z.sub(oldstep.clone());
             }
 
-            oldm = logsumexp(gamma_z.clone(), 0)?.reshape(Shape::new([1, n_obs]));
+            oldm = logsumexp(gamma_z.clone(), 0)?;
             gamma_z = gamma_z.sub(oldm);
             n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone())?;
 
@@ -177,7 +176,7 @@ pub fn rcg_optl_mat<B: Backend>(
         // }
 
         if (bound - oldbound).abs() < tol && !didreset {
-            oldm = logsumexp(gamma_z.clone(), 0)?.reshape(Shape::new([1, n_obs]));
+            oldm = logsumexp(gamma_z.clone(), 0)?;
             gamma_z = gamma_z.sub(oldm);
             break;
         }
@@ -189,7 +188,7 @@ pub fn rcg_optl_mat<B: Backend>(
         iter += 1;
     }
 
-    let m = logsumexp(gamma_z.clone(), 0)?.reshape(Shape::new([1, n_obs]));
+    let m = logsumexp(gamma_z.clone(), 0)?;
     gamma_z = gamma_z.sub(m);
 
     Ok(gamma_z)
@@ -483,8 +482,7 @@ mod tests {
 
         let m = logsumexp::<Backend>(old_gamma_Z.clone(), 0).unwrap();
 
-        let m_squeezed: Tensor::<Backend, 2> = m.reshape(Shape::new([1, old_gamma_Z.clone().dims()[1]]));
-        let got = old_gamma_Z.sub(m_squeezed);
+        let got = old_gamma_Z.sub(m);
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();
