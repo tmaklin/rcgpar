@@ -24,6 +24,7 @@
 //! This implementation is based on the rcg_gpu Torch code written by Joel.
 //!
 
+use burn_tensor::Device;
 use burn_tensor::backend::Backend;
 use burn_tensor::{Shape, Tensor};
 use statrs::function::gamma::digamma;
@@ -126,9 +127,8 @@ pub fn rcg_optl_mat<B: Backend>(
     alpha0: Tensor::<B, 1>,
     tolerance: f64,
     max_iters: usize,
+    device: &Device<B>,
 ) -> Result<Tensor::<B, 2>, E> {
-    let device = logl.clone().device();
-
     let n_targets = logl.clone().dims()[0];
     let n_obs = logl.clone().dims()[1];
 
@@ -556,7 +556,7 @@ mod tests {
             &device,
         );
 
-        let got = rcg_optl_mat::<Backend>(logl, log_counts, alpha0, 1e-7_f64, 100_usize).unwrap();
+        let got = rcg_optl_mat::<Backend>(logl, log_counts, alpha0, 1e-7_f64, 100_usize, &device).unwrap();
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();
