@@ -80,14 +80,14 @@ pub fn elbo_rcg_mat<B: Backend>(
     gamma_z: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,
     n_k: Tensor::<B, 1>,
-) -> Result<Tensor::<B, 1>, E> {
+) -> Result<f64, E> {
     let log_counts_squeezed: Tensor::<B, 2> = log_counts.reshape(Shape::new([1, gamma_z.dims()[1]]));
 
     let n_k_data = n_k.into_data();
     let lgamma_n_k_sum = n_k_data.iter().map(|x: f64| ln_gamma(x)).sum::<f64>();
 
     let bound = gamma_z.clone().add(log_counts_squeezed).exp().mul(logl.sub(gamma_z)).sum();
-    let newbound = bound.add_scalar(lgamma_n_k_sum);
+    let newbound: f64 = bound.add_scalar(lgamma_n_k_sum).into_data().iter().next().unwrap();
 
     Ok(newbound)
 }
@@ -95,20 +95,16 @@ pub fn elbo_rcg_mat<B: Backend>(
 pub fn calc_bound_const<B: Backend>(
     log_counts: Tensor::<B, 1>,
     alpha0: Tensor::<B, 1>,
-) -> Result<Tensor::<B, 1>, E> {
-    let counts_sum = log_counts.exp().sum().into_data().iter().collect::<Vec<f64>>()[0];
-    let alpha0_sum = alpha0.clone().sum().into_data().iter().collect::<Vec<f64>>()[0];
+) -> Result<f64, E> {
+    let alpha0_sum = alpha0.clone().sum();
+    let counts_sum = log_counts.exp().sum();
     let alpha0_data = alpha0.clone().into_data();
-    let lgamma_alpha0_sum = alpha0_data.iter().map(|x: f32| ln_gamma(x as f64)).sum::<f64>();
+    let lgamma_alpha0_sum = alpha0_data.iter().map(|x: f64| ln_gamma(x)).sum::<f64>();
 
-    let bound_const_float = ln_gamma(alpha0_sum) + ln_gamma(alpha0_sum + counts_sum) - lgamma_alpha0_sum;
+    let alpha0_sum_f: f64 = alpha0_sum.into_data().iter().next().unwrap();
+    let counts_sum_f: f64 = counts_sum.into_data().iter().next().unwrap();
 
-    let bound_const = Tensor::<B, 1>::from_data(
-        [
-            bound_const_float
-        ],
-        &alpha0.device(),
-    );
+    let bound_const = ln_gamma(alpha0_sum_f) + ln_gamma(alpha0_sum_f + counts_sum_f) - lgamma_alpha0_sum;
 
     Ok(bound_const)
 }
@@ -128,11 +124,11 @@ pub fn rcg_optl_mat<B: Backend>(
     let mut oldstep = logl.zeros_like();
 
     let mut iter = 0;
-    let mut tol = Tensor::<B, 1>::from_data([tolerance], &device);
+    let mut tol: f64 = tolerance;
 
-    let mut bound = Tensor::<B, 1>::from_data([-10000_f64], &device);
+    let mut bound = -10000_f64;
 
-    let bound_const = calc_bound_const(log_counts.clone(), alpha0.clone())?;
+    let bound_const: f64 = calc_bound_const(log_counts.clone(), alpha0.clone())?;
     let mut n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone())?;
 
     let mut oldnorm: f64 = 1_f64;
@@ -159,9 +155,9 @@ pub fn rcg_optl_mat<B: Backend>(
 
         n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone())?;
         let oldbound = bound;
-        bound = bound_const.clone() + elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone())?.into_scalar();
+        bound = bound_const + elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone())?;
 
-        if bound.clone().lower(oldbound.clone()).all().into_data().iter().next().unwrap() {
+        if bound < oldbound {
             didreset = true;
             gamma_z = gamma_z.add(oldm); // revert step
             if beta_fr > 0_f64 {
@@ -172,7 +168,7 @@ pub fn rcg_optl_mat<B: Backend>(
             gamma_z = gamma_z.sub(oldm);
             n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone())?;
 
-            bound = bound_const.clone() + elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone())?.into_scalar();
+            bound = bound_const + elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone())?;
         } else {
             oldstep = step;
         }
@@ -181,14 +177,14 @@ pub fn rcg_optl_mat<B: Backend>(
         //     eprintln!("\titer: {iter}, bound: {bound}, |g|: {newnorm}");
         // }
 
-        if bound.clone().sub(oldbound.clone()).abs().lower(tol.clone()).all().into_data().iter().next().unwrap() && !didreset {
+        if (bound - oldbound).abs() < tol && !didreset {
             oldm = logsumexp(gamma_z.clone(), 0)?.reshape(Shape::new([1, n_obs]));
             gamma_z = gamma_z.sub(oldm);
             break;
         }
 
         if newnorm < oldnorm {
-            tol = tol.mul_scalar(10_f64);
+            tol *= 10_f64;
         }
 
         iter += 1;
@@ -411,10 +407,10 @@ mod tests {
             &device,
         );
 
-        let bound_const = 85494_f32;
-        let expected: f32 = -699.064 + bound_const;
+        let bound_const = 85494_f64;
+        let expected: f64 = -699.064 + bound_const;
 
-        let got = elbo_rcg_mat::<Backend>(logl, gamma_Z, log_counts, n_k).unwrap().into_scalar();
+        let got = elbo_rcg_mat::<Backend>(logl, gamma_Z, log_counts, n_k).unwrap();
 
         assert_approx_eq!(expected, got, 1e-1);
     }
@@ -446,11 +442,11 @@ mod tests {
             &device,
         );
 
-        let expected = 85494_f32;
+        let expected = 85494_f64;
 
-        let got = calc_bound_const::<Backend>(log_counts, alpha0).unwrap().into_scalar();
+        let got = calc_bound_const::<Backend>(log_counts, alpha0).unwrap();
 
-        assert_approx_eq!(expected, got, 4_f32);
+        assert_approx_eq!(expected, got, 4_f64);
     }
 
     #[test]
