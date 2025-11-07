@@ -103,7 +103,7 @@ fn main() {
 
             let logl = read_log_likelihoods(logl_path, b'\t');
             let weights = read_counts(weights_path, b'\t');
-            let prior: Vec<f32> = vec![1.0, 1.0, 1.0, 1.0, 1.0];
+            let prior: Vec<f32> = vec![1.0; logl.len()];
 
             let mut options: rcgpar::OptimizerOpts = Default::default();
             options.tolerance = *tolerance;
