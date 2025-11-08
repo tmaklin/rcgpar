@@ -114,10 +114,7 @@ pub fn rcg_optl_mat<B: Backend>(
     tolerance: f64,
     max_iters: usize,
 ) -> Result<Tensor::<B, 2>, E> {
-    let n_targets = logl.dims()[0];
-    let n_obs = logl.dims()[1];
-
-    let mut gamma_z = logl.zeros_like() + (1_f64 / (n_targets as f64)).ln();
+    let mut gamma_z = logl.zeros_like() + (1_f64 / (logl.dims()[0] as f64)).ln();
     let mut oldstep = logl.zeros_like();
 
     let mut iter = 0;
