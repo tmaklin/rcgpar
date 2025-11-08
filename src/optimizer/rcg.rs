@@ -46,8 +46,8 @@ pub fn compute_norm<B: Backend>(
     dl_dphi: Tensor::<B, 2>,
 ) -> Result<f64, E> {
     let temp = gamma_z.exp().mul(dl_dphi.clone());
-    let colsums = temp.clone().sum_dim(0).reshape(Shape::new([1, dl_dphi.dims()[1]]));
-    let newnorm = temp.mul(dl_dphi.sub(colsums)).sum().into_data().iter::<f64>().next().unwrap();
+    let colsums = temp.clone().sum_dim(0);
+    let newnorm = temp.mul(dl_dphi.sub(colsums.unsqueeze())).sum().into_data().iter::<f64>().next().unwrap();
     Ok(newnorm)
 }
 
@@ -68,8 +68,7 @@ pub fn update_n_k<B: Backend>(
     log_counts: Tensor::<B, 1>,
     alpha0: Tensor::<B, 1>,
 ) -> Result<Tensor::<B, 1>, E> {
-    let log_counts_squeezed: Tensor::<B, 2> = log_counts.reshape(Shape::new([1, gamma_z.dims()[1]]));
-    let n_k: Tensor::<B, 1> = gamma_z.add(log_counts_squeezed).exp().sum_dim(1).reshape(Shape::new([alpha0.dims()[0]])).add(alpha0);
+    let n_k: Tensor::<B, 1> = gamma_z.add(log_counts.unsqueeze()).exp().sum_dim(1).reshape(Shape::new([alpha0.dims()[0]])).add(alpha0);
     Ok(n_k)
 }
 
@@ -79,12 +78,10 @@ pub fn elbo_rcg_mat<B: Backend>(
     log_counts: Tensor::<B, 1>,
     n_k: Tensor::<B, 1>,
 ) -> Result<f64, E> {
-    let log_counts_squeezed: Tensor::<B, 2> = log_counts.reshape(Shape::new([1, gamma_z.dims()[1]]));
-
     let n_k_data = n_k.into_data();
     let lgamma_n_k_sum = n_k_data.iter().map(|x: f64| ln_gamma(x)).sum::<f64>();
 
-    let bound = gamma_z.clone().add(log_counts_squeezed).exp().mul(logl.sub(gamma_z)).sum();
+    let bound = gamma_z.clone().add(log_counts.unsqueeze()).exp().mul(logl.sub(gamma_z)).sum();
     let newbound: f64 = bound.add_scalar(lgamma_n_k_sum).into_data().iter().next().unwrap();
 
     Ok(newbound)
@@ -177,8 +174,7 @@ pub fn mixture_components<B: Backend>(
     log_counts: Tensor::<B, 1>,
 ) -> Result<Tensor::<B, 1>, E> {
     let n_times_total = log_counts.clone().exp().sum().log().into_scalar();
-    let log_counts_squeezed: Tensor::<B, 2> = log_counts.reshape(Shape::new([1, gamma_z.dims()[1]]));
-    let thetas = gamma_z.clone().add(log_counts_squeezed).exp().sum_dim(1).log().sub_scalar(n_times_total).exp().reshape(Shape::new([gamma_z.dims()[0], 1]));
+    let thetas = gamma_z.clone().add(log_counts.unsqueeze()).exp().sum_dim(1).log().sub_scalar(n_times_total).exp().reshape(Shape::new([gamma_z.dims()[0], 1]));
     Ok(thetas)
 }
 
