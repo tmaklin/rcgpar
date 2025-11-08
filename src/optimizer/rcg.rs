@@ -211,9 +211,7 @@ mod tests {
     #[test]
     fn mixt_negnatgrad() {
         use burn::backend::ndarray::NdArray;
-        use burn_tensor::backend::Device;
         use burn_tensor::Tensor;
-        use burn_tensor::Int;
 
         use super::mixt_negnatgrad;
 
@@ -269,10 +267,7 @@ mod tests {
     #[test]
     fn compute_norm() {
         use burn::backend::ndarray::NdArray;
-        use burn_tensor::backend::Device;
-        use burn::backend::ndarray::NdArrayDevice;
         use burn_tensor::Tensor;
-        use burn_tensor::Int;
 
         use super::compute_norm;
 
@@ -308,10 +303,7 @@ mod tests {
     #[test]
     fn update_n_k() {
         use burn::backend::ndarray::NdArray;
-        use burn_tensor::backend::Device;
-        use burn::backend::ndarray::NdArrayDevice;
         use burn_tensor::Tensor;
-        use burn_tensor::Int;
 
         use super::update_n_k;
 
@@ -360,10 +352,7 @@ mod tests {
     #[test]
     fn elbo_rcg_mat() {
         use burn::backend::ndarray::NdArray;
-        use burn_tensor::backend::Device;
-        use burn::backend::ndarray::NdArrayDevice;
         use burn_tensor::Tensor;
-        use burn_tensor::Int;
 
         use super::elbo_rcg_mat;
 
@@ -415,10 +404,7 @@ mod tests {
     #[test]
     fn calc_bound_const() {
         use burn::backend::ndarray::NdArray;
-        use burn_tensor::backend::Device;
-        use burn::backend::ndarray::NdArrayDevice;
         use burn_tensor::Tensor;
-        use burn_tensor::Int;
 
         use super::calc_bound_const;
 
@@ -449,10 +435,7 @@ mod tests {
     #[test]
     fn logsumexp() {
         use burn::backend::ndarray::NdArray;
-        use burn_tensor::backend::Device;
-        use burn::backend::ndarray::NdArrayDevice;
-        use burn_tensor::{Shape, Tensor};
-        use burn_tensor::Int;
+        use burn_tensor::Tensor;
 
         use super::logsumexp;
 
@@ -492,10 +475,7 @@ mod tests {
     #[test]
     fn rcg_optl_mat() {
         use burn::backend::ndarray::NdArray;
-        use burn_tensor::backend::Device;
-        use burn::backend::ndarray::NdArrayDevice;
-        use burn_tensor::{Shape, Tensor};
-        use burn_tensor::Int;
+        use burn_tensor::Tensor;
 
         use super::rcg_optl_mat;
 
