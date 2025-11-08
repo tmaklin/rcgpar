@@ -215,11 +215,6 @@ mod tests {
 
     #[test]
     fn optimize_f64() {
-        use burn::backend::ndarray::NdArray;
-        use burn_tensor::backend::Device;
-        use burn_tensor::Tensor;
-        use burn_tensor::Int;
-
         use super::BurnBackend;
         use super::OptimizerOpts;
         use super::optimize;
@@ -245,11 +240,6 @@ mod tests {
 
     #[test]
     fn optimize_f32() {
-        use burn::backend::ndarray::NdArray;
-        use burn_tensor::backend::Device;
-        use burn_tensor::Tensor;
-        use burn_tensor::Int;
-
         use super::BurnBackend;
         use super::OptimizerOpts;
         use super::optimize;
