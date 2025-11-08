@@ -54,12 +54,12 @@ impl std::str::FromStr for Algorithm {
 
 /// Compute mixture components from a fitted probability matrix
 pub fn mixture_components<B: Backend>(
-    gamma_Z: Tensor::<B, 2>,
+    gamma_z: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,
 ) -> Result<Tensor::<B, 1>, E> {
     let n_times_total = log_counts.clone().exp().sum().log().into_scalar();
-    let log_counts_squeezed: Tensor::<B, 2> = log_counts.clone().reshape(Shape::new([1, gamma_Z.clone().dims()[1]]));
-    let thetas = gamma_Z.clone().add(log_counts_squeezed).exp().sum_dim(1).log().sub_scalar(n_times_total).exp().reshape(Shape::new([gamma_Z.clone().dims()[0], 1]));
+    let log_counts_squeezed: Tensor::<B, 2> = log_counts.clone().reshape(Shape::new([1, gamma_z.clone().dims()[1]]));
+    let thetas = gamma_z.clone().add(log_counts_squeezed).exp().sum_dim(1).log().sub_scalar(n_times_total).exp().reshape(Shape::new([gamma_z.clone().dims()[0], 1]));
     Ok(thetas)
 }
 
@@ -81,7 +81,7 @@ mod tests {
         let device = Default::default();
         type Backend = NdArray<f32>;
 
-        let gamma_Z = Tensor::<Backend, 2>::from_data(
+        let gamma_z = Tensor::<Backend, 2>::from_data(
             [
                 [ -0.0010899, -0.00104044, -0.000928571, -0.00104519, -0.000995734, -0.000883857, -0.000944069, -0.000894604, -0.000782716, -0.000853449 ],
                 [ -7.15745,   -7.1574,     -7.15729,     -7.15741,    -7.15736,     -7.15725,     -7.15731,     -7.15726,     -7.15715,     -7.51888 ],
@@ -105,7 +105,7 @@ mod tests {
             &device,
         );
 
-        let got = mixture_components::<Backend>(gamma_Z, log_counts).unwrap();
+        let got = mixture_components::<Backend>(gamma_z, log_counts).unwrap();
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();
