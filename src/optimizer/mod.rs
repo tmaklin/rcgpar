@@ -71,10 +71,7 @@ mod tests {
     #[test]
     fn mixture_components() {
         use burn::backend::ndarray::NdArray;
-        use burn_tensor::backend::Device;
-        use burn::backend::ndarray::NdArrayDevice;
-        use burn_tensor::{Shape, Tensor};
-        use burn_tensor::Int;
+        use burn_tensor::Tensor;
 
         use super::mixture_components;
 
