@@ -101,10 +101,7 @@ mod tests {
     #[test]
     fn em_optl_mat() {
         use burn::backend::ndarray::NdArray;
-        use burn_tensor::backend::Device;
-        use burn::backend::ndarray::NdArrayDevice;
-        use burn_tensor::{Shape, Tensor};
-        use burn_tensor::Int;
+        use burn_tensor::Tensor;
 
         use super::em_algorithm;
 
@@ -124,13 +121,6 @@ mod tests {
         let log_counts = Tensor::<Backend, 1>::from_data(
             [
                 7.681099, 7.04316, 6.849066, 5.278115, 5.164786, 5.062595, 6.947937, 6.863803, 7.277248, 7.666222
-            ],
-            &device,
-        );
-
-        let alpha0 = Tensor::<Backend, 1>::from_data(
-            [
-                1.0, 1.0, 1.0, 1.0
             ],
             &device,
         );
