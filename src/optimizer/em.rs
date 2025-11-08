@@ -56,7 +56,7 @@ pub fn em_algorithm<B: Backend>(
     let mut prev_loss = Tensor::<B, 1>::from_data([100000.0], device);
     let tol = Tensor::<B, 1>::from_data([tolerance], device);
 
-    let mut logl_weighted = logl.zeros_like();
+    let mut logl_weighted;
     let log_counts_squeezed: Tensor::<B, 2> = log_counts.clone().reshape(Shape::new([1, n_obs]));
     let mut thetas = Tensor::<B, 1>::zeros(Shape::new([n_targets]), device);
     thetas = thetas.sub_scalar((n_targets as f64).ln()).exp();
@@ -88,9 +88,9 @@ pub fn em_algorithm<B: Backend>(
     logl_weighted = logl.clone().add(thetas_squeezed);
     let lse = logsumexp(logl_weighted.clone(), 0)?;
     let lse_squeezed : Tensor::<B, 2> = lse.clone().reshape(Shape::new([1, n_obs]));
-    let gamma_Z = logl_weighted.sub(lse_squeezed);
+    let gamma_z = logl_weighted.sub(lse_squeezed);
 
-    Ok(gamma_Z)
+    Ok(gamma_z)
 }
 
 // Tests
