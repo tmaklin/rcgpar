@@ -220,7 +220,7 @@ mod tests {
         let device = Default::default();
         type Backend = NdArray<f32>;
 
-        let gamma_Z = Tensor::<Backend, 2>::from_data(
+        let gamma_z = Tensor::<Backend, 2>::from_data(
             [
                 [ -0.861124, -0.824187, -0.737067, -0.830991, -0.792902, -0.702885, -0.76075,  -0.719832, -0.622649, -0.742541 ],
                 [ -1.01295,  -0.976009, -0.888889, -0.982813, -0.944725, -0.854708, -0.912572, -0.871654, -0.774472, -1.26242 ],
@@ -258,7 +258,7 @@ mod tests {
             &device,
         );
 
-        let got = mixt_negnatgrad::<Backend>(logl, gamma_Z, n_k).unwrap();
+        let got = mixt_negnatgrad::<Backend>(logl, gamma_z, n_k).unwrap();
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();
@@ -279,7 +279,7 @@ mod tests {
         let device = Default::default();
         type Backend = NdArray<f32>;
 
-        let gamma_Z = Tensor::<Backend, 2>::from_data(
+        let gamma_z = Tensor::<Backend, 2>::from_data(
             [
                 [ -0.861124, -0.824187, -0.737067, -0.830991, -0.792902, -0.702885, -0.76075,  -0.719832, -0.622649, -0.742541 ],
                 [ -1.01295,  -0.976009, -0.888889, -0.982813, -0.944725, -0.854708, -0.912572, -0.871654, -0.774472, -1.26242 ],
@@ -300,7 +300,7 @@ mod tests {
         );
 
         let expected: f64 = 0.193162;
-        let got = compute_norm::<Backend>(gamma_Z, dl_dphi).unwrap();
+        let got = compute_norm::<Backend>(gamma_z, dl_dphi).unwrap();
 
         assert_approx_eq!(expected, got, 1e-4);
     }
@@ -318,7 +318,7 @@ mod tests {
         let device = Default::default();
         type Backend = NdArray<f32>;
 
-        let gamma_Z = Tensor::<Backend, 2>::from_data(
+        let gamma_z = Tensor::<Backend, 2>::from_data(
             [
                 [ -0.681538, -0.662494, -0.617806, -0.667704, -0.648392, -0.603055, -0.635526, -0.615577, -0.568692, -0.557316 ],
                 [ -0.951042, -0.931998, -0.887311, -0.937208, -0.917896, -0.872559, -0.905031, -0.885081, -0.838196, -1.18688 ],
@@ -349,7 +349,7 @@ mod tests {
             &device,
         );
 
-        let got = update_n_k::<Backend>(gamma_Z, log_counts, alpha0).unwrap();
+        let got = update_n_k::<Backend>(gamma_z, log_counts, alpha0).unwrap();
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();
@@ -387,7 +387,7 @@ mod tests {
             &device,
         );
 
-        let gamma_Z = Tensor::<Backend, 2>::from_data(
+        let gamma_z = Tensor::<Backend, 2>::from_data(
             [
                 [ -0.681538, -0.662494, -0.617806, -0.667704, -0.648392, -0.603055, -0.635526, -0.615577, -0.568692, -0.557316 ],
                 [ -0.951042, -0.931998, -0.887311, -0.937208, -0.917896, -0.872559, -0.905031, -0.885081, -0.838196, -1.18688 ],
@@ -407,7 +407,7 @@ mod tests {
         let bound_const = 85494_f64;
         let expected: f64 = -699.064 + bound_const;
 
-        let got = elbo_rcg_mat::<Backend>(logl, gamma_Z, log_counts, n_k).unwrap();
+        let got = elbo_rcg_mat::<Backend>(logl, gamma_z, log_counts, n_k).unwrap();
 
         assert_approx_eq!(expected, got, 1e-1);
     }
@@ -459,7 +459,7 @@ mod tests {
         let device = Default::default();
         type Backend = NdArray<f32>;
 
-        let old_gamma_Z = Tensor::<Backend, 2>::from_data(
+        let old_gamma_z = Tensor::<Backend, 2>::from_data(
             [
                 [ -0.861124, -0.824187, -0.737067, -0.830991, -0.792902, -0.702885, -0.76075,  -0.719832, -0.622649, -0.742541 ],
                 [ -1.01295,  -0.976009, -0.888889, -0.982813, -0.944725, -0.854708, -0.912572, -0.871654, -0.774472, -1.26242 ],
@@ -479,9 +479,9 @@ mod tests {
             &device,
         );
 
-        let m = logsumexp::<Backend>(old_gamma_Z.clone(), 0).unwrap();
+        let m = logsumexp::<Backend>(old_gamma_z.clone(), 0).unwrap();
 
-        let got = old_gamma_Z.sub(m);
+        let got = old_gamma_z.sub(m);
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();
