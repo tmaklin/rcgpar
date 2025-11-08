@@ -90,23 +90,6 @@ pub fn elbo_rcg_mat<B: Backend>(
     Ok(newbound)
 }
 
-pub fn calc_bound_const<B: Backend>(
-    log_counts: Tensor::<B, 1>,
-    alpha0: Tensor::<B, 1>,
-) -> Result<f64, E> {
-    let alpha0_sum = alpha0.clone().sum();
-    let counts_sum = log_counts.exp().sum();
-    let alpha0_data = alpha0.clone().into_data();
-    let lgamma_alpha0_sum = alpha0_data.iter().map(|x: f64| ln_gamma(x)).sum::<f64>();
-
-    let alpha0_sum_f: f64 = alpha0_sum.into_data().iter().next().unwrap();
-    let counts_sum_f: f64 = counts_sum.into_data().iter().next().unwrap();
-
-    let bound_const = ln_gamma(alpha0_sum_f) + ln_gamma(alpha0_sum_f + counts_sum_f) - lgamma_alpha0_sum;
-
-    Ok(bound_const)
-}
-
 pub fn rcg_optl_mat<B: Backend>(
     logl: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,
@@ -122,7 +105,6 @@ pub fn rcg_optl_mat<B: Backend>(
 
     let mut bound = -10000_f64;
 
-    let bound_const: f64 = calc_bound_const(log_counts.clone(), alpha0.clone())?;
     let mut n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone())?;
 
     let mut oldnorm: f64 = 1_f64;
@@ -149,7 +131,7 @@ pub fn rcg_optl_mat<B: Backend>(
 
         n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone())?;
         let oldbound = bound;
-        bound = bound_const + elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone())?;
+        bound = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone())?;
 
         if bound < oldbound {
             didreset = true;
@@ -162,7 +144,7 @@ pub fn rcg_optl_mat<B: Backend>(
             gamma_z = gamma_z.sub(oldm);
             n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone())?;
 
-            bound = bound_const + elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone())?;
+            bound = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone())?;
         } else {
             oldstep = step;
         }
@@ -390,43 +372,9 @@ mod tests {
             &device,
         );
 
-        let bound_const = 85494_f64;
-        let expected: f64 = -699.064 + bound_const;
-
+        let expected = -699.064_f64 + 85494_f64;
         let got = elbo_rcg_mat::<Backend>(logl, gamma_z, log_counts, n_k).unwrap();
-
         assert_approx_eq!(expected, got, 1e-1);
-    }
-
-    #[test]
-    fn calc_bound_const() {
-        use burn::backend::ndarray::NdArray;
-        use burn_tensor::Tensor;
-
-        use super::calc_bound_const;
-
-        let device = Default::default();
-        type Backend = NdArray<f32>;
-
-        let log_counts = Tensor::<Backend, 1>::from_data(
-            [
-                7.681099, 7.04316, 6.849066, 5.278115, 5.164786, 5.062595, 6.947937, 6.863803, 7.277248, 7.666222
-            ],
-            &device,
-        );
-
-        let alpha0 = Tensor::<Backend, 1>::from_data(
-            [
-                1.0, 1.0, 1.0, 1.0
-            ],
-            &device,
-        );
-
-        let expected = 85494_f64;
-
-        let got = calc_bound_const::<Backend>(log_counts, alpha0).unwrap();
-
-        assert_approx_eq!(expected, got, 4_f64);
     }
 
     #[test]
