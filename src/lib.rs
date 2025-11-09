@@ -138,7 +138,7 @@ fn run_optimizer<B: Backend, F: Float + FromPrimitive, U: PrimInt>(
         optimizer::Algorithm::EM => optimizer::em::em_algorithm(logl, log_counts.clone(), options.tolerance, options.max_iters, device)?,
     };
 
-    Ok(optimizer::mixture_components(probs, log_counts)?.into_data().iter().map(|x: f64| FromPrimitive::from_f64(x).unwrap()).collect::<Vec<F>>())
+    Ok(probs.into_data().iter().map(|x: f64| FromPrimitive::from_f64(x).unwrap()).collect::<Vec<F>>())
 }
 
 /// Infer mixing proportions for a weighted log-likelihood matrix
@@ -166,7 +166,7 @@ fn run_optimizer<B: Backend, F: Float + FromPrimitive, U: PrimInt>(
 /// from a previously fitted model (weighted by the total observation count) can
 /// be used as a prior when estimating a new dataset.
 ///
-pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
+pub fn optimize_mat<F: Float + FromPrimitive, U: PrimInt>(
     log_likelihood: &[Vec<F>],
     counts: &[U],
     prior: &[F],
@@ -177,7 +177,7 @@ pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
 
     let options = opts.unwrap_or_default();
 
-    let proportions = match options.device {
+    let probs = match options.device {
         BurnBackend::CPU32 => {
             let device = burn::backend::ndarray::NdArrayDevice::default();
             type Backend = NdArray<f32>;
@@ -205,6 +205,22 @@ pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
         BurnBackend::GPU32 | BurnBackend::GPU64 => panic!("rcgpar was not compiled with WGPU support"),
     };
 
+    Ok(probs)
+}
+
+pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
+    log_likelihood: &[Vec<F>],
+    counts: &[U],
+    prior: &[F],
+    opts: Option<OptimizerOpts>,
+) -> Result<Vec<F>, E> {
+    let probs = optimize_mat(log_likelihood, counts, prior, opts)?;
+
+    let n_times_total = counts.iter().map(|x| x.to_u64().unwrap()).sum::<u64>();
+    let proportions = probs.chunks(counts.len()).map(|x| {
+        let p = x.iter().zip(counts.iter()).map(|(y, z)| (y.to_f64().unwrap() + z.to_f64().unwrap().ln()).exp()).sum::<f64>()/(n_times_total as f64);
+        FromPrimitive::from_f64(p).unwrap()
+    }).collect::<Vec<F>>();
     Ok(proportions)
 }
 
