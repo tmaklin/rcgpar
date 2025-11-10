@@ -116,22 +116,22 @@ impl Default for OptimizerOpts {
 }
 
 /// Helper function to run on a generic backend
-fn run_optimizer<B: Backend, F: Float + FromPrimitive, U: PrimInt>(
-    logl_f: &[Vec<F>],
-    counts_i: &[U],
+fn run_optimizer<B: Backend, F: Float + FromPrimitive>(
+    logl_flat_f: &[F],
+    log_counts_f: &[F],
     alpha0_f: &[F],
     options: &OptimizerOpts,
     device: &Device<B>,
 ) -> Result<(Vec<F>, Vec<F>), E> {
 
-    let n_rows = counts_i.len();
-    let n_cols = logl_f.len();
+    let n_rows = log_counts_f.len();
+    let n_cols = alpha0_f.len();
 
-    let logl_floats: Vec<f32> = logl_f.iter().flat_map(|x| x.iter().map(|x| x.to_f32().unwrap()).collect::<Vec<f32>>()).collect::<Vec<f32>>();
+    let logl_floats: Vec<f32> = logl_flat_f.iter().map(|x| x.to_f32().unwrap()).collect();
     let logl_flat = Tensor::<B, 1>::from_data(logl_floats.as_slice(), device);
     let logl = logl_flat.reshape([n_cols, n_rows]);
 
-    let log_counts_floats: Vec<f32> = counts_i.iter().map(|x| x.to_f32().unwrap().ln()).collect();
+    let log_counts_floats: Vec<f32> = log_counts_f.iter().map(|x| x.to_f32().unwrap()).collect();
     let log_counts = Tensor::<B, 1>::from_data(log_counts_floats.as_slice(), device);
 
     let alpha0_floats: Vec<f32> = alpha0_f.iter().map(|x| x.to_f32().unwrap()).collect();
@@ -173,14 +173,13 @@ fn run_optimizer<B: Backend, F: Float + FromPrimitive, U: PrimInt>(
 /// from a previously fitted model (weighted by the total observation count) can
 /// be used as a prior when estimating a new dataset.
 ///
-pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
-    log_likelihood: &[Vec<F>],
-    counts: &[U],
+pub fn optimize_flat<F: Float + FromPrimitive>(
+    log_likelihood: &[F],
+    log_counts: &[F],
     prior: &[F],
     opts: Option<OptimizerOpts>,
 ) -> Result<(Vec<F>, Vec<F>), E> {
-    assert_eq!(log_likelihood[0].len(), counts.len());
-    assert_eq!(log_likelihood.len(), prior.len());
+    assert_eq!(log_likelihood.len() as u64, (log_counts.len() as u64) * (prior.len() as u64));
 
     let options = opts.unwrap_or_default();
 
@@ -188,24 +187,24 @@ pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
         BurnBackend::CPU32 => {
             let device = burn::backend::ndarray::NdArrayDevice::default();
             type Backend = NdArray<f32>;
-            run_optimizer::<Backend, F, U>(log_likelihood, counts, prior, &options, &device)?
+            run_optimizer::<Backend, F>(log_likelihood, log_counts, prior, &options, &device)?
         },
         BurnBackend::CPU64 => {
             let device = burn::backend::ndarray::NdArrayDevice::default();
             type Backend = NdArray<f64>;
-            run_optimizer::<Backend, F, U>(log_likelihood, counts, prior, &options, &device)?
+            run_optimizer::<Backend, F>(log_likelihood, log_counts, prior, &options, &device)?
         },
         #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
         BurnBackend::GPU32 => {
             let device = burn::backend::wgpu::WgpuDevice::default();
             type Backend = Wgpu<f32>;
-            run_optimizer::<Backend, F, U>(&log_likelihood, counts, prior, &options, &device)?
+            run_optimizer::<Backend, F>(log_likelihood, log_counts, prior, &options, &device)?
         },
         #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
         BurnBackend::GPU64 => {
             let device = burn::backend::wgpu::WgpuDevice::default();
             type Backend = Wgpu<f64>;
-            run_optimizer::<Backend, F, U>(&log_likelihood, counts, prior, &options, &device)?
+            run_optimizer::<Backend, F>(log_likelihood, log_counts, prior, &options, &device)?
         },
         // TODO Return error instead of panic when requesting a backend that is not supported
         #[cfg(not(any(feature = "wgpu", feature = "webgpu", feature = "vulkan")))]
@@ -213,6 +212,22 @@ pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
     };
 
     Ok((proportions, probs_mat))
+}
+
+/// Run optimizer on 2D log_likelihoods and integer counts
+///
+/// This is just a wrapper around [optimize_mat] that flattens the input and
+/// computes the log counts.
+///
+pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
+    log_likelihood: &[Vec<F>],
+    counts: &[U],
+    prior: &[F],
+    opts: Option<OptimizerOpts>,
+) -> Result<(Vec<F>, Vec<F>), E> {
+    let logl_flat = log_likelihood.iter().flatten().cloned().collect::<Vec<F>>();
+    let log_counts = counts.iter().map(|x| FromPrimitive::from_f64((x.to_f64().unwrap()).ln()).unwrap()).collect::<Vec<F>>();
+    optimize_flat(&logl_flat, &log_counts, prior, opts)
 }
 
 // Tests
