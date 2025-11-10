@@ -31,6 +31,9 @@ use burn_tensor::backend::Backend;
 use num::traits::{Float, PrimInt};
 use num::FromPrimitive;
 
+#[cfg(feature = "cxxbridge")]
+pub mod cxx_api;
+
 pub mod math;
 pub mod optimizer;
 
