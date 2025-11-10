@@ -29,7 +29,7 @@ use crate::math::ln_gamma_tensor;
 use crate::math::logsumexp;
 
 use burn_tensor::backend::Backend;
-use burn_tensor::{Shape, Tensor};
+use burn_tensor::Tensor;
 
 type E = Box<dyn std::error::Error>;
 
@@ -57,7 +57,7 @@ pub fn update_n_k<B: Backend>(
     log_counts: Tensor::<B, 1>,
     alpha0: Tensor::<B, 1>,
 ) -> Tensor::<B, 1> {
-    gamma_z.add(log_counts.unsqueeze()).exp().sum_dim(1).reshape(Shape::new([alpha0.dims()[0]])).add(alpha0)
+    gamma_z.add(log_counts.unsqueeze()).exp().sum_dim(1).squeeze().add(alpha0)
 }
 
 pub fn elbo_rcg_mat<B: Backend>(
@@ -157,8 +157,8 @@ pub fn mixture_components<B: Backend>(
     log_counts: Tensor::<B, 1>,
 ) -> Result<Tensor::<B, 1>, E> {
     let n_times_total = log_counts.clone().exp().sum().log().into_scalar();
-    let thetas = gamma_z.clone().add(log_counts.unsqueeze()).exp().sum_dim(1).log().sub_scalar(n_times_total).exp().reshape(Shape::new([gamma_z.dims()[0], 1]));
-    Ok(thetas)
+    let thetas = gamma_z.clone().add(log_counts.unsqueeze()).exp().sum_dim(1).log().sub_scalar(n_times_total).exp();
+    Ok(thetas.squeeze())
 }
 
 // Tests
