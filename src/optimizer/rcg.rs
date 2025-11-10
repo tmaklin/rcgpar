@@ -37,10 +37,10 @@ type E = Box<dyn std::error::Error>;
 pub fn compute_norm<B: Backend>(
     gamma_z: Tensor::<B, 2>,
     dl_dphi: Tensor::<B, 2>,
-) -> Result<f64, E> {
+) -> Result<Tensor::<B, 1>, E> {
     let temp = gamma_z.exp().mul(dl_dphi.clone());
     let colsums = temp.clone().sum_dim(0);
-    let newnorm = temp.mul(dl_dphi.sub(colsums.unsqueeze())).sum().into_data().iter::<f64>().next().unwrap();
+    let newnorm = temp.mul(dl_dphi.sub(colsums.unsqueeze())).sum();
     Ok(newnorm)
 }
 
@@ -68,11 +68,11 @@ pub fn elbo_rcg_mat<B: Backend>(
     gamma_z: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,
     n_k: Tensor::<B, 1>,
-) -> Result<f64, E> {
+) -> Result<Tensor::<B, 1>, E> {
     let lgamma_n_k_sum = ln_gamma_tensor(n_k)?.sum();
 
     let bound = gamma_z.clone().add(log_counts.unsqueeze()).exp().mul(logl.sub(gamma_z)).sum();
-    let newbound: f64 = bound.add(lgamma_n_k_sum).into_data().iter().next().unwrap();
+    let newbound = bound.add(lgamma_n_k_sum);
 
     Ok(newbound)
 }
@@ -88,25 +88,24 @@ pub fn rcg_optl_mat<B: Backend>(
     let mut oldstep = logl.zeros_like();
 
     let mut iter = 0;
-    let mut tol: f64 = tolerance;
 
-    let mut bound = -10000_f64;
+    let mut bound_t = Tensor::<B, 1>::from_data([-10000_f64], &logl.device());
 
     let mut n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone())?;
 
-    let mut oldnorm: f64 = 1_f64;
+    let mut oldnorm_t = Tensor::<B, 1>::from_data([1_f64], &logl.device());
     let mut didreset = false;
 
     while iter < max_iters {
         let mut step = mixt_negnatgrad(logl.clone(), gamma_z.clone(), n_k.clone())?;
-        let newnorm: f64 = compute_norm(gamma_z.clone(), step.clone())?.abs().max(1e-7);
-        let beta_fr: f64 = (newnorm.ln() - oldnorm.ln()).exp();
-        oldnorm = newnorm;
+        let newnorm_t = compute_norm(gamma_z.clone(), step.clone())?.abs();
+        let beta_fr_t = (newnorm_t.clone().log() - oldnorm_t.log()).exp();
+        oldnorm_t = newnorm_t;
 
         if didreset {
             oldstep = logl.zeros_like();
         } else {
-            oldstep = oldstep.mul_scalar(beta_fr);
+            oldstep = oldstep.mul(beta_fr_t.clone().unsqueeze());
             step = step.add(oldstep.clone());
         }
         didreset = false;
@@ -117,10 +116,13 @@ pub fn rcg_optl_mat<B: Backend>(
         gamma_z = gamma_z.sub(oldm.clone());
 
         n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone())?;
-        let oldbound = bound;
-        bound = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone())?;
+        let oldbound_t = bound_t;
+        bound_t = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone())?;
 
+        let bound: f64 = bound_t.clone().into_data().iter().next().unwrap();
+        let oldbound: f64 = oldbound_t.into_data().iter().next().unwrap();
         if bound < oldbound {
+            let beta_fr: f64 = beta_fr_t.into_data().iter().next().unwrap();
             didreset = true;
             gamma_z = gamma_z.add(oldm); // revert step
             if beta_fr > 0_f64 {
@@ -131,7 +133,7 @@ pub fn rcg_optl_mat<B: Backend>(
             gamma_z = gamma_z.sub(oldm);
             n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone())?;
 
-            bound = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone())?;
+            bound_t = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone())?;
         } else {
             oldstep = step;
         }
@@ -140,14 +142,10 @@ pub fn rcg_optl_mat<B: Backend>(
         //     eprintln!("\titer: {iter}, bound: {bound}, |g|: {newnorm}");
         // }
 
-        if (bound - oldbound).abs() < tol && !didreset {
+        if (bound - oldbound).abs() < tolerance && !didreset {
             oldm = logsumexp(gamma_z.clone(), 0)?;
             gamma_z = gamma_z.sub(oldm);
             break;
-        }
-
-        if newnorm < oldnorm {
-            tol *= 10_f64;
         }
 
         iter += 1;
@@ -260,7 +258,7 @@ mod tests {
         );
 
         let expected: f64 = 0.193162;
-        let got = compute_norm::<Backend>(gamma_z, dl_dphi).unwrap();
+        let got: f64 = compute_norm::<Backend>(gamma_z, dl_dphi).unwrap().into_data().iter().next().unwrap();
 
         assert_approx_eq!(expected, got, 1e-4);
     }
@@ -359,7 +357,7 @@ mod tests {
         );
 
         let expected = -699.064_f64 + 85494_f64;
-        let got = elbo_rcg_mat::<Backend>(logl, gamma_z, log_counts, n_k).unwrap();
+        let got: f64 = elbo_rcg_mat::<Backend>(logl, gamma_z, log_counts, n_k).unwrap().into_data().iter().next().unwrap();
         assert_approx_eq!(expected, got, 1e-1);
     }
 
