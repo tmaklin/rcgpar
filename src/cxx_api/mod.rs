@@ -23,7 +23,7 @@
 use crate::OptimizerOpts;
 use crate::BurnBackend::CPU64;
 use crate::BurnBackend::GPU32;
-use crate::optimize;
+use crate::optimize_flat;
 
 use crate::optimizer::Algorithm;
 
@@ -75,17 +75,13 @@ mod ffi {
     }
 }
 
-pub fn run_optimizer(
+fn run_optimizer(
     logl: &CxxVector<f64>,
     log_times_observed: &CxxVector<f64>,
     alpha0: &CxxVector<f64>,
     options: OptimizerOpts,
 ) -> Vec<f64> {
-    let n_targets = alpha0.len();
-    let logl_r: Vec<Vec<f64>> = logl.iter().cloned().collect::<Vec<f64>>().chunks(n_targets).map(|x| x.to_vec()).collect::<Vec<Vec<f64>>>();
-    let log_counts_r: Vec<u64> = log_times_observed.iter().map(|x| *x as u64).collect::<Vec<u64>>();
-    let alpha0_r: Vec<f64> = alpha0.iter().cloned().collect::<Vec<f64>>();
-    let (_, probs) = optimize(&logl_r, &log_counts_r, &alpha0_r, Some(options)).unwrap();
+    let (_, probs) = optimize_flat(logl.as_slice(), log_times_observed.as_slice(), alpha0.as_slice(), Some(options)).unwrap();
     probs
 }
 
@@ -156,10 +152,10 @@ pub fn mixture_components(
     let device = Default::default();
     type Backend = NdArray<f32>;
 
-    let probs_r: Vec<u64> = probs.iter().map(|x| *x as u64).collect::<Vec<u64>>();
-    let log_counts_r: Vec<u64> = log_times_observed.iter().map(|x| *x as u64).collect::<Vec<u64>>();
+    let probs_r: Vec<f32> = probs.iter().map(|x| *x as f32).collect::<Vec<f32>>();
+    let log_counts_r: Vec<f32> = log_times_observed.iter().map(|x| *x as f32).collect::<Vec<f32>>();
 
-    let probs_t = Tensor::<Backend, 2>::from_data(probs_r.as_slice(), &device).reshape(Shape::new([n_targets, n_obs]));
+    let probs_t: Tensor::<Backend, 2> = Tensor::<Backend, 1>::from_data(probs_r.as_slice(), &device).reshape(Shape::new([n_targets, n_obs]));
     let log_counts_t = Tensor::<Backend, 1>::from_data(log_counts_r.as_slice(), &device);
 
     let thetas_t = crate::optimizer::mixture_components(probs_t, log_counts_t);
