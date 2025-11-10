@@ -37,30 +37,27 @@ type E = Box<dyn std::error::Error>;
 pub fn compute_norm<B: Backend>(
     gamma_z: Tensor::<B, 2>,
     dl_dphi: Tensor::<B, 2>,
-) -> Result<Tensor::<B, 1>, E> {
+) -> Tensor::<B, 1> {
     let temp = gamma_z.exp().mul(dl_dphi.clone());
     let colsums = temp.clone().sum_dim(0);
-    let newnorm = temp.mul(dl_dphi.sub(colsums.unsqueeze())).sum();
-    Ok(newnorm)
+    temp.mul(dl_dphi.sub(colsums.unsqueeze())).sum()
 }
 
 pub fn mixt_negnatgrad<B: Backend>(
     logl: Tensor::<B, 2>,
     gamma_z: Tensor::<B, 2>,
     n_k: Tensor::<B, 1>,
-) -> Result<Tensor::<B, 2>, E> {
-    let digamma_n_k = digamma_tensor(n_k)?.sub_scalar(1.0);
-    let dl_dphi: Tensor::<B, 2> = logl.add(digamma_n_k.unsqueeze().swap_dims(0, 1)).sub(gamma_z);
-    Ok(dl_dphi)
+) -> Tensor::<B, 2> {
+    let digamma_n_k = digamma_tensor(n_k).sub_scalar(1.0);
+    logl.add(digamma_n_k.unsqueeze().swap_dims(0, 1)).sub(gamma_z)
 }
 
 pub fn update_n_k<B: Backend>(
     gamma_z: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,
     alpha0: Tensor::<B, 1>,
-) -> Result<Tensor::<B, 1>, E> {
-    let n_k: Tensor::<B, 1> = gamma_z.add(log_counts.unsqueeze()).exp().sum_dim(1).reshape(Shape::new([alpha0.dims()[0]])).add(alpha0);
-    Ok(n_k)
+) -> Tensor::<B, 1> {
+    gamma_z.add(log_counts.unsqueeze()).exp().sum_dim(1).reshape(Shape::new([alpha0.dims()[0]])).add(alpha0)
 }
 
 pub fn elbo_rcg_mat<B: Backend>(
@@ -68,13 +65,11 @@ pub fn elbo_rcg_mat<B: Backend>(
     gamma_z: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,
     n_k: Tensor::<B, 1>,
-) -> Result<Tensor::<B, 1>, E> {
-    let lgamma_n_k_sum = ln_gamma_tensor(n_k)?.sum();
+) -> Tensor::<B, 1> {
+    let lgamma_n_k_sum = ln_gamma_tensor(n_k).sum();
 
     let bound = gamma_z.clone().add(log_counts.unsqueeze()).exp().mul(logl.sub(gamma_z)).sum();
-    let newbound = bound.add(lgamma_n_k_sum);
-
-    Ok(newbound)
+    bound.add(lgamma_n_k_sum)
 }
 
 pub fn rcg_optl_mat<B: Backend>(
@@ -91,14 +86,14 @@ pub fn rcg_optl_mat<B: Backend>(
 
     let mut bound_t = Tensor::<B, 1>::from_data([-10000_f64], &logl.device());
 
-    let mut n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone())?;
+    let mut n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone());
 
     let mut oldnorm_t = Tensor::<B, 1>::from_data([1_f64], &logl.device());
     let mut didreset = false;
 
     while iter < max_iters {
-        let mut step = mixt_negnatgrad(logl.clone(), gamma_z.clone(), n_k.clone())?;
-        let newnorm_t = compute_norm(gamma_z.clone(), step.clone())?.abs();
+        let mut step = mixt_negnatgrad(logl.clone(), gamma_z.clone(), n_k.clone());
+        let newnorm_t = compute_norm(gamma_z.clone(), step.clone()).abs();
         let beta_fr_t = (newnorm_t.clone().log() - oldnorm_t.log()).exp();
         oldnorm_t = newnorm_t;
 
@@ -112,12 +107,12 @@ pub fn rcg_optl_mat<B: Backend>(
 
         gamma_z = gamma_z.add(step.clone());
 
-        let mut oldm = logsumexp(gamma_z.clone(), 0)?;
+        let mut oldm = logsumexp(gamma_z.clone(), 0);
         gamma_z = gamma_z.sub(oldm.clone());
 
-        n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone())?;
+        n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone());
         let oldbound_t = bound_t;
-        bound_t = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone())?;
+        bound_t = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone());
 
         let bound: f64 = bound_t.clone().into_data().iter().next().unwrap();
         let oldbound: f64 = oldbound_t.into_data().iter().next().unwrap();
@@ -129,11 +124,11 @@ pub fn rcg_optl_mat<B: Backend>(
                 gamma_z = gamma_z.sub(oldstep.clone());
             }
 
-            oldm = logsumexp(gamma_z.clone(), 0)?;
+            oldm = logsumexp(gamma_z.clone(), 0);
             gamma_z = gamma_z.sub(oldm);
-            n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone())?;
+            n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone());
 
-            bound_t = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone())?;
+            bound_t = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone());
         } else {
             oldstep = step;
         }
@@ -143,7 +138,7 @@ pub fn rcg_optl_mat<B: Backend>(
         // }
 
         if (bound - oldbound).abs() < tolerance && !didreset {
-            oldm = logsumexp(gamma_z.clone(), 0)?;
+            oldm = logsumexp(gamma_z.clone(), 0);
             gamma_z = gamma_z.sub(oldm);
             break;
         }
@@ -151,7 +146,7 @@ pub fn rcg_optl_mat<B: Backend>(
         iter += 1;
     }
 
-    let m = logsumexp(gamma_z.clone(), 0)?;
+    let m = logsumexp(gamma_z.clone(), 0);
     gamma_z = gamma_z.sub(m);
 
     Ok(gamma_z)
@@ -219,7 +214,7 @@ mod tests {
             &device,
         );
 
-        let got = mixt_negnatgrad::<Backend>(logl, gamma_z, n_k).unwrap();
+        let got = mixt_negnatgrad::<Backend>(logl, gamma_z, n_k);
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();
@@ -258,7 +253,7 @@ mod tests {
         );
 
         let expected: f64 = 0.193162;
-        let got: f64 = compute_norm::<Backend>(gamma_z, dl_dphi).unwrap().into_data().iter().next().unwrap();
+        let got: f64 = compute_norm::<Backend>(gamma_z, dl_dphi).into_data().iter().next().unwrap();
 
         assert_approx_eq!(expected, got, 1e-4);
     }
@@ -304,7 +299,7 @@ mod tests {
             &device,
         );
 
-        let got = update_n_k::<Backend>(gamma_z, log_counts, alpha0).unwrap();
+        let got = update_n_k::<Backend>(gamma_z, log_counts, alpha0);
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();
@@ -357,7 +352,7 @@ mod tests {
         );
 
         let expected = -699.064_f64 + 85494_f64;
-        let got: f64 = elbo_rcg_mat::<Backend>(logl, gamma_z, log_counts, n_k).unwrap().into_data().iter().next().unwrap();
+        let got: f64 = elbo_rcg_mat::<Backend>(logl, gamma_z, log_counts, n_k).into_data().iter().next().unwrap();
         assert_approx_eq!(expected, got, 1e-1);
     }
 

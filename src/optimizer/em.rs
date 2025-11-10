@@ -58,7 +58,7 @@ pub fn em_algorithm<B: Backend>(
         // E step
         let thetas_squeezed: Tensor::<B, 2> = thetas.clone().log().reshape(Shape::new([n_targets, 1]));
         logl_weighted = logl.clone().add(thetas_squeezed);
-        let lse = logsumexp(logl_weighted.clone(), 0)?;
+        let lse = logsumexp(logl_weighted.clone(), 0);
         let lse_squeezed : Tensor::<B, 2> = lse.clone().reshape(Shape::new([1, n_obs]));
         logl_weighted = logl_weighted.sub(lse_squeezed);
 
@@ -78,7 +78,7 @@ pub fn em_algorithm<B: Backend>(
     }
     let thetas_squeezed: Tensor::<B, 2> = thetas.clone().log().reshape(Shape::new([n_targets, 1]));
     logl_weighted = logl.clone().add(thetas_squeezed);
-    let lse = logsumexp(logl_weighted.clone(), 0)?;
+    let lse = logsumexp(logl_weighted.clone(), 0);
     let lse_squeezed : Tensor::<B, 2> = lse.clone().reshape(Shape::new([1, n_obs]));
     let gamma_z = logl_weighted.sub(lse_squeezed);
 

@@ -23,8 +23,6 @@
 use burn_tensor::Tensor;
 use burn_tensor::backend::Backend;
 
-type E = Box<dyn std::error::Error>;
-
 /// Approximate the derivative of the log gamma function (digamma)
 ///
 /// Based on the
@@ -41,7 +39,7 @@ type E = Box<dyn std::error::Error>;
 ///
 pub fn digamma_tensor<B: Backend>(
     tensor: Tensor::<B, 1>,
-) -> Result<Tensor::<B, 1>, E> {
+) -> Tensor::<B, 1> {
     const S3: f64 = 1.0 / 12.0;
     const S4: f64 = 1.0 / 120.0;
     const S5: f64 = 1.0 / 252.0;
@@ -62,10 +60,8 @@ pub fn digamma_tensor<B: Backend>(
     result = result.clone().mask_where(mask.clone(), result.add(z.log()).sub(r.clone().mul_scalar(0.5)));
     r = r.clone().mask_where(mask.clone(), r.square().mul_scalar(-1.0));
 
-    result = result.clone().mask_where(mask, result.sub(
-            r.clone().mul_scalar(S7).add_scalar(S6).mul(r.clone()).add_scalar(S5).mul(r.clone()).add_scalar(S4).mul(r.clone()).add_scalar(S3).mul(r).mul_scalar(-1.0)));
-
-    Ok(result)
+    result.clone().mask_where(mask, result.sub(
+        r.clone().mul_scalar(S7).add_scalar(S6).mul(r.clone()).add_scalar(S5).mul(r.clone()).add_scalar(S4).mul(r.clone()).add_scalar(S3).mul(r).mul_scalar(-1.0)))
 }
 
 /// Approximate the log-gamma function
@@ -82,7 +78,7 @@ pub fn digamma_tensor<B: Backend>(
 ///
 pub fn ln_gamma_tensor<B: Backend>(
     tensor: Tensor::<B, 1>,
-) -> Result<Tensor::<B, 1>, E> {
+) -> Tensor::<B, 1> {
     // Constants
     const LN_2_SQRT_E_OVER_PI: f64 = 0.6207822376352452;
     const GAMMA_R: f64  = 10.900511;
@@ -128,7 +124,7 @@ pub fn ln_gamma_tensor<B: Backend>(
                        );
     let temp = tensor_neg.clone().mask_where(mask.clone(), tensor_neg.clone().add_scalar(0.5));
     let temp = tensor_neg.clone().mask_where(mask.clone(), tensor_neg.add_scalar(0.5 + GAMMA_R).div_scalar(std::f64::consts::E).log().mul(temp));
-    let mut result = s1.clone().mask_where(mask.clone(),
+    let result = s1.clone().mask_where(mask.clone(),
                                       s1.sub(temp));
 
     // Compute for elements >= 0.5
@@ -148,20 +144,18 @@ pub fn ln_gamma_tensor<B: Backend>(
                           .add_scalar(LN_2_SQRT_E_OVER_PI));
     let temp = tensor.clone().mask_where(mask.clone(), tensor.clone().sub_scalar(0.5));
     let temp = tensor.clone().mask_where(mask.clone(), tensor.add_scalar(GAMMA_R - 0.5).div_scalar(std::f64::consts::E).log().mul(temp));
-    result = result.mask_where(mask, s2.add(temp));
 
-    Ok(result)
+    result.mask_where(mask, s2.add(temp))
 }
 
 /// Log of the sum of exponentials over a dimension
 pub fn logsumexp<B: Backend>(
     input: Tensor::<B, 2>,
     dim: usize,
-) -> Result<Tensor<B, 2>, E> {
+) -> Tensor<B, 2> {
     let max = input.clone().max_dim(dim);
     let res = (input - max.clone()).exp().sum_dim(dim).log();
-    let res = res + max;
-    Ok(res)
+    res + max
 }
 
 // Tests
@@ -192,7 +186,7 @@ mod tests {
             &device,
         );
 
-        let got = digamma_tensor::<Backend>(n_k).unwrap();
+        let got = digamma_tensor::<Backend>(n_k);
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();
@@ -223,7 +217,7 @@ mod tests {
             &device,
         );
 
-        let got = ln_gamma_tensor::<Backend>(input).unwrap();
+        let got = ln_gamma_tensor::<Backend>(input);
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();
@@ -253,7 +247,7 @@ mod tests {
             &device,
         );
 
-        let got = ln_gamma_tensor::<Backend>(input).unwrap();
+        let got = ln_gamma_tensor::<Backend>(input);
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();
@@ -283,7 +277,7 @@ mod tests {
             &device,
         );
 
-        let got = ln_gamma_tensor::<Backend>(input).unwrap();
+        let got = ln_gamma_tensor::<Backend>(input);
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();
@@ -321,7 +315,7 @@ mod tests {
             &device,
         );
 
-        let m = logsumexp::<Backend>(old_gamma_z.clone(), 0).unwrap();
+        let m = logsumexp::<Backend>(old_gamma_z.clone(), 0);
 
         let got = old_gamma_z.sub(m);
 
