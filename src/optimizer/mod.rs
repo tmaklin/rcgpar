@@ -28,8 +28,6 @@ use crate::math::logsumexp;
 use burn_tensor::Tensor;
 use burn_tensor::backend::Backend;
 
-type E = Box<dyn std::error::Error>;
-
 /// Optimizer algorithms
 ///
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
