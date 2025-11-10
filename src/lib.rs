@@ -116,26 +116,22 @@ impl Default for OptimizerOpts {
 }
 
 /// Helper function to run on a generic backend
-fn run_optimizer<B: Backend, F: Float + FromPrimitive>(
-    logl_flat_f: &[F],
-    log_counts_f: &[F],
-    alpha0_f: &[F],
+fn run_optimizer<B: Backend>(
+    logl_f: &[f64],
+    log_counts_f: &[f64],
+    alpha0_f: &[f64],
     options: &OptimizerOpts,
     device: &Device<B>,
-) -> Result<(Vec<F>, Vec<F>), E> {
+) -> Result<(Vec<f64>, Vec<f64>), E> {
 
     let n_rows = log_counts_f.len();
     let n_cols = alpha0_f.len();
 
-    let logl_floats: Vec<f32> = logl_flat_f.iter().map(|x| x.to_f32().unwrap()).collect();
-    let logl_flat = Tensor::<B, 1>::from_data(logl_floats.as_slice(), device);
+    let logl_flat = Tensor::<B, 1>::from_data(logl_f, device);
+    let log_counts = Tensor::<B, 1>::from_data(log_counts_f, device);
+    let alpha0 = Tensor::<B, 1>::from_data(alpha0_f, device);
+
     let logl = logl_flat.reshape([n_cols, n_rows]);
-
-    let log_counts_floats: Vec<f32> = log_counts_f.iter().map(|x| x.to_f32().unwrap()).collect();
-    let log_counts = Tensor::<B, 1>::from_data(log_counts_floats.as_slice(), device);
-
-    let alpha0_floats: Vec<f32> = alpha0_f.iter().map(|x| x.to_f32().unwrap()).collect();
-    let alpha0 = Tensor::<B, 1>::from_data(alpha0_floats.as_slice(), device);
 
     let probs = match options.algorithm {
         optimizer::Algorithm::RCG => optimizer::rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0, options.tolerance, options.max_iters)?,
@@ -143,8 +139,8 @@ fn run_optimizer<B: Backend, F: Float + FromPrimitive>(
     };
 
     let proportions = optimizer::mixture_components(probs.clone(), log_counts);
-    let probs_f = probs.into_data().iter().map(|x: f64| FromPrimitive::from_f64(x).unwrap()).collect::<Vec<F>>();
-    let props_f = proportions.into_data().iter().map(|x: f64| FromPrimitive::from_f64(x).unwrap()).collect::<Vec<F>>();
+    let probs_f = probs.into_data().iter().map(|x: f64| x).collect::<Vec<f64>>();
+    let props_f = proportions.into_data().iter().map(|x: f64| x).collect::<Vec<f64>>();
     Ok((props_f, probs_f))
 }
 
@@ -173,12 +169,12 @@ fn run_optimizer<B: Backend, F: Float + FromPrimitive>(
 /// from a previously fitted model (weighted by the total observation count) can
 /// be used as a prior when estimating a new dataset.
 ///
-pub fn optimize_flat<F: Float + FromPrimitive>(
-    log_likelihood: &[F],
-    log_counts: &[F],
-    prior: &[F],
+pub fn optimize_flat(
+    log_likelihood: &[f64],
+    log_counts: &[f64],
+    prior: &[f64],
     opts: Option<OptimizerOpts>,
-) -> Result<(Vec<F>, Vec<F>), E> {
+) -> Result<(Vec<f64>, Vec<f64>), E> {
     assert_eq!(log_likelihood.len() as u64, (log_counts.len() as u64) * (prior.len() as u64));
 
     let options = opts.unwrap_or_default();
@@ -187,24 +183,24 @@ pub fn optimize_flat<F: Float + FromPrimitive>(
         BurnBackend::CPU32 => {
             let device = burn::backend::ndarray::NdArrayDevice::default();
             type Backend = NdArray<f32>;
-            run_optimizer::<Backend, F>(log_likelihood, log_counts, prior, &options, &device)?
+            run_optimizer::<Backend>(log_likelihood, log_counts, prior, &options, &device)?
         },
         BurnBackend::CPU64 => {
             let device = burn::backend::ndarray::NdArrayDevice::default();
             type Backend = NdArray<f64>;
-            run_optimizer::<Backend, F>(log_likelihood, log_counts, prior, &options, &device)?
+            run_optimizer::<Backend>(log_likelihood, log_counts, prior, &options, &device)?
         },
         #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
         BurnBackend::GPU32 => {
             let device = burn::backend::wgpu::WgpuDevice::default();
             type Backend = Wgpu<f32>;
-            run_optimizer::<Backend, F>(log_likelihood, log_counts, prior, &options, &device)?
+            run_optimizer::<Backend>(log_likelihood, log_counts, prior, &options, &device)?
         },
         #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
         BurnBackend::GPU64 => {
             let device = burn::backend::wgpu::WgpuDevice::default();
             type Backend = Wgpu<f64>;
-            run_optimizer::<Backend, F>(log_likelihood, log_counts, prior, &options, &device)?
+            run_optimizer::<Backend>(log_likelihood, log_counts, prior, &options, &device)?
         },
         // TODO Return error instead of panic when requesting a backend that is not supported
         #[cfg(not(any(feature = "wgpu", feature = "webgpu", feature = "vulkan")))]
@@ -216,18 +212,29 @@ pub fn optimize_flat<F: Float + FromPrimitive>(
 
 /// Run optimizer on 2D log_likelihoods and integer counts
 ///
-/// This is just a wrapper around [optimize_mat] that flattens the input and
-/// computes the log counts.
+/// Wrapper around [optimize_mat] that flattens the input and computes the log
+/// counts.
+///
+/// This function uses extra memory to handle generic floating point and integer
+/// types. [optimize_mat] should be preferred.
+///
+/// Values will be returned as 64-bit floats regardless of input width.
+///
+/// If you want to perform *computation* in 64-bit space, specify a 64-bit device via `opts`.
+///
+/// If you want to supply *log likelihoods* using 32-bit or 16-bit floats, call the
+/// [optimizer] functions directly with the appropriate tensor.
 ///
 pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
     log_likelihood: &[Vec<F>],
     counts: &[U],
     prior: &[F],
     opts: Option<OptimizerOpts>,
-) -> Result<(Vec<F>, Vec<F>), E> {
-    let logl_flat = log_likelihood.iter().flatten().cloned().collect::<Vec<F>>();
-    let log_counts = counts.iter().map(|x| FromPrimitive::from_f64((x.to_f64().unwrap()).ln()).unwrap()).collect::<Vec<F>>();
-    optimize_flat(&logl_flat, &log_counts, prior, opts)
+) -> Result<(Vec<f64>, Vec<f64>), E> {
+    let logl_flat = log_likelihood.iter().flatten().map(|x| x.to_f64().unwrap()).collect::<Vec<f64>>();
+    let log_counts = counts.iter().map(|x| x.to_f64().unwrap().ln()).collect::<Vec<f64>>();
+    let alpha0 = prior.iter().map(|x| x.to_f64().unwrap()).collect::<Vec<f64>>();
+    optimize_flat(&logl_flat, &log_counts, &alpha0, opts)
 }
 
 // Tests
@@ -242,7 +249,7 @@ mod tests {
         use super::optimize;
         use super::optimizer::Algorithm;
 
-        let log_likelihood: Vec<Vec<f64>> =
+        let log_likelihood: Vec<Vec<f32>> =
             vec![
                 vec![ -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503 ],
                 vec![ -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.371713 ],
@@ -250,7 +257,7 @@ mod tests {
                 vec![ -0.0100503, -0.371713,  -4.60517,   -0.0100503, -0.371713,  -4.60517,   -0.0100503, -0.371713,  -4.60517,   -0.0100503 ],
             ];
         let counts: Vec<u32> = vec![2167, 1145, 943, 196, 175, 158, 1041, 957, 1447, 2135];
-        let prior_counts: Vec<f64> = vec![1.0, 1.0, 1.0, 1.0];
+        let prior_counts: Vec<f32> = vec![1.0, 1.0, 1.0, 1.0];
 
         let expected: Vec<f64> = vec![0.9990609231670258, 0.0007300890279000023, 9.656363112888921e-5, 0.00011242417394518503];
 
@@ -277,7 +284,7 @@ mod tests {
         let counts: Vec<u32> = vec![2167, 1145, 943, 196, 175, 158, 1041, 957, 1447, 2135];
         let prior_counts: Vec<f32> = vec![1.0, 1.0, 1.0, 1.0];
 
-        let expected: Vec<f32> = vec![0.9990609232614853, 0.0007300889486079688, 9.656361438673255e-5, 0.00011242417552052694];
+        let expected: Vec<f64> = vec![0.9990609232614853, 0.0007300889486079688, 9.656361438673255e-5, 0.00011242417552052694];
 
         let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, device: BurnBackend::CPU32, algorithm: Algorithm::RCG };
         let (got, _) = optimize(&log_likelihood, &counts, &prior_counts, Some(opts)).unwrap();
