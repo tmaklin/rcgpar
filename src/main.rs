@@ -112,7 +112,7 @@ fn main() {
             options.device = device.clone().unwrap_or_default();
             options.algorithm = algorithm.clone().unwrap_or_default();
 
-            let proportions = rcgpar::optimize(&logl, &weights, &prior, Some(options)).unwrap();
+            let (proportions, _) = rcgpar::optimize(&logl, &weights, &prior, Some(options)).unwrap();
 
             proportions.iter().enumerate().for_each(|(idx, theta)| {
                 eprintln!("{idx}\t{theta}");

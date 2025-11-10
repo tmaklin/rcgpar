@@ -119,7 +119,7 @@ fn run_optimizer<B: Backend, F: Float + FromPrimitive, U: PrimInt>(
     alpha0_f: &[F],
     options: &OptimizerOpts,
     device: &Device<B>,
-) -> Result<Vec<F>, E> {
+) -> Result<(Vec<F>, Vec<F>), E> {
 
     let n_rows = counts_i.len();
     let n_cols = logl_f.len();
@@ -139,7 +139,10 @@ fn run_optimizer<B: Backend, F: Float + FromPrimitive, U: PrimInt>(
         optimizer::Algorithm::EM => optimizer::em::em_algorithm(logl, log_counts.clone(), options.tolerance, options.max_iters, device)?,
     };
 
-    Ok(probs.into_data().iter().map(|x: f64| FromPrimitive::from_f64(x).unwrap()).collect::<Vec<F>>())
+    let proportions = optimizer::mixture_components(probs.clone(), log_counts);
+    let probs_f = probs.into_data().iter().map(|x: f64| FromPrimitive::from_f64(x).unwrap()).collect::<Vec<F>>();
+    let props_f = proportions.into_data().iter().map(|x: f64| FromPrimitive::from_f64(x).unwrap()).collect::<Vec<F>>();
+    Ok((props_f, probs_f))
 }
 
 /// Infer mixing proportions for a weighted log-likelihood matrix
@@ -167,18 +170,18 @@ fn run_optimizer<B: Backend, F: Float + FromPrimitive, U: PrimInt>(
 /// from a previously fitted model (weighted by the total observation count) can
 /// be used as a prior when estimating a new dataset.
 ///
-pub fn optimize_mat<F: Float + FromPrimitive, U: PrimInt>(
+pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
     log_likelihood: &[Vec<F>],
     counts: &[U],
     prior: &[F],
     opts: Option<OptimizerOpts>,
-) -> Result<Vec<F>, E> {
+) -> Result<(Vec<F>, Vec<F>), E> {
     assert_eq!(log_likelihood[0].len(), counts.len());
     assert_eq!(log_likelihood.len(), prior.len());
 
     let options = opts.unwrap_or_default();
 
-    let probs = match options.device {
+    let (proportions, probs_mat) = match options.device {
         BurnBackend::CPU32 => {
             let device = burn::backend::ndarray::NdArrayDevice::default();
             type Backend = NdArray<f32>;
@@ -206,23 +209,7 @@ pub fn optimize_mat<F: Float + FromPrimitive, U: PrimInt>(
         BurnBackend::GPU32 | BurnBackend::GPU64 => panic!("rcgpar was not compiled with WGPU support"),
     };
 
-    Ok(probs)
-}
-
-pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
-    log_likelihood: &[Vec<F>],
-    counts: &[U],
-    prior: &[F],
-    opts: Option<OptimizerOpts>,
-) -> Result<Vec<F>, E> {
-    let probs = optimize_mat(log_likelihood, counts, prior, opts)?;
-
-    let n_times_total = counts.iter().map(|x| x.to_u64().unwrap()).sum::<u64>();
-    let proportions = probs.chunks(counts.len()).map(|x| {
-        let p = x.iter().zip(counts.iter()).map(|(y, z)| (y.to_f64().unwrap() + z.to_f64().unwrap().ln()).exp()).sum::<f64>()/(n_times_total as f64);
-        FromPrimitive::from_f64(p).unwrap()
-    }).collect::<Vec<F>>();
-    Ok(proportions)
+    Ok((proportions, probs_mat))
 }
 
 // Tests
@@ -250,7 +237,7 @@ mod tests {
         let expected: Vec<f64> = vec![0.9990609231670258, 0.0007300890279000023, 9.656363112888921e-5, 0.00011242417394518503];
 
         let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, device: BurnBackend::CPU64, algorithm: Algorithm::RCG };
-        let got = optimize(&log_likelihood, &counts, &prior_counts, Some(opts)).unwrap();
+        let (got, _) = optimize(&log_likelihood, &counts, &prior_counts, Some(opts)).unwrap();
 
         got.iter().zip(expected.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 1e-10) });
     }
@@ -275,7 +262,7 @@ mod tests {
         let expected: Vec<f32> = vec![0.9990609232614853, 0.0007300889486079688, 9.656361438673255e-5, 0.00011242417552052694];
 
         let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, device: BurnBackend::CPU32, algorithm: Algorithm::RCG };
-        let got = optimize(&log_likelihood, &counts, &prior_counts, Some(opts)).unwrap();
+        let (got, _) = optimize(&log_likelihood, &counts, &prior_counts, Some(opts)).unwrap();
 
         got.iter().zip(expected.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 1e-4); assert!((x - y).abs() > 1e-8) });
     }
