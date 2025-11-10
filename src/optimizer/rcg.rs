@@ -152,15 +152,6 @@ pub fn rcg_optl_mat<B: Backend>(
     Ok(gamma_z)
 }
 
-pub fn mixture_components<B: Backend>(
-    gamma_z: Tensor::<B, 2>,
-    log_counts: Tensor::<B, 1>,
-) -> Result<Tensor::<B, 1>, E> {
-    let n_times_total = log_counts.clone().exp().sum().log().into_scalar();
-    let thetas = gamma_z.clone().add(log_counts.unsqueeze()).exp().sum_dim(1).log().sub_scalar(n_times_total).exp();
-    Ok(thetas.squeeze())
-}
-
 // Tests
 #[cfg(test)]
 mod tests {
