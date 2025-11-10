@@ -25,23 +25,15 @@
 //! implementation by Joel.
 //!
 
+use crate::math::logsumexp;
+
 use burn_tensor::Device;
 use burn_tensor::backend::Backend;
 use burn_tensor::{Shape, Tensor};
 
 type E = Box<dyn std::error::Error>;
 
-pub fn logsumexp<B: Backend>(
-    input: Tensor::<B, 2>,
-    dim: usize,
-) -> Result<Tensor<B, 1>, E> {
-    let max = input.clone().max_dim(dim).unsqueeze();
-    let res = (input - max.clone()).exp().sum_dim(dim).log();
-    let res = res + max;
-    let res = res.squeeze();
-    Ok(res)
-}
-
+/// Expectation maximization algorithm
 pub fn em_algorithm<B: Backend>(
     logl: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,
@@ -76,7 +68,7 @@ pub fn em_algorithm<B: Backend>(
 
         thetas = logl_weighted.clone().sum_dim(1).reshape(Shape::new([n_targets])).div_scalar(log_counts.clone().exp().sum().into_scalar());
 
-        let loss = -lse.add(log_counts.clone()).exp().sum();
+        let loss = -lse.add(log_counts.clone().unsqueeze()).exp().sum();
 
         if loss.clone().sub(prev_loss.clone()).abs().lower(tol.clone()).all().into_data().iter().next().unwrap() {
             break;

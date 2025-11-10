@@ -31,6 +31,7 @@ use burn_tensor::backend::Backend;
 use num::traits::{Float, PrimInt};
 use num::FromPrimitive;
 
+pub mod math;
 pub mod optimizer;
 
 use optimizer::Algorithm;
