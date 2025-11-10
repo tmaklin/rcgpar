@@ -25,11 +25,11 @@
 //!
 
 use crate::math::digamma_tensor;
+use crate::math::ln_gamma_tensor;
 use crate::math::logsumexp;
 
 use burn_tensor::backend::Backend;
 use burn_tensor::{Shape, Tensor};
-use statrs::function::gamma::ln_gamma;
 
 type E = Box<dyn std::error::Error>;
 
@@ -69,11 +69,10 @@ pub fn elbo_rcg_mat<B: Backend>(
     log_counts: Tensor::<B, 1>,
     n_k: Tensor::<B, 1>,
 ) -> Result<f64, E> {
-    let n_k_data = n_k.into_data();
-    let lgamma_n_k_sum = n_k_data.iter().map(|x: f64| ln_gamma(x)).sum::<f64>();
+    let lgamma_n_k_sum = ln_gamma_tensor(n_k)?.sum();
 
     let bound = gamma_z.clone().add(log_counts.unsqueeze()).exp().mul(logl.sub(gamma_z)).sum();
-    let newbound: f64 = bound.add_scalar(lgamma_n_k_sum).into_data().iter().next().unwrap();
+    let newbound: f64 = bound.add(lgamma_n_k_sum).into_data().iter().next().unwrap();
 
     Ok(newbound)
 }

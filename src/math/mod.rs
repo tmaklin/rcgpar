@@ -68,6 +68,91 @@ pub fn digamma_tensor<B: Backend>(
     Ok(result)
 }
 
+/// Approximate the log-gamma function
+///
+/// Based on the
+/// [statrs::function::gamma::ln_gamma](https://docs.rs/statrs/0.18.0/src/statrs/function/gamma.rs.html#54-78)
+/// source code which is derived from "An Analysis of the Lanczos Gamma
+/// Approximation", Glendon Ralph Pugh, 2004 p. 116
+///
+/// ## Notes
+///
+/// Computes the logarithm of the gamma function with an accuracy of 16 floating
+/// point digits.
+///
+pub fn ln_gamma_tensor<B: Backend>(
+    tensor: Tensor::<B, 1>,
+) -> Result<Tensor::<B, 1>, E> {
+    // Constants
+    const LN_2_SQRT_E_OVER_PI: f64 = 0.6207822376352452;
+    const GAMMA_R: f64  = 10.900511;
+
+    // Polynomial coefficients for approximating the `gamma_ln` function
+    const C0: f64 = 2.4857408913875356e-5;
+    const C1: f64 = 1.0514237858172197;
+    const C2: f64 = -3.4568709722201623;
+    const C3: f64 = 4.512277094668948;
+    const C4: f64 = -2.9828522532357665;
+    const C5: f64 = 1.056397115771267;
+    const C6: f64 = -1.9542877319164586e-1;
+    const C7: f64 = 1.709705434044412e-2;
+    const C8: f64 = -5.719261174043057e-4;
+    const C9: f64 = 4.633994733599056e-6;
+    const C10: f64 = -2.719949084886077e-9;
+
+    // Compute for elements < 0.5
+    let mask = tensor.clone().lower_elem(0.5);
+    let tensor_neg = tensor.clone().neg();
+    let s1 = tensor.clone().mask_where(mask.clone(), tensor_neg.clone().add_scalar(1.0).recip().mul_scalar(C1)
+                          .add(tensor.clone().mask_where(mask.clone(), tensor_neg.clone().add_scalar(2.0).recip().mul_scalar(C2)))
+                          .add(tensor.clone().mask_where(mask.clone(), tensor_neg.clone().add_scalar(3.0).recip().mul_scalar(C3)))
+                          .add(tensor.clone().mask_where(mask.clone(), tensor_neg.clone().add_scalar(4.0).recip().mul_scalar(C4)))
+                          .add(tensor.clone().mask_where(mask.clone(), tensor_neg.clone().add_scalar(5.0).recip().mul_scalar(C5)))
+                          .add(tensor.clone().mask_where(mask.clone(), tensor_neg.clone().add_scalar(6.0).recip().mul_scalar(C6)))
+                          .add(tensor.clone().mask_where(mask.clone(), tensor_neg.clone().add_scalar(7.0).recip().mul_scalar(C7)))
+                          .add(tensor.clone().mask_where(mask.clone(), tensor_neg.clone().add_scalar(8.0).recip().mul_scalar(C8)))
+                          .add(tensor.clone().mask_where(mask.clone(), tensor_neg.clone().add_scalar(9.0).recip().mul_scalar(C9)))
+                          .add(tensor.clone().mask_where(mask.clone(), tensor_neg.clone().add_scalar(10.0).recip().mul_scalar(C10)))
+                          .add_scalar(C0)
+                          .log()
+                          .add_scalar(LN_2_SQRT_E_OVER_PI)
+                          .sub_scalar(std::f64::consts::PI.ln())
+    );
+    let s1 = s1.clone().zeros_like()
+                       .mask_where(mask.clone(), tensor.clone()
+                       .mul_scalar(std::f64::consts::PI)
+                       .sin()
+                       .log()
+                       .neg()
+                       .sub(s1)
+                       );
+    let temp = tensor_neg.clone().mask_where(mask.clone(), tensor_neg.clone().add_scalar(0.5));
+    let temp = tensor_neg.clone().mask_where(mask.clone(), tensor_neg.add_scalar(0.5 + GAMMA_R).div_scalar(std::f64::consts::E).log().mul(temp));
+    let mut result = s1.clone().mask_where(mask.clone(),
+                                      s1.sub(temp));
+
+    // Compute for elements >= 0.5
+    let mask = mask.bool_not();
+    let s2 = tensor.clone().mask_where(mask.clone(), tensor.clone().recip().mul_scalar(C1)
+                          .add(tensor.clone().mask_where(mask.clone(), tensor.clone().add_scalar(1.0).recip().mul_scalar(C2)))
+                          .add(tensor.clone().mask_where(mask.clone(), tensor.clone().add_scalar(2.0).recip().mul_scalar(C3)))
+                          .add(tensor.clone().mask_where(mask.clone(), tensor.clone().add_scalar(3.0).recip().mul_scalar(C4)))
+                          .add(tensor.clone().mask_where(mask.clone(), tensor.clone().add_scalar(4.0).recip().mul_scalar(C5)))
+                          .add(tensor.clone().mask_where(mask.clone(), tensor.clone().add_scalar(5.0).recip().mul_scalar(C6)))
+                          .add(tensor.clone().mask_where(mask.clone(), tensor.clone().add_scalar(6.0).recip().mul_scalar(C7)))
+                          .add(tensor.clone().mask_where(mask.clone(), tensor.clone().add_scalar(7.0).recip().mul_scalar(C8)))
+                          .add(tensor.clone().mask_where(mask.clone(), tensor.clone().add_scalar(8.0).recip().mul_scalar(C9)))
+                          .add(tensor.clone().mask_where(mask.clone(), tensor.clone().add_scalar(9.0).recip().mul_scalar(C10)))
+                          .add_scalar(C0)
+                          .log()
+                          .add_scalar(LN_2_SQRT_E_OVER_PI));
+    let temp = tensor.clone().mask_where(mask.clone(), tensor.clone().sub_scalar(0.5));
+    let temp = tensor.clone().mask_where(mask.clone(), tensor.add_scalar(GAMMA_R - 0.5).div_scalar(std::f64::consts::E).log().mul(temp));
+    result = result.mask_where(mask, s2.add(temp));
+
+    Ok(result)
+}
+
 /// Log of the sum of exponentials over a dimension
 pub fn logsumexp<B: Backend>(
     input: Tensor::<B, 2>,
@@ -113,6 +198,97 @@ mod tests {
         let expected_data = expected.into_data();
 
         got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1e-16) });
+    }
+
+
+    #[test]
+    fn ln_gamma_tensor_small() {
+        use burn::backend::ndarray::NdArray;
+        use burn_tensor::Tensor;
+        use statrs::function::gamma::ln_gamma;
+
+        use super::ln_gamma_tensor;
+
+        let device = Default::default();
+        type Backend = NdArray<f32>;
+
+        let input_data = vec![0.33440901, 0.41306856, 0.06975968, 0.36323925, 0.18675239];
+        let input = Tensor::<Backend, 1>::from_data(
+            input_data.as_slice(),
+            &device,
+        );
+
+        let expected = Tensor::<Backend, 1>::from_data(
+            input_data.iter().map(|x| ln_gamma(*x as f64)).collect::<Vec<f64>>().as_slice(),
+            &device,
+        );
+
+        let got = ln_gamma_tensor::<Backend>(input).unwrap();
+
+        let got_data = got.into_data();
+        let expected_data = expected.into_data();
+
+        got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1e-6) });
+    }
+
+    #[test]
+    fn ln_gamma_tensor_large() {
+        use burn::backend::ndarray::NdArray;
+        use burn_tensor::Tensor;
+        use statrs::function::gamma::ln_gamma;
+
+        use super::ln_gamma_tensor;
+
+        let device = Default::default();
+        type Backend = NdArray<f32>;
+
+        let input_data = vec![1.33440901, 10.41306856, 100.06975968, 1000.36323925, 10000.18675239];
+        let input = Tensor::<Backend, 1>::from_data(
+            input_data.as_slice(),
+            &device,
+        );
+
+        let expected = Tensor::<Backend, 1>::from_data(
+            input_data.iter().map(|x| ln_gamma(*x as f64)).collect::<Vec<f64>>().as_slice(),
+            &device,
+        );
+
+        let got = ln_gamma_tensor::<Backend>(input).unwrap();
+
+        let got_data = got.into_data();
+        let expected_data = expected.into_data();
+
+        got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1e-2) });
+    }
+
+    #[test]
+    fn ln_gamma_tensor_mixed() {
+        use burn::backend::ndarray::NdArray;
+        use burn_tensor::Tensor;
+        use statrs::function::gamma::ln_gamma;
+
+        use super::ln_gamma_tensor;
+
+        let device = Default::default();
+        type Backend = NdArray<f32>;
+
+        let input_data = vec![100.33440901, 0.41306856, 1.06975968, 1.36323925, 0.5];
+        let input = Tensor::<Backend, 1>::from_data(
+            input_data.as_slice(),
+            &device,
+        );
+
+        let expected = Tensor::<Backend, 1>::from_data(
+            input_data.iter().map(|x| ln_gamma(*x as f64)).collect::<Vec<f64>>().as_slice(),
+            &device,
+        );
+
+        let got = ln_gamma_tensor::<Backend>(input).unwrap();
+
+        let got_data = got.into_data();
+        let expected_data = expected.into_data();
+
+        got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1e-4) });
     }
 
     #[test]
