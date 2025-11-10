@@ -23,7 +23,9 @@
 pub mod em;
 pub mod rcg;
 
-use burn_tensor::{Shape, Tensor};
+use crate::math::logsumexp;
+
+use burn_tensor::Tensor;
 use burn_tensor::backend::Backend;
 
 type E = Box<dyn std::error::Error>;
@@ -56,11 +58,15 @@ impl std::str::FromStr for Algorithm {
 pub fn mixture_components<B: Backend>(
     gamma_z: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,
-) -> Result<Tensor::<B, 1>, E> {
-    let n_times_total = log_counts.clone().exp().sum().log().into_scalar();
-    let log_counts_squeezed: Tensor::<B, 2> = log_counts.clone().reshape(Shape::new([1, gamma_z.clone().dims()[1]]));
-    let thetas = gamma_z.clone().add(log_counts_squeezed).exp().sum_dim(1).log().sub_scalar(n_times_total).exp().reshape(Shape::new([gamma_z.clone().dims()[0], 1]));
-    Ok(thetas)
+) -> Tensor::<B, 1> {
+    let log_counts = log_counts.unsqueeze();
+    let n_times_total = logsumexp(log_counts.clone(), 1);
+    let n_times_total = n_times_total.sum();
+    let n_times_total = n_times_total.unsqueeze();
+    let gamma_z = gamma_z.add(log_counts).exp();
+    let alphas = gamma_z.sum_dim(1);
+    let thetas = alphas.log().sub(n_times_total).exp();
+    thetas.squeeze()
 }
 
 // Tests
@@ -102,7 +108,7 @@ mod tests {
             &device,
         );
 
-        let got = mixture_components::<Backend>(gamma_z, log_counts).unwrap();
+        let got = mixture_components::<Backend>(gamma_z, log_counts);
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();
