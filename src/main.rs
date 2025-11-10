@@ -27,7 +27,7 @@ mod cli;
 fn read_counts(
     path: &PathBuf,
     delimiter: u8
-) -> Vec<u32> {
+) -> Vec<f64> {
     let fs = match std::fs::File::open(path) {
         Ok(fs) => fs,
         Err(e) => panic!("  Error in reading --input-list: {}", e),
@@ -38,22 +38,20 @@ fn read_counts(
         .has_headers(false)
         .from_reader(fs);
 
-    let counts = reader.records().map(|line| {
+    reader.records().map(|line| {
         if let Ok(record) = line {
-            let val: u32 = record.iter().next().unwrap().parse().unwrap();
+            let val: f64 = (record.iter().next().unwrap().parse::<u32>().unwrap() as f64).ln();
             val
         } else {
             panic!("  Error in reading --weights: {}", path.clone().into_os_string().into_string().unwrap());
         }
-    }).collect::<Vec<u32>>();
-
-    counts
+    }).collect::<Vec<f64>>()
 }
 
 fn read_log_likelihoods(
     path: &PathBuf,
     delimiter: u8
-) -> Vec<Vec<f32>> {
+) -> Vec<f64> {
     let fs = match std::fs::File::open(path) {
         Ok(fs) => fs,
         Err(e) => panic!("  Error in reading --input-list: {}", e),
@@ -64,10 +62,10 @@ fn read_log_likelihoods(
         .has_headers(false)
         .from_reader(fs);
 
-    let mut logl: Vec<Vec<f32>> = Vec::new();
+    let mut logl: Vec<f64> = Vec::new();
     reader.records().for_each(|line| {
         if let Ok(record) = line {
-            logl.push(record.iter().map(|x| { let val: f32 = x.parse().unwrap(); val } ).collect::<Vec<f32>>());
+            record.iter().for_each(|x| { logl.push(x.parse().unwrap()) } );
         } else {
             panic!("  Error in reading --log-likelihood: {}", path.clone().into_os_string().into_string().unwrap());
         }
@@ -104,7 +102,7 @@ fn main() {
 
             let logl = read_log_likelihoods(logl_path, b'\t');
             let weights = read_counts(weights_path, b'\t');
-            let prior: Vec<f32> = vec![1.0; logl.len()];
+            let prior: Vec<f64> = vec![1.0; logl.len() / weights.len()];
 
             let mut options: rcgpar::OptimizerOpts = Default::default();
             options.tolerance = *tolerance;
@@ -112,7 +110,7 @@ fn main() {
             options.device = device.clone().unwrap_or_default();
             options.algorithm = algorithm.clone().unwrap_or_default();
 
-            let (proportions, _) = rcgpar::optimize(&logl, &weights, &prior, Some(options)).unwrap();
+            let (proportions, _) = rcgpar::optimize_flat(&logl, &weights, &prior, Some(options)).unwrap();
 
             proportions.iter().enumerate().for_each(|(idx, theta)| {
                 eprintln!("{idx}\t{theta}");
