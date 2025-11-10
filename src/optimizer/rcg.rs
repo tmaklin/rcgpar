@@ -26,10 +26,54 @@
 
 use burn_tensor::backend::Backend;
 use burn_tensor::{Shape, Tensor};
-use statrs::function::gamma::digamma;
 use statrs::function::gamma::ln_gamma;
 
 type E = Box<dyn std::error::Error>;
+
+/// Compute digamma over a Burn tensor on device.
+///
+/// Digamma is defined as the derivative of the log gamma function.
+///
+/// Based on the
+/// [statrs::function::gamma::digamma](https://docs.rs/statrs/0.18.0/src/statrs/function/gamma.rs.html#373-412)
+/// source code at: which uses "Algorithm AS 103" from Jose Bernardo, Applied
+/// Statistics, Volume 25, Number 3, 1976, pages 315 - 317.
+///
+/// ## Notes
+/// Does not work for negative inputs or very small (<1e-6) inputs.
+///
+/// It is possible to extend the code to work on these inputs, see the statrs
+/// code.
+///
+pub fn digamma_tensor<B: Backend>(
+    tensor: Tensor::<B, 1>,
+) -> Result<Tensor::<B, 1>, E> {
+    let c = 12.0;
+    let s3 = 1.0 / 12.0;
+    let s4 = 1.0 / 120.0;
+    let s5 = 1.0 / 252.0;
+    let s6 = 1.0 / 240.0;
+    let s7 = 1.0 / 132.0;
+
+    let mut result = tensor.zeros_like();
+    let mut z = tensor.clone();
+    let mut mask = tensor.clone().lower_elem(c);
+    for _ in 0..12 {
+        result = result.clone().mask_where(mask.clone(), result.sub(z.clone().recip()));
+        z = z.clone().mask_where(mask, z.add_scalar(1.0));
+        mask = tensor.clone().lower_elem(c);
+    }
+
+    mask = z.clone().greater_equal_elem(c);
+    let mut r = z.clone().mask_where(mask.clone(), z.clone().recip());
+    result = result.clone().mask_where(mask.clone(), result.add(z.log()).sub(r.clone().mul_scalar(0.5)));
+    r = r.clone().mask_where(mask.clone(), r.square().mul_scalar(-1.0));
+
+    result = result.clone().mask_where(mask, result.sub(
+            r.clone().mul_scalar(s7).add_scalar(s6).mul(r.clone()).add_scalar(s5).mul(r.clone()).add_scalar(s4).mul(r.clone()).add_scalar(s3).mul(r).mul_scalar(-1.0)));
+
+    Ok(result)
+}
 
 pub fn logsumexp<B: Backend>(
     input: Tensor::<B, 2>,
@@ -56,10 +100,8 @@ pub fn mixt_negnatgrad<B: Backend>(
     gamma_z: Tensor::<B, 2>,
     n_k: Tensor::<B, 1>,
 ) -> Result<Tensor::<B, 2>, E> {
-    let n_k_data = n_k.clone().into_data();
-    let digamma_n_k_vals = n_k_data.iter().map(|x: f32| (digamma(x as f64) - 1_f64) as f32).collect::<Vec<f32>>();
-    let digamma_n_k = Tensor::<B, 1>::from_data(digamma_n_k_vals.as_slice(), &n_k.device()).reshape(Shape::new([logl.dims()[0], 1]));
-    let dl_dphi: Tensor::<B, 2> = logl.add(digamma_n_k).sub(gamma_z);
+    let digamma_n_k = digamma_tensor(n_k)?.sub_scalar(1.0);
+    let dl_dphi: Tensor::<B, 2> = logl.add(digamma_n_k.unsqueeze().swap_dims(0, 1)).sub(gamma_z);
     Ok(dl_dphi)
 }
 
@@ -182,6 +224,37 @@ pub fn mixture_components<B: Backend>(
 #[cfg(test)]
 mod tests {
     use assert_approx_eq::assert_approx_eq;
+
+    #[test]
+    fn digamma_tensor() {
+        use burn::backend::ndarray::NdArray;
+        use burn_tensor::Tensor;
+        use statrs::function::gamma::digamma;
+
+        use super::digamma_tensor;
+
+        let device = Default::default();
+        type Backend = NdArray<f32>;
+
+        let n_k_data = vec![4857.97, 3905.03, 701.053, 903.946];
+        let n_k = Tensor::<Backend, 1>::from_data(
+            n_k_data.as_slice(),
+            &device,
+        );
+
+        // mixt_negnatgrad should return the next value for `step`
+        let expected = Tensor::<Backend, 1>::from_data(
+            n_k_data.iter().map(|x| digamma(*x as f64)).collect::<Vec<f64>>().as_slice(),
+            &device,
+        );
+
+        let got = digamma_tensor::<Backend>(n_k).unwrap();
+
+        let got_data = got.into_data();
+        let expected_data = expected.into_data();
+
+        got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1e-16) });
+    }
 
     #[test]
     fn mixt_negnatgrad() {
