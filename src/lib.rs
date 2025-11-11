@@ -52,15 +52,15 @@ type E = Box<dyn std::error::Error>;
 #[non_exhaustive]
 pub enum BurnBackend {
     /// [WebGPU](https://www.w3.org/TR/webgpu/), best cross-platform GPU support, 32 bit precision.
-    GPU32,
+    Wgpu32,
     /// [WebGPU](https://www.w3.org/TR/webgpu/), best cross-platform GPU support, 64 bit precision.
-    GPU64,
+    Wgpu64,
 
     /// [NdArray](https://docs.rs/ndarray), runs on most CPU architectures, 32 bit precision.
-    CPU32,
+    NdArray32,
     /// [NdArray](https://docs.rs/ndarray), runs on most CPU architectures, 64 bit precision.
     #[default]
-    CPU64,
+    NdArray64,
 }
 
 impl std::str::FromStr for BurnBackend {
@@ -68,10 +68,10 @@ impl std::str::FromStr for BurnBackend {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "cpu32" => Ok(BurnBackend::CPU32),
-            "cpu64" => Ok(BurnBackend::CPU64),
-            "gpu32" => Ok(BurnBackend::GPU32),
-            "gpu64" => Ok(BurnBackend::GPU64),
+            "cpu32" => Ok(BurnBackend::NdArray32),
+            "cpu64" => Ok(BurnBackend::NdArray64),
+            "gpu32" => Ok(BurnBackend::Wgpu32),
+            "gpu64" => Ok(BurnBackend::Wgpu64),
             _ => Err(format!("'{}' is not a valid BurnBackend variant", s)),
         }
     }
@@ -109,7 +109,7 @@ impl Default for OptimizerOpts {
         OptimizerOpts {
             tolerance: 1e-7_f64,
             max_iters: 5000_usize,
-            device: BurnBackend::CPU64,
+            device: BurnBackend::NdArray64,
             algorithm: Algorithm::RCG,
         }
     }
@@ -194,31 +194,31 @@ pub fn optimize_flat(
     let options = opts.unwrap_or_default();
 
     let (proportions, probs_mat) = match options.device {
-        BurnBackend::CPU32 => {
+        BurnBackend::NdArray32 => {
             let device = burn::backend::ndarray::NdArrayDevice::default();
             type Backend = NdArray<f32>;
             run_optimizer::<Backend>(log_likelihood, log_counts, prior, &options, &device)?
         },
-        BurnBackend::CPU64 => {
+        BurnBackend::NdArray64 => {
             let device = burn::backend::ndarray::NdArrayDevice::default();
             type Backend = NdArray<f64>;
             run_optimizer::<Backend>(log_likelihood, log_counts, prior, &options, &device)?
         },
         #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
-        BurnBackend::GPU32 => {
+        BurnBackend::Wgpu32 => {
             let device = burn::backend::wgpu::WgpuDevice::default();
             type Backend = Wgpu<f32>;
             run_optimizer::<Backend>(log_likelihood, log_counts, prior, &options, &device)?
         },
         #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
-        BurnBackend::GPU64 => {
+        BurnBackend::Wgpu64 => {
             let device = burn::backend::wgpu::WgpuDevice::default();
             type Backend = Wgpu<f64>;
             run_optimizer::<Backend>(log_likelihood, log_counts, prior, &options, &device)?
         },
         // TODO Return error instead of panic when requesting a backend that is not supported
         #[cfg(not(any(feature = "wgpu", feature = "webgpu", feature = "vulkan")))]
-        BurnBackend::GPU32 | BurnBackend::GPU64 => panic!("rcgpar was not compiled with WGPU support"),
+        BurnBackend::Wgpu32 | BurnBackend::Wgpu64 => panic!("rcgpar was not compiled with WGPU support, recompile with `--features wgpu` to enable."),
     };
 
     Ok((proportions, probs_mat))
@@ -275,7 +275,7 @@ mod tests {
 
         let expected: Vec<f64> = vec![0.9990609231670258, 0.0007300890279000023, 9.656363112888921e-5, 0.00011242417394518503];
 
-        let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, device: BurnBackend::CPU64, algorithm: Algorithm::RCG };
+        let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, device: BurnBackend::NdArray64, algorithm: Algorithm::RCG };
         let (got, _) = optimize(&log_likelihood, &counts, &prior_counts, Some(opts)).unwrap();
 
         got.iter().zip(expected.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 1e-10) });
@@ -300,7 +300,7 @@ mod tests {
 
         let expected: Vec<f64> = vec![0.9990609232614853, 0.0007300889486079688, 9.656361438673255e-5, 0.00011242417552052694];
 
-        let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, device: BurnBackend::CPU32, algorithm: Algorithm::RCG };
+        let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, device: BurnBackend::NdArray32, algorithm: Algorithm::RCG };
         let (got, _) = optimize(&log_likelihood, &counts, &prior_counts, Some(opts)).unwrap();
 
         got.iter().zip(expected.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 1e-4); assert!((x - y).abs() > 1e-8) });
