@@ -24,44 +24,6 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use burn::backend::ndarray::NdArray;
 use burn_tensor::Tensor;
 
-use rand::rngs::ThreadRng;
-
-use rand_distr::Distribution;
-use rand_distr::{Gamma, Normal, Poisson, Uniform};
-use rand_distr::weighted::WeightedIndex;
-
-fn rcg_random_data(c: &mut Criterion) {
-use statrs::distribution::Continuous;
-
-    let mut rng = rand::rng();
-    let gamma = Gamma::new(1.0, 1.0).unwrap();
-
-    const k: usize = 50;
-    let n: usize = 1000;
-
-    let alphas_real: Vec<f64> = (0..k).map(|_| gamma.sample(&mut rng)).collect();
-    let dirichlet = Dirichlet::<_, k>::new(alphas_real.try_into().unwrap()).unwrap();
-
-    let logl_mat: Vec<Vec<f64>> = (0..n).map(|_| dirichlet.sample(&mut rng).iter().map(|x: &f64| x.ln()).collect::<Vec<f64>>()).collect();
-
-    let mut transposed: Vec<Vec<f64>> = Vec::with_capacity(k);
-    for _ in 0..k {
-        transposed.push(Vec::with_capacity(n));
-    }
-    for i in 0..n {
-        for j in 0..k {
-            transposed[j].push(logl_mat[i][j].clone());
-        }
-    }
-    let log_likelihoods = transposed.iter().cloned().flatten().collect::<Vec<f64>>();
-
-    let mut col_sums: Vec<f64> = vec![0_f64; k];
-    for i in 0..n {
-        for j in 0..k {
-            col_sums[j] += logl_mat[i][j].exp();
-        }
-    }
-    let col_sums = col_sums.iter().map(|x| x/(n as f64)).collect::<Vec<f64>>();
 fn compute_norm_bench(c: &mut Criterion) {
     use rcgpar::optimizer::rcg::compute_norm;
 
