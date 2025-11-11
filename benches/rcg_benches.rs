@@ -62,6 +62,32 @@ use statrs::distribution::Continuous;
         }
     }
     let col_sums = col_sums.iter().map(|x| x/(n as f64)).collect::<Vec<f64>>();
+fn update_n_k_bench(c: &mut Criterion) {
+    use rcgpar::optimizer::rcg::update_n_k;
+
+    let mut rng = rand::rng();
+
+    let k: usize = 5;
+    let n: usize = 10;
+
+    let (gamma_z, _) = random_loglls(k, n, &mut rng);
+    let log_counts: Vec<f64> = sample_n_poisson(100_f64, n, &mut rng).iter().map(|x| x.ln()).collect();
+    let alpha0: Vec<f64> = vec![1.0; k];
+
+    let device = Default::default();
+    type Backend = NdArray<f64>;
+
+    let gamma_z = Tensor::<Backend, 1>::from_data(gamma_z.as_slice(), &device);
+    let gamma_z = gamma_z.reshape([k, n]);
+    let log_counts = Tensor::<Backend, 1>::from_data(log_counts.as_slice(), &device);
+    let alpha0 = Tensor::<Backend, 1>::from_data(alpha0.as_slice(), &device);
+
+    c.bench_function("update_n_k 5x10", |b|
+                     b.iter(||
+                            update_n_k(black_box(gamma_z.clone()), log_counts.clone(), alpha0.clone())
+                     ));
+}
+
 fn elbo_rcg_mat_bench(c: &mut Criterion) {
     use rcgpar::optimizer::rcg::elbo_rcg_mat;
 
@@ -117,5 +143,8 @@ fn rcg_optl_mat_bench(c: &mut Criterion) {
                      ));
 }
 
-criterion_group!(benches, rcg_optl_mat_bench, elbo_rcg_mat_bench);
+criterion_group!(benches,
+                 rcg_optl_mat_bench,
+                 elbo_rcg_mat_bench,
+                 update_n_k_bench);
 criterion_main!(benches);
