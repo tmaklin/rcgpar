@@ -58,14 +58,14 @@ fn ln_gamma_tensor_bench(c: &mut Criterion) {
 
     let n_k = Tensor::<Backend, 1>::from_data(n_k.as_slice(), &device);
 
-    c.bench_function("digamma_tensor 5x10", |b|
+    c.bench_function("ln_gamma_tensor 5x10", |b|
                      b.iter(||
                             ln_gamma_tensor(black_box(n_k.clone()))
                      ));
 }
 
-criterion_group!(benches,
+criterion_group!(tensor_math_benches,
                  digamma_tensor_bench,
                  ln_gamma_tensor_bench,
 );
-criterion_main!(benches);
+criterion_main!(tensor_math_benches);

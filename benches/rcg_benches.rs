@@ -157,11 +157,11 @@ fn rcg_optl_mat_bench(c: &mut Criterion) {
                      ));
 }
 
-criterion_group!(benches,
+criterion_group!(rcg_benches,
                  rcg_optl_mat_bench,
                  elbo_rcg_mat_bench,
                  update_n_k_bench,
                  mixt_negnatgrad_bench,
                  compute_norm_bench,
 );
-criterion_main!(benches);
+criterion_main!(rcg_benches);
