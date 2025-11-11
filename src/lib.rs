@@ -96,7 +96,7 @@ impl Default for OptimizerOpts {
     /// let mut opts = rcgpar::OptimizerOpts::default();
     /// opts.tolerance = 1e-7_f64;
     /// opts.max_iters = 5000_usize;
-    /// opts.device = rcgpar::BurnBackend::CPU64;
+    /// opts.device = rcgpar::BurnBackend::NdArray64;
     /// opts.algorithm = rcgpar::optimizer::Algorithm::RCG;
     /// # let expected = rcgpar::OptimizerOpts::default();
     /// # assert_eq!(opts.tolerance, expected.tolerance);
