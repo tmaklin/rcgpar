@@ -129,7 +129,7 @@ fn random_loglls(
 }
 
 #[test]
-fn rcg32_random_data() {
+fn rcg32_random() {
     let mut rng = rand::rng();
 
     let k: usize = 2;
@@ -152,7 +152,7 @@ fn rcg32_random_data() {
 }
 
 #[test]
-fn em32_random_data() {
+fn em32_random() {
     let mut rng = rand::rng();
 
     let k: usize = 2;
