@@ -43,3 +43,10 @@ assert_approx_eq = "1.1"
 rand = "0.9"
 rand_distr = "0.5"
 statrs = "0.18"
+
+## Benchmarks
+criterion = { version = "0.7", features = ["html_reports"] }
+
+[[bench]]
+name = "rcg_benches"
+harness = false
