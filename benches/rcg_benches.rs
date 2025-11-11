@@ -62,6 +62,58 @@ use statrs::distribution::Continuous;
         }
     }
     let col_sums = col_sums.iter().map(|x| x/(n as f64)).collect::<Vec<f64>>();
+fn compute_norm_bench(c: &mut Criterion) {
+    use rcgpar::optimizer::rcg::compute_norm;
+
+    let mut rng = rand::rng();
+
+    let k: usize = 5;
+    let n: usize = 10;
+
+    let (gamma_z, _) = random_loglls(k, n, &mut rng);
+    let dl_dphi = sample_n_uniform(-1_f64, 1_f64, n * k, &mut rng);
+
+    let device = Default::default();
+    type Backend = NdArray<f64>;
+
+    let gamma_z = Tensor::<Backend, 1>::from_data(gamma_z.as_slice(), &device);
+    let gamma_z = gamma_z.reshape([k, n]);
+    let dl_dphi = Tensor::<Backend, 1>::from_data(dl_dphi.as_slice(), &device);
+    let dl_dphi = dl_dphi.reshape([k, n]);
+
+    c.bench_function("compute_norm 5x10", |b|
+                     b.iter(||
+                            compute_norm(black_box(gamma_z.clone()), dl_dphi.clone())
+                     ));
+}
+
+fn mixt_negnatgrad_bench(c: &mut Criterion) {
+    use rcgpar::optimizer::rcg::mixt_negnatgrad;
+
+    let mut rng = rand::rng();
+
+    let k: usize = 5;
+    let n: usize = 10;
+
+    let (log_lls, _) = random_loglls(k, n, &mut rng);
+    let (gamma_z, _) = random_loglls(k, n, &mut rng);
+    let n_k: Vec<f64> = sample_n_gamma(4000_f64, 1_f64, k, &mut rng).iter().map(|x| x.ln()).collect();
+
+    let device = Default::default();
+    type Backend = NdArray<f64>;
+
+    let logl = Tensor::<Backend, 1>::from_data(log_lls.as_slice(), &device);
+    let logl = logl.reshape([k, n]);
+    let gamma_z = Tensor::<Backend, 1>::from_data(gamma_z.as_slice(), &device);
+    let gamma_z = gamma_z.reshape([k, n]);
+    let n_k = Tensor::<Backend, 1>::from_data(n_k.as_slice(), &device);
+
+    c.bench_function("mixt_negnatgrad 5x10", |b|
+                     b.iter(||
+                            mixt_negnatgrad(black_box(logl.clone()), gamma_z.clone(), n_k.clone())
+                     ));
+}
+
 fn update_n_k_bench(c: &mut Criterion) {
     use rcgpar::optimizer::rcg::update_n_k;
 
@@ -146,5 +198,8 @@ fn rcg_optl_mat_bench(c: &mut Criterion) {
 criterion_group!(benches,
                  rcg_optl_mat_bench,
                  elbo_rcg_mat_bench,
-                 update_n_k_bench);
+                 update_n_k_bench,
+                 mixt_negnatgrad_bench,
+                 compute_norm_bench,
+);
 criterion_main!(benches);
