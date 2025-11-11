@@ -62,6 +62,35 @@ use statrs::distribution::Continuous;
         }
     }
     let col_sums = col_sums.iter().map(|x| x/(n as f64)).collect::<Vec<f64>>();
+fn elbo_rcg_mat_bench(c: &mut Criterion) {
+    use rcgpar::optimizer::rcg::elbo_rcg_mat;
+
+    let mut rng = rand::rng();
+
+    let k: usize = 5;
+    let n: usize = 10;
+
+    let (log_lls, _) = random_loglls(k, n, &mut rng);
+    let (gamma_z, _) = random_loglls(k, n, &mut rng);
+    let log_counts: Vec<f64> = sample_n_poisson(100_f64, n, &mut rng).iter().map(|x| x.ln()).collect();
+    let n_k: Vec<f64> = sample_n_gamma(4000_f64, 1_f64, k, &mut rng).iter().map(|x| x.ln()).collect();
+
+    let device = Default::default();
+    type Backend = NdArray<f64>;
+
+    let logl = Tensor::<Backend, 1>::from_data(log_lls.as_slice(), &device);
+    let logl = logl.reshape([k, n]);
+    let gamma_z = Tensor::<Backend, 1>::from_data(gamma_z.as_slice(), &device);
+    let gamma_z = gamma_z.reshape([k, n]);
+    let log_counts = Tensor::<Backend, 1>::from_data(log_counts.as_slice(), &device);
+    let n_k = Tensor::<Backend, 1>::from_data(n_k.as_slice(), &device);
+
+    c.bench_function("elbo_rcg_mat 5x10", |b|
+                     b.iter(||
+                            elbo_rcg_mat(black_box(logl.clone()), gamma_z.clone(), log_counts.clone(), n_k.clone())
+                     ));
+}
+
 fn rcg_optl_mat_bench(c: &mut Criterion) {
     use rcgpar::optimizer::rcg::rcg_optl_mat;
 
@@ -88,5 +117,5 @@ fn rcg_optl_mat_bench(c: &mut Criterion) {
                      ));
 }
 
-criterion_group!(benches, rcg_optl_mat_bench);
+criterion_group!(benches, rcg_optl_mat_bench, elbo_rcg_mat_bench);
 criterion_main!(benches);
