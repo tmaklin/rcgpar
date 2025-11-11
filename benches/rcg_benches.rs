@@ -21,17 +21,17 @@
 use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use assert_approx_eq::assert_approx_eq;
-use rcgpar::optimize;
-use rcgpar::optimize_flat;
-use rcgpar::BurnBackend;
-use rcgpar::OptimizerOpts;
-use rcgpar::optimizer::Algorithm;
+use burn::backend::ndarray::NdArray;
+use burn_tensor::Tensor;
 
-use rand_distr::{Gamma, Dirichlet};
+use rand::rngs::ThreadRng;
+
 use rand_distr::Distribution;
+use rand_distr::{Gamma, Normal, Poisson, Uniform};
+use rand_distr::weighted::WeightedIndex;
 
 fn rcg_random_data(c: &mut Criterion) {
+use statrs::distribution::Continuous;
 
     let mut rng = rand::rng();
     let gamma = Gamma::new(1.0, 1.0).unwrap();
@@ -62,23 +62,31 @@ fn rcg_random_data(c: &mut Criterion) {
         }
     }
     let col_sums = col_sums.iter().map(|x| x/(n as f64)).collect::<Vec<f64>>();
+fn rcg_optl_mat_bench(c: &mut Criterion) {
+    use rcgpar::optimizer::rcg::rcg_optl_mat;
 
-    let log_counts: Vec<f64> = (0..n).map(|(_)| 0.0).collect();
-    let prior_counts: Vec<f64> = vec![1.0; k];
+    let mut rng = rand::rng();
 
-    let expected: Vec<f64> = vec![0.9990609231670258, 0.0007300890279000023, 9.656363112888921e-5, 0.00011242417394518503, 0.0];
+    let k: usize = 5;
+    let n: usize = 10;
 
-    let mut opts: OptimizerOpts = Default::default();
-    opts.tolerance = 1e-16_f64;
-    opts.max_iters = 5000;
-    opts.device = BurnBackend::Wgpu32;
-    opts.algorithm = Algorithm::RCG;
+    let (log_lls, _) = random_loglls(k, n, &mut rng);
+    let log_counts: Vec<f64> = sample_n_poisson(100_f64, n, &mut rng).iter().map(|x| x.ln()).collect();
+    let alpha0: Vec<f64> = vec![1.0; k];
 
-    c.bench_function("rcg 5x10", |b|
+    let device = Default::default();
+    type Backend = NdArray<f64>;
+
+    let logl = Tensor::<Backend, 1>::from_data(log_lls.as_slice(), &device);
+    let logl = logl.reshape([k, n]);
+    let log_counts = Tensor::<Backend, 1>::from_data(log_counts.as_slice(), &device);
+    let alpha0 = Tensor::<Backend, 1>::from_data(alpha0.as_slice(), &device);
+
+    c.bench_function("rcg_optl_mat 5x10", |b|
                      b.iter(||
-                            optimize_flat(black_box(&log_likelihoods), &log_counts, &prior_counts, Some(opts.clone())).unwrap()
+                            rcg_optl_mat(black_box(logl.clone()), log_counts.clone(), alpha0.clone(), 1e-7_f64, 5000_usize)
                      ));
 }
 
-criterion_group!(benches, rcg_random_data);
+criterion_group!(benches, rcg_optl_mat_bench);
 criterion_main!(benches);
