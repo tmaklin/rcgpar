@@ -19,64 +19,157 @@
 //
 
 use assert_approx_eq::assert_approx_eq;
-use rcgpar::optimize;
 use rcgpar::optimize_flat;
 use rcgpar::BurnBackend;
 use rcgpar::OptimizerOpts;
 use rcgpar::optimizer::Algorithm;
 
-use rand_distr::{Gamma, Dirichlet};
+use rand::rngs::ThreadRng;
+
 use rand_distr::Distribution;
+use rand_distr::{Gamma, Normal, Poisson, Uniform};
+use rand_distr::weighted::WeightedIndex;
+
+use statrs::distribution::Continuous;
+
+/// Sample a single value from the Dirichlet distribution
+fn sample_dirichlet(
+    alphas: &[f64],
+    rng: &mut ThreadRng,
+) -> Vec<f64> {
+    let k = alphas.len();
+
+    let mut y_sum: f64 = 0.0;
+    let ys: Vec<f64> = (0..k).map(|idx| {
+        let gamma = Gamma::new(alphas[idx], 1.0).unwrap();
+        let y = gamma.sample(rng);
+        y_sum += y;
+        y
+    }).collect();
+
+    ys.iter().map(|y| y/y_sum).collect::<Vec<f64>>()
+}
+
+/// Sample n values from the normal distribution
+fn sample_n_normal(
+    mean: f64,
+    sd: f64,
+    n: usize,
+    rng: &mut ThreadRng,
+) -> Vec<f64> {
+    let normal = Normal::new(mean, sd).unwrap();
+    (0..n).map(|_| normal.sample(rng)).collect::<Vec<f64>>()
+}
+
+/// Sample n values from the gamma distribution
+fn sample_n_gamma(
+    shape: f64,
+    scale: f64,
+    n: usize,
+    rng: &mut ThreadRng,
+) -> Vec<f64> {
+    let gamma = Gamma::new(shape, scale).unwrap();
+    (0..n).map(|_| gamma.sample(rng)).collect::<Vec<f64>>()
+}
+
+/// Sample n values from the uniform distribution
+fn sample_n_uniform(
+    min: f64,
+    max: f64,
+    n: usize,
+    rng: &mut ThreadRng,
+) -> Vec<f64> {
+    let uniform = Uniform::new(min, max).unwrap();
+    (0..n).map(|_| uniform.sample(rng)).collect::<Vec<f64>>()
+}
+
+/// Sample n values from the poission
+fn sample_n_poisson(
+    rate: f64,
+    n: usize,
+    rng: &mut ThreadRng,
+) -> Vec<f64> {
+    let poisson = Poisson::new(rate).unwrap();
+    (0..n).map(|_| poisson.sample(rng)).collect::<Vec<f64>>()
+}
+
+fn random_loglls(
+    k: usize,
+    n: usize,
+    rng: &mut ThreadRng,
+) -> (Vec<f64>, Vec<f64>) {
+    // Normal distribution parameters to generate observations
+    let means: Vec<f64> = sample_n_normal(0_f64, 10_f64, k, rng);
+    let sds: Vec<f64> = sample_n_gamma(1_f64, 2_f64, k, rng).iter().map(|x| x.sqrt()).collect();
+
+    let normals: Vec<_> = means.iter().zip(sds.iter()).map(|(mu, sigma)| {
+        statrs::distribution::Normal::new(*mu, *sigma).unwrap()
+    }).collect();
+
+    // Generate random thetas ~ Dirichlet(alpha_1, ..., alpha_k) by sampling from
+    // Gamma(alpha_i, 1) distributions, where alpha_1 ~ Unif(0, 1)
+    //
+    // This tends to produce thetas that are concentrated around a few values
+    let alphas: Vec<f64> = sample_n_uniform(0_f64, 1_f64, k, rng);
+    let thetas: Vec<f64> = sample_dirichlet(&alphas, rng);
+
+    // Generate log likelihoods for a mixture of `k` normal distributions
+    let dist = WeightedIndex::new(&thetas).unwrap();
+    let mut log_lls: Vec<Vec<f64>> = vec![vec![0_f64; n]; k];
+    for i in 0..n {
+        let cluster: usize = dist.sample(rng);
+        let obs: f64 = sample_n_normal(means[cluster], sds[cluster], 1, rng)[0];
+        for j in 0..k {
+            log_lls[j][i] = normals[j].ln_pdf(obs)
+        }
+    }
+    let log_lls: Vec<f64> = log_lls.iter().cloned().flatten().collect();
+
+    (log_lls, thetas)
+}
 
 #[test]
-fn rcg_random_data() {
-
+fn rcg32_random_data() {
     let mut rng = rand::rng();
-    let gamma = Gamma::new(1.0, 1.0).unwrap();
 
-    const k: usize = 5;
-    let n: usize = 10;
+    let k: usize = 2;
+    let n: usize = 1000;
 
-    let alphas_real: Vec<f64> = (0..k).map(|_| gamma.sample(&mut rng)).collect();
-    let dirichlet = Dirichlet::<_, k>::new(alphas_real.try_into().unwrap()).unwrap();
-
-    let logl_mat: Vec<Vec<f64>> = (0..n).map(|_| dirichlet.sample(&mut rng).iter().map(|x: &f64| x.ln()).collect::<Vec<f64>>()).collect();
-    eprintln!("logl: {}x{}", logl_mat.len(), logl_mat[0].len());
-    eprintln!("{:?}", logl_mat);
-
-    let mut transposed: Vec<Vec<f64>> = Vec::with_capacity(k);
-    for _ in 0..k {
-        transposed.push(Vec::with_capacity(n));
-    }
-    for i in 0..n {
-        for j in 0..k {
-            transposed[j].push(logl_mat[i][j].clone());
-        }
-    }
-    let log_likelihoods = transposed.iter().cloned().flatten().collect::<Vec<f64>>();
-
-    let mut col_sums: Vec<f64> = vec![0_f64; k];
-    for i in 0..n {
-        for j in 0..k {
-            col_sums[j] += logl_mat[i][j].exp();
-        }
-    }
-    let col_sums = col_sums.iter().map(|x| x/(n as f64)).collect::<Vec<f64>>();
-
-    let log_counts: Vec<f64> = (0..n).map(|(_)| 0.0).collect();
-    let prior_counts: Vec<f64> = vec![1.0; k];
-
-    let expected: Vec<f64> = vec![0.9990609231670258, 0.0007300890279000023, 9.656363112888921e-5, 0.00011242417394518503, 0.0];
+    let (log_lls, thetas) = random_loglls(k, n, &mut rng);
+    let log_counts: Vec<f64> = sample_n_poisson(100_f64, n, &mut rng).iter().map(|x| x.ln()).collect();
+    let alphas: Vec<f64> = vec![1.0; k];
 
     let mut opts: OptimizerOpts = Default::default();
     opts.tolerance = 1e-16_f64;
-    opts.max_iters = 5000;
-    opts.device = BurnBackend::NdArray64;
+    opts.max_iters = 1000;
+    opts.device = BurnBackend::NdArray32;
     opts.algorithm = Algorithm::RCG;
 
-    let (got, _) = optimize_flat(&log_likelihoods, &log_counts, &prior_counts, Some(opts)).unwrap();
-    eprintln!("{:?}", got);
-    eprintln!("{:?}", col_sums);;
+    let (got, _) = optimize_flat(&log_lls, &log_counts, &alphas, Some(opts)).unwrap();
 
-    got.iter().zip(col_sums.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, (100_f64/(n as f64)).min(0.1_f64)) });
+    got.iter().zip(thetas.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 4e-2) });
+
+}
+
+#[test]
+fn em32_random_data() {
+    let mut rng = rand::rng();
+
+    let k: usize = 2;
+    let n: usize = 1000;
+
+    let (log_lls, thetas) = random_loglls(k, n, &mut rng);
+    let log_counts: Vec<f64> = sample_n_poisson(100_f64, n, &mut rng).iter().map(|x| x.ln()).collect();
+    let alphas: Vec<f64> = vec![1.0; k];
+
+    let mut opts: OptimizerOpts = Default::default();
+    opts.tolerance = 1e-16_f64;
+    opts.max_iters = 1000;
+    opts.device = BurnBackend::NdArray32;
+    opts.algorithm = Algorithm::EM;
+
+    let (got, _) = optimize_flat(&log_lls, &log_counts, &alphas, Some(opts)).unwrap();
+
+    got.iter().zip(thetas.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 4e-2) });
+
 }
