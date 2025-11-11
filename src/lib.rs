@@ -133,15 +133,29 @@ fn run_optimizer<B: Backend>(
 
     let logl = logl_flat.reshape([n_cols, n_rows]);
 
+    let (alpha0, logl) = optimize_tensor::<B>(logl, log_counts, alpha0, options)?;
+
+    let probs_f = logl.into_data().iter().map(|x: f64| x).collect::<Vec<f64>>();
+    let props_f = alpha0.into_data().iter().map(|x: f64| x).collect::<Vec<f64>>();
+    Ok((props_f, probs_f))
+}
+
+/// Infer mixing proportions for tensor formatted data
+pub fn optimize_tensor<B: Backend>(
+    log_likelihood: Tensor::<B, 2>,
+    log_counts: Tensor::<B, 1>,
+    alpha0: Tensor::<B, 1>,
+    options: &OptimizerOpts,
+) -> Result<(Tensor::<B, 1>, Tensor::<B, 2>), E> {
+
     let probs = match options.algorithm {
-        optimizer::Algorithm::RCG => optimizer::rcg::rcg_optl_mat(logl, log_counts.clone(), alpha0, options.tolerance, options.max_iters)?,
-        optimizer::Algorithm::EM => optimizer::em::em_algorithm(logl, log_counts.clone(), options.tolerance, options.max_iters, device)?,
+        optimizer::Algorithm::RCG => optimizer::rcg::rcg_optl_mat(log_likelihood, log_counts.clone(), alpha0, options.tolerance, options.max_iters)?,
+        optimizer::Algorithm::EM => optimizer::em::em_algorithm(log_likelihood, log_counts.clone(), options.tolerance, options.max_iters, &alpha0.device())?,
     };
 
     let proportions = optimizer::mixture_components(probs.clone(), log_counts);
-    let probs_f = probs.into_data().iter().map(|x: f64| x).collect::<Vec<f64>>();
-    let props_f = proportions.into_data().iter().map(|x: f64| x).collect::<Vec<f64>>();
-    Ok((props_f, probs_f))
+
+    Ok((proportions, probs))
 }
 
 /// Infer mixing proportions for a weighted log-likelihood matrix
