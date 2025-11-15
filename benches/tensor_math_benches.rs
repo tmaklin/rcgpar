@@ -24,12 +24,9 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use burn::backend::ndarray::NdArray;
 use burn_tensor::Tensor;
 
-use rand::RngCore;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
-use rand_distr::Distribution;
-use rand_distr::Gamma;
 fn digamma_tensor_bench(c: &mut Criterion) {
     use rcgpar::math::digamma_tensor;
 
@@ -75,3 +72,21 @@ criterion_group!(tensor_math_benches,
                  ln_gamma_tensor_bench,
 );
 criterion_main!(tensor_math_benches);
+
+// util
+
+use rand::RngCore;
+
+use rand_distr::Distribution;
+use rand_distr::Gamma;
+
+/// Sample n values from the gamma distribution
+fn sample_n_gamma(
+    shape: f64,
+    scale: f64,
+    n: usize,
+    rng: &mut dyn RngCore,
+) -> Vec<f64> {
+    let gamma = Gamma::new(shape, scale).unwrap();
+    (0..n).map(|_| gamma.sample(rng)).collect::<Vec<f64>>()
+}

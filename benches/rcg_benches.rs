@@ -24,15 +24,9 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use burn::backend::ndarray::NdArray;
 use burn_tensor::Tensor;
 
-use rand::RngCore;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
-use rand_distr::Distribution;
-use rand_distr::{Gamma, Normal, Poisson, Uniform};
-use rand_distr::weighted::WeightedIndex;
-
-use statrs::distribution::Continuous;
 fn compute_norm_bench(c: &mut Criterion) {
     use rcgpar::optimizer::rcg::compute_norm;
 
@@ -174,3 +168,109 @@ criterion_group!(rcg_benches,
                  compute_norm_bench,
 );
 criterion_main!(rcg_benches);
+
+// util
+
+use rand::RngCore;
+
+use rand_distr::Distribution;
+use rand_distr::{Gamma, Normal, Poisson, Uniform};
+use rand_distr::weighted::WeightedIndex;
+
+use statrs::distribution::Continuous;
+
+/// Sample a single value from the Dirichlet distribution
+fn sample_dirichlet(
+    alphas: &[f64],
+    rng: &mut dyn RngCore,
+) -> Vec<f64> {
+    let k = alphas.len();
+
+    let mut y_sum: f64 = 0.0;
+    let ys: Vec<f64> = (0..k).map(|idx| {
+        let gamma = Gamma::new(alphas[idx], 1.0).unwrap();
+        let y = gamma.sample(rng);
+        y_sum += y;
+        y
+    }).collect();
+
+    ys.iter().map(|y| y/y_sum).collect::<Vec<f64>>()
+}
+
+/// Sample n values from the normal distribution
+fn sample_n_normal(
+    mean: f64,
+    sd: f64,
+    n: usize,
+    rng: &mut dyn RngCore,
+) -> Vec<f64> {
+    let normal = Normal::new(mean, sd).unwrap();
+    (0..n).map(|_| normal.sample(rng)).collect::<Vec<f64>>()
+}
+
+/// Sample n values from the gamma distribution
+fn sample_n_gamma(
+    shape: f64,
+    scale: f64,
+    n: usize,
+    rng: &mut dyn RngCore,
+) -> Vec<f64> {
+    let gamma = Gamma::new(shape, scale).unwrap();
+    (0..n).map(|_| gamma.sample(rng)).collect::<Vec<f64>>()
+}
+
+/// Sample n values from the uniform distribution
+fn sample_n_uniform(
+    min: f64,
+    max: f64,
+    n: usize,
+    rng: &mut dyn RngCore,
+) -> Vec<f64> {
+    let uniform = Uniform::new(min, max).unwrap();
+    (0..n).map(|_| uniform.sample(rng)).collect::<Vec<f64>>()
+}
+
+/// Sample n values from the poission
+fn sample_n_poisson(
+    rate: f64,
+    n: usize,
+    rng: &mut dyn RngCore,
+) -> Vec<f64> {
+    let poisson = Poisson::new(rate).unwrap();
+    (0..n).map(|_| poisson.sample(rng)).collect::<Vec<f64>>()
+}
+
+fn random_loglls(
+    k: usize,
+    n: usize,
+    rng: &mut dyn RngCore,
+) -> (Vec<f64>, Vec<f64>) {
+    // Normal distribution parameters to generate observations
+    let means: Vec<f64> = sample_n_normal(0_f64, 10_f64, k, rng);
+    let sds: Vec<f64> = sample_n_gamma(1_f64, 2_f64, k, rng).iter().map(|x| x.sqrt()).collect();
+
+    let normals: Vec<_> = means.iter().zip(sds.iter()).map(|(mu, sigma)| {
+        statrs::distribution::Normal::new(*mu, *sigma).unwrap()
+    }).collect();
+
+    // Generate random thetas ~ Dirichlet(alpha_1, ..., alpha_k) by sampling from
+    // Gamma(alpha_i, 1) distributions, where alpha_1 ~ Unif(0, 1)
+    //
+    // This tends to produce thetas that are concentrated around a few values
+    let alphas: Vec<f64> = sample_n_uniform(0_f64, 1_f64, k, rng);
+    let thetas: Vec<f64> = sample_dirichlet(&alphas, rng);
+
+    // Generate log likelihoods for a mixture of `k` normal distributions
+    let dist = WeightedIndex::new(&thetas).unwrap();
+    let mut log_lls: Vec<Vec<f64>> = vec![vec![0_f64; n]; k];
+    for i in 0..n {
+        let cluster: usize = dist.sample(rng);
+        let obs: f64 = sample_n_normal(means[cluster], sds[cluster], 1, rng)[0];
+        for j in 0..k {
+            log_lls[j][i] = normals[j].ln_pdf(obs)
+        }
+    }
+    let log_lls: Vec<f64> = log_lls.iter().cloned().flatten().collect();
+
+    (log_lls, thetas)
+}
