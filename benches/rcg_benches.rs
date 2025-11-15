@@ -46,7 +46,7 @@ fn compute_norm_bench(c: &mut Criterion) {
     let dl_dphi = Tensor::<Backend, 1>::from_data(dl_dphi.as_slice(), &device);
     let dl_dphi = dl_dphi.reshape([k, n]);
 
-    c.bench_function("compute_norm 5x10", |b|
+    c.bench_function("compute_norm", |b|
                      b.iter(||
                             compute_norm(black_box(gamma_z.clone()), dl_dphi.clone())
                      ));
@@ -73,7 +73,7 @@ fn mixt_negnatgrad_bench(c: &mut Criterion) {
     let gamma_z = gamma_z.reshape([k, n]);
     let n_k = Tensor::<Backend, 1>::from_data(n_k.as_slice(), &device);
 
-    c.bench_function("mixt_negnatgrad 5x10", |b|
+    c.bench_function("mixt_negnatgrad", |b|
                      b.iter(||
                             mixt_negnatgrad(black_box(logl.clone()), gamma_z.clone(), n_k.clone())
                      ));
@@ -99,7 +99,7 @@ fn update_n_k_bench(c: &mut Criterion) {
     let log_counts = Tensor::<Backend, 1>::from_data(log_counts.as_slice(), &device);
     let alpha0 = Tensor::<Backend, 1>::from_data(alpha0.as_slice(), &device);
 
-    c.bench_function("update_n_k 5x10", |b|
+    c.bench_function("update_n_k", |b|
                      b.iter(||
                             update_n_k(black_box(gamma_z.clone()), log_counts.clone(), alpha0.clone())
                      ));
@@ -128,7 +128,7 @@ fn elbo_rcg_mat_bench(c: &mut Criterion) {
     let log_counts = Tensor::<Backend, 1>::from_data(log_counts.as_slice(), &device);
     let n_k = Tensor::<Backend, 1>::from_data(n_k.as_slice(), &device);
 
-    c.bench_function("elbo_rcg_mat 5x10", |b|
+    c.bench_function("elbo_rcg_mat", |b|
                      b.iter(||
                             elbo_rcg_mat(black_box(logl.clone()), gamma_z.clone(), log_counts.clone(), n_k.clone())
                      ));
@@ -154,7 +154,7 @@ fn rcg_optl_mat_bench(c: &mut Criterion) {
     let log_counts = Tensor::<Backend, 1>::from_data(log_counts.as_slice(), &device);
     let alpha0 = Tensor::<Backend, 1>::from_data(alpha0.as_slice(), &device);
 
-    c.bench_function("rcg_optl_mat 5x10", |b|
+    c.bench_function("rcg_optl_mat", |b|
                      b.iter(||
                             rcg_optl_mat(black_box(logl.clone()), log_counts.clone(), alpha0.clone(), 1e-7_f64, 5000_usize)
                      ));
