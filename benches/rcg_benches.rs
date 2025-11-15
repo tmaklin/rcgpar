@@ -24,10 +24,19 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use burn::backend::ndarray::NdArray;
 use burn_tensor::Tensor;
 
+use rand::RngCore;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
+
+use rand_distr::Distribution;
+use rand_distr::{Gamma, Normal, Poisson, Uniform};
+use rand_distr::weighted::WeightedIndex;
+
+use statrs::distribution::Continuous;
 fn compute_norm_bench(c: &mut Criterion) {
     use rcgpar::optimizer::rcg::compute_norm;
 
-    let mut rng = rand::rng();
+    let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
     let k: usize = 5;
     let n: usize = 10;
@@ -52,7 +61,7 @@ fn compute_norm_bench(c: &mut Criterion) {
 fn mixt_negnatgrad_bench(c: &mut Criterion) {
     use rcgpar::optimizer::rcg::mixt_negnatgrad;
 
-    let mut rng = rand::rng();
+    let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
     let k: usize = 5;
     let n: usize = 10;
@@ -79,7 +88,7 @@ fn mixt_negnatgrad_bench(c: &mut Criterion) {
 fn update_n_k_bench(c: &mut Criterion) {
     use rcgpar::optimizer::rcg::update_n_k;
 
-    let mut rng = rand::rng();
+    let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
     let k: usize = 5;
     let n: usize = 10;
@@ -105,7 +114,7 @@ fn update_n_k_bench(c: &mut Criterion) {
 fn elbo_rcg_mat_bench(c: &mut Criterion) {
     use rcgpar::optimizer::rcg::elbo_rcg_mat;
 
-    let mut rng = rand::rng();
+    let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
     let k: usize = 5;
     let n: usize = 10;
@@ -134,7 +143,7 @@ fn elbo_rcg_mat_bench(c: &mut Criterion) {
 fn rcg_optl_mat_bench(c: &mut Criterion) {
     use rcgpar::optimizer::rcg::rcg_optl_mat;
 
-    let mut rng = rand::rng();
+    let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
     let k: usize = 5;
     let n: usize = 10;

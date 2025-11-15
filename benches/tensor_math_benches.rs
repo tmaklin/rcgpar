@@ -24,10 +24,16 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use burn::backend::ndarray::NdArray;
 use burn_tensor::Tensor;
 
+use rand::RngCore;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
+
+use rand_distr::Distribution;
+use rand_distr::Gamma;
 fn digamma_tensor_bench(c: &mut Criterion) {
     use rcgpar::math::digamma_tensor;
 
-    let mut rng = rand::rng();
+    let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
     let k: usize = 5;
 
@@ -47,7 +53,7 @@ fn digamma_tensor_bench(c: &mut Criterion) {
 fn ln_gamma_tensor_bench(c: &mut Criterion) {
     use rcgpar::math::ln_gamma_tensor;
 
-    let mut rng = rand::rng();
+    let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
     let k: usize = 5;
 
