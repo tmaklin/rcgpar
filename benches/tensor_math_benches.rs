@@ -32,7 +32,7 @@ fn digamma_tensor_bench(c: &mut Criterion) {
 
     let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
-    let k: usize = 5;
+    let k: usize = 41;
 
     let n_k: Vec<f64> = sample_n_gamma(4000_f64, 1_f64, k, &mut rng).iter().map(|x| x.ln()).collect();
 
@@ -52,7 +52,7 @@ fn ln_gamma_tensor_bench(c: &mut Criterion) {
 
     let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
-    let k: usize = 5;
+    let k: usize = 41;
 
     let n_k: Vec<f64> = sample_n_gamma(4000_f64, 1_f64, k, &mut rng).iter().map(|x| x.ln()).collect();
 

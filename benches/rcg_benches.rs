@@ -32,8 +32,8 @@ fn compute_norm_bench(c: &mut Criterion) {
 
     let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
-    let k: usize = 5;
-    let n: usize = 10;
+    let k: usize = 41;
+    let n: usize = 1109;
 
     let (gamma_z, _) = random_loglls(k, n, &mut rng);
     let dl_dphi = sample_n_uniform(-1_f64, 1_f64, n * k, &mut rng);
@@ -57,8 +57,8 @@ fn mixt_negnatgrad_bench(c: &mut Criterion) {
 
     let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
-    let k: usize = 5;
-    let n: usize = 10;
+    let k: usize = 41;
+    let n: usize = 1109;
 
     let (log_lls, _) = random_loglls(k, n, &mut rng);
     let (gamma_z, _) = random_loglls(k, n, &mut rng);
@@ -84,8 +84,8 @@ fn update_n_k_bench(c: &mut Criterion) {
 
     let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
-    let k: usize = 5;
-    let n: usize = 10;
+    let k: usize = 41;
+    let n: usize = 1109;
 
     let (gamma_z, _) = random_loglls(k, n, &mut rng);
     let log_counts: Vec<f64> = sample_n_poisson(100_f64, n, &mut rng).iter().map(|x| x.ln()).collect();
@@ -110,8 +110,8 @@ fn elbo_rcg_mat_bench(c: &mut Criterion) {
 
     let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
-    let k: usize = 5;
-    let n: usize = 10;
+    let k: usize = 41;
+    let n: usize = 1109;
 
     let (log_lls, _) = random_loglls(k, n, &mut rng);
     let (gamma_z, _) = random_loglls(k, n, &mut rng);
@@ -139,8 +139,8 @@ fn rcg_optl_mat_bench(c: &mut Criterion) {
 
     let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
-    let k: usize = 5;
-    let n: usize = 10;
+    let k: usize = 41;
+    let n: usize = 1109;
 
     let (log_lls, _) = random_loglls(k, n, &mut rng);
     let log_counts: Vec<f64> = sample_n_poisson(100_f64, n, &mut rng).iter().map(|x| x.ln()).collect();
