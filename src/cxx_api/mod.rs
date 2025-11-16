@@ -21,7 +21,7 @@
 //! C++ API for compatibility with rcgpar v1
 
 use crate::OptimizerOpts;
-use crate::BurnBackend::NdArray64;
+use crate::BurnBackend::NdArray32;
 use crate::BurnBackend::Wgpu32;
 use crate::optimize_flat;
 
@@ -92,7 +92,7 @@ pub fn rcg_optl_cpu(
     tolerance: f64,
     max_iters: usize,
 ) -> Vec<f64> {
-    let options = OptimizerOpts { tolerance, max_iters, device: NdArray64, algorithm: Algorithm::RCG };
+    let options = OptimizerOpts { tolerance, max_iters, device: NdArray32, algorithm: Algorithm::RCG };
     run_optimizer(logl, log_times_observed, alpha0, options)
 }
 
@@ -120,7 +120,7 @@ pub fn em_cpu(
     tolerance: f64,
     max_iters: usize,
 ) -> Vec<f64> {
-    let options = OptimizerOpts { tolerance, max_iters, device: NdArray64, algorithm: Algorithm::EM };
+    let options = OptimizerOpts { tolerance, max_iters, device: NdArray32, algorithm: Algorithm::EM };
     run_optimizer(logl, log_times_observed, alpha0, options)
 }
 
