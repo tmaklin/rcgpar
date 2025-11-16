@@ -71,7 +71,10 @@ pub fn elbo_rcg_mat<B: Backend>(
 ) -> Tensor::<B, 1> {
     let lgamma_n_k_sum = ln_gamma_tensor(n_k).sum();
 
-    let bound = gamma_z.clone().add(log_counts.unsqueeze()).exp().mul(logl.sub(gamma_z)).sum();
+    let log_counts = log_counts.unsqueeze();
+    let logl = logl.sub(gamma_z.clone());
+    let gamma_z = gamma_z.add(log_counts);
+    let bound = logl.clone().sign().mul(gamma_z.add(logl.abs().log()).exp()).sum();
     bound.add(lgamma_n_k_sum)
 }
 
