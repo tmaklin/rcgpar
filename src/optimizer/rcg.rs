@@ -76,17 +76,11 @@ pub fn revert_step<B: Backend>(
     mut gamma_z: Tensor::<B, 2>,
     oldstep: Tensor::<B, 2>,
     mut oldm: Tensor::<B, 2>,
-    beta_fr_t: Tensor::<B, 1>,
 ) -> Tensor::<B, 2> {
-    let beta_fr: f64 = beta_fr_t.into_data().iter().next().unwrap();
-    gamma_z = gamma_z.add(oldm); // revert step
-    if beta_fr > 0_f64 {
-        gamma_z = gamma_z.sub(oldstep);
-    }
-
+    gamma_z = gamma_z.add(oldm);
+    gamma_z = gamma_z.sub(oldstep);
     oldm = logsumexp(gamma_z.clone(), 0);
-    gamma_z = gamma_z.sub(oldm);
-    gamma_z
+    gamma_z.sub(oldm)
 }
 
 pub fn rcg_optl_mat<B: Backend>(
@@ -134,7 +128,7 @@ pub fn rcg_optl_mat<B: Backend>(
         let bound: f64 = bound_t.clone().into_data().iter().next().unwrap();
         let oldbound: f64 = oldbound_t.into_data().iter().next().unwrap();
         if bound < oldbound {
-            gamma_z = revert_step(gamma_z, oldstep.clone(), oldm, beta_fr_t);
+            gamma_z = revert_step(gamma_z, oldstep.clone(), oldm);
             n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone());
             bound_t = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone());
             didreset = true;
@@ -393,13 +387,6 @@ mod tests {
             &device,
         );
 
-        let beta_fr_t = Tensor::<Backend, 1>::from_data(
-            [
-                1.6030141
-            ],
-            &device,
-        );
-
         let expected = Tensor::<Backend, 2>::from_data(
             [
                 [-0.001115799, -0.0010662079, -0.000954628, -0.0010719299, -0.0010223389, -0.0009098053, -0.0009698868, -0.0009202957, -0.0008087158, -0.0008716583],
@@ -410,7 +397,7 @@ mod tests {
                 &device,
         );
 
-        let got = revert_step::<Backend>(gamma_z, oldstep, oldm, beta_fr_t);
+        let got = revert_step::<Backend>(gamma_z, oldstep, oldm);
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();
