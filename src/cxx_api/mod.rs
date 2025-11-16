@@ -152,14 +152,9 @@ pub fn mixture_components(
     let device = Default::default();
     type Backend = NdArray<f32>;
 
-    let probs_r: Vec<f32> = probs.iter().map(|x| *x as f32).collect::<Vec<f32>>();
-    let log_counts_r: Vec<f32> = log_times_observed.iter().map(|x| *x as f32).collect::<Vec<f32>>();
-
-    let probs_t: Tensor::<Backend, 2> = Tensor::<Backend, 1>::from_data(probs_r.as_slice(), &device).reshape(Shape::new([n_targets, n_obs]));
-    let log_counts_t = Tensor::<Backend, 1>::from_data(log_counts_r.as_slice(), &device);
+    let probs_t: Tensor::<Backend, 2> = Tensor::<Backend, 1>::from_data(probs.as_slice(), &device).reshape(Shape::new([n_targets, n_obs]));
+    let log_counts_t = Tensor::<Backend, 1>::from_data(log_times_observed.as_slice(), &device);
 
     let thetas_t = crate::optimizer::mixture_components(probs_t, log_counts_t);
-
-    let thetas: Vec<f32> = thetas_t.into_data().iter().collect::<Vec<f32>>();
-    thetas
+    thetas_t.into_data().to_vec().unwrap()
 }
