@@ -33,14 +33,15 @@ use burn_tensor::Tensor;
 
 type E = Box<dyn std::error::Error>;
 
-
 pub fn compute_norm<B: Backend>(
     gamma_z: Tensor::<B, 2>,
     dl_dphi: Tensor::<B, 2>,
 ) -> Tensor::<B, 1> {
-    let temp = gamma_z.exp().mul(dl_dphi.clone());
-    let colsums = temp.clone().sum_dim(0);
-    temp.mul(dl_dphi.sub(colsums.unsqueeze())).sum()
+    let temp = gamma_z.add(dl_dphi.clone().abs().log());
+    let colsums = logsumexp(temp.clone(), 0).exp();
+    let colsums = colsums.unsqueeze();
+    let dl_dphi = dl_dphi.sub(colsums);
+    dl_dphi.clone().sign().mul(temp.add(dl_dphi.abs().log()).exp()).sum()
 }
 
 pub fn mixt_negnatgrad<B: Backend>(
