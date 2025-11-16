@@ -94,7 +94,7 @@ pub fn rcg_optl_mat<B: Backend>(
 
     let mut iter = 0;
 
-    let mut bound = Tensor::<B, 1>::from_data([-10000_f64], &logl.device());
+    let mut oldbound = Tensor::<B, 1>::from_data([f64::MIN], &logl.device());
 
     let mut n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone());
 
@@ -121,16 +121,16 @@ pub fn rcg_optl_mat<B: Backend>(
         gamma_z = gamma_z.sub(oldm.clone());
 
         n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone());
-        let oldbound = bound;
-        bound = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone());
+        let bound = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone());
 
         diff = bound.clone().sub(oldbound.clone()).into_data().iter().next().unwrap();
         if diff < 0_f64 {
             gamma_z = revert_step(gamma_z, oldstep.clone(), oldm);
             n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone());
-            bound = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone());
+            oldbound = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone());
         } else {
             oldstep = step;
+            oldbound = bound;
         }
 
         // if iter % 5 == 0 {
