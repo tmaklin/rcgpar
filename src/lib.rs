@@ -57,9 +57,9 @@ pub enum BurnBackend {
     Wgpu64,
 
     /// [NdArray](https://docs.rs/ndarray), runs on most CPU architectures, 32 bit precision.
+    #[default]
     NdArray32,
     /// [NdArray](https://docs.rs/ndarray), runs on most CPU architectures, 64 bit precision.
-    #[default]
     NdArray64,
 }
 
@@ -96,7 +96,7 @@ impl Default for OptimizerOpts {
     /// let mut opts = rcgpar::OptimizerOpts::default();
     /// opts.tolerance = 1e-7_f64;
     /// opts.max_iters = 5000_usize;
-    /// opts.device = rcgpar::BurnBackend::NdArray64;
+    /// opts.device = rcgpar::BurnBackend::NdArray32;
     /// opts.algorithm = rcgpar::optimizer::Algorithm::RCG;
     /// # let expected = rcgpar::OptimizerOpts::default();
     /// # assert_eq!(opts.tolerance, expected.tolerance);
@@ -109,7 +109,7 @@ impl Default for OptimizerOpts {
         OptimizerOpts {
             tolerance: 1e-7_f64,
             max_iters: 5000_usize,
-            device: BurnBackend::NdArray64,
+            device: BurnBackend::NdArray32,
             algorithm: Algorithm::RCG,
         }
     }
