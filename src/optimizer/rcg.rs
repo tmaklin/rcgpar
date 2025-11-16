@@ -89,9 +89,11 @@ pub fn rcg_optl_mat<B: Backend>(
     tolerance: f64,
     max_iters: usize,
 ) -> Result<Tensor::<B, 2>, E> {
+    // Optimization target
     let mut gamma_z = logl.zeros_like() + (1_f64 / (logl.dims()[0] as f64)).ln();
     let mut n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone());
 
+    // Values from previous iteration that are needed in the next iter
     let mut oldstep = logl.zeros_like();
     let mut oldbound = Tensor::<B, 1>::from_data([f64::MIN], &logl.device());
     let mut oldnorm_t = Tensor::<B, 1>::from_data([f64::MAX], &logl.device());
@@ -113,7 +115,7 @@ pub fn rcg_optl_mat<B: Backend>(
 
         gamma_z = gamma_z.add(step.clone());
 
-        let mut oldm = logsumexp(gamma_z.clone(), 0);
+        let oldm = logsumexp(gamma_z.clone(), 0);
         gamma_z = gamma_z.sub(oldm.clone());
 
         n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone());
@@ -134,16 +136,14 @@ pub fn rcg_optl_mat<B: Backend>(
         // }
 
         if diff >= 0_f64 && diff < tolerance {
-            oldm = logsumexp(gamma_z.clone(), 0);
-            gamma_z = gamma_z.sub(oldm);
+            gamma_z = gamma_z.clone().sub(logsumexp(gamma_z, 0));
             break;
         }
 
         iter += 1;
     }
 
-    let m = logsumexp(gamma_z.clone(), 0);
-    gamma_z = gamma_z.sub(m);
+    gamma_z = gamma_z.clone().sub(logsumexp(gamma_z, 0));
 
     Ok(gamma_z)
 }
