@@ -135,9 +135,7 @@ fn run_optimizer<B: Backend>(
 
     let (alpha0, logl) = optimize_tensor::<B>(logl, log_counts, alpha0, options)?;
 
-    let probs_f = logl.into_data().iter().map(|x: f32| x).collect::<Vec<f32>>();
-    let props_f = alpha0.into_data().iter().map(|x: f32| x).collect::<Vec<f32>>();
-    Ok((props_f, probs_f))
+    Ok((alpha0.into_data().to_vec().unwrap(), logl.into_data().to_vec().unwrap()))
 }
 
 /// Infer mixing proportions for tensor formatted data
