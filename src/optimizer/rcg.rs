@@ -105,15 +105,15 @@ pub fn rcg_optl_mat<B: Backend>(
     while iter < max_iters {
         let mut step = mixt_negnatgrad(logl.clone(), gamma_z.clone(), n_k.clone());
         let newnorm_t = compute_norm(gamma_z.clone(), step.clone()).abs();
-        let beta_fr_t = (newnorm_t.clone().log() - oldnorm_t.log()).exp();
-        oldnorm_t = newnorm_t;
 
         if diff < 0_f64 {
             oldstep = logl.zeros_like();
         } else {
-            oldstep = oldstep.mul(beta_fr_t.clone().unsqueeze());
+            let beta_fr_t = newnorm_t.clone().log().sub(oldnorm_t.log()).exp();
+            oldstep = oldstep.mul(beta_fr_t.unsqueeze());
             step = step.add(oldstep.clone());
         }
+        oldnorm_t = newnorm_t;
 
         gamma_z = gamma_z.add(step.clone());
 
