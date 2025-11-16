@@ -90,18 +90,14 @@ pub fn rcg_optl_mat<B: Backend>(
     max_iters: usize,
 ) -> Result<Tensor::<B, 2>, E> {
     let mut gamma_z = logl.zeros_like() + (1_f64 / (logl.dims()[0] as f64)).ln();
-    let mut oldstep = logl.zeros_like();
-
-    let mut iter = 0;
-
-    let mut oldbound = Tensor::<B, 1>::from_data([f64::MIN], &logl.device());
-
     let mut n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone());
 
-    let mut oldnorm_t = Tensor::<B, 1>::from_data([1_f64], &logl.device());
+    let mut oldstep = logl.zeros_like();
+    let mut oldbound = Tensor::<B, 1>::from_data([f64::MIN], &logl.device());
+    let mut oldnorm_t = Tensor::<B, 1>::from_data([f64::MAX], &logl.device());
+    let mut diff = f64::MAX;
 
-    let mut diff: f64 = 1000_f64;
-
+    let mut iter = 0;
     while iter < max_iters {
         let mut step = mixt_negnatgrad(logl.clone(), gamma_z.clone(), n_k.clone());
         let newnorm_t = compute_norm(gamma_z.clone(), step.clone()).abs();
