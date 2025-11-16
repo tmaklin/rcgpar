@@ -27,7 +27,7 @@ mod cli;
 fn read_counts(
     path: &PathBuf,
     delimiter: u8
-) -> Vec<f64> {
+) -> Vec<f32> {
     let fs = match std::fs::File::open(path) {
         Ok(fs) => fs,
         Err(e) => panic!("  Error in reading --input-list: {}", e),
@@ -40,18 +40,18 @@ fn read_counts(
 
     reader.records().map(|line| {
         if let Ok(record) = line {
-            let val: f64 = (record.iter().next().unwrap().parse::<u32>().unwrap() as f64).ln();
+            let val: f32 = (record.iter().next().unwrap().parse::<u32>().unwrap() as f32).ln();
             val
         } else {
             panic!("  Error in reading --weights: {}", path.clone().into_os_string().into_string().unwrap());
         }
-    }).collect::<Vec<f64>>()
+    }).collect::<Vec<f32>>()
 }
 
 fn read_log_likelihoods(
     path: &PathBuf,
     delimiter: u8
-) -> Vec<f64> {
+) -> Vec<f32> {
     let fs = match std::fs::File::open(path) {
         Ok(fs) => fs,
         Err(e) => panic!("  Error in reading --input-list: {}", e),
@@ -62,7 +62,7 @@ fn read_log_likelihoods(
         .has_headers(false)
         .from_reader(fs);
 
-    let mut logl: Vec<f64> = Vec::new();
+    let mut logl: Vec<f32> = Vec::new();
     reader.records().for_each(|line| {
         if let Ok(record) = line {
             record.iter().for_each(|x| { logl.push(x.parse().unwrap()) } );
@@ -102,7 +102,7 @@ fn main() {
 
             let logl = read_log_likelihoods(logl_path, b'\t');
             let weights = read_counts(weights_path, b'\t');
-            let prior: Vec<f64> = vec![1.0; logl.len() / weights.len()];
+            let prior: Vec<f32> = vec![1.0; logl.len() / weights.len()];
 
             let mut options: rcgpar::OptimizerOpts = Default::default();
             options.tolerance = *tolerance;

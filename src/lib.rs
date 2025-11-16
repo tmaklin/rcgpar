@@ -117,12 +117,12 @@ impl Default for OptimizerOpts {
 
 /// Helper function to run on a generic backend
 fn run_optimizer<B: Backend>(
-    logl_f: &[f64],
-    log_counts_f: &[f64],
-    alpha0_f: &[f64],
+    logl_f: &[f32],
+    log_counts_f: &[f32],
+    alpha0_f: &[f32],
     options: &OptimizerOpts,
     device: &Device<B>,
-) -> Result<(Vec<f64>, Vec<f64>), E> {
+) -> Result<(Vec<f32>, Vec<f32>), E> {
 
     let n_rows = log_counts_f.len();
     let n_cols = alpha0_f.len();
@@ -135,8 +135,8 @@ fn run_optimizer<B: Backend>(
 
     let (alpha0, logl) = optimize_tensor::<B>(logl, log_counts, alpha0, options)?;
 
-    let probs_f = logl.into_data().iter().map(|x: f64| x).collect::<Vec<f64>>();
-    let props_f = alpha0.into_data().iter().map(|x: f64| x).collect::<Vec<f64>>();
+    let probs_f = logl.into_data().iter().map(|x: f32| x).collect::<Vec<f32>>();
+    let props_f = alpha0.into_data().iter().map(|x: f32| x).collect::<Vec<f32>>();
     Ok((props_f, probs_f))
 }
 
@@ -184,11 +184,11 @@ pub fn optimize_tensor<B: Backend>(
 /// be used as a prior when estimating a new dataset.
 ///
 pub fn optimize_flat(
-    log_likelihood: &[f64],
-    log_counts: &[f64],
-    prior: &[f64],
+    log_likelihood: &[f32],
+    log_counts: &[f32],
+    prior: &[f32],
     opts: Option<OptimizerOpts>,
-) -> Result<(Vec<f64>, Vec<f64>), E> {
+) -> Result<(Vec<f32>, Vec<f32>), E> {
     assert_eq!(log_likelihood.len() as u64, (log_counts.len() as u64) * (prior.len() as u64));
 
     let options = opts.unwrap_or_default();
@@ -244,10 +244,10 @@ pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
     counts: &[U],
     prior: &[F],
     opts: Option<OptimizerOpts>,
-) -> Result<(Vec<f64>, Vec<f64>), E> {
-    let logl_flat = log_likelihood.iter().flatten().map(|x| x.to_f64().unwrap()).collect::<Vec<f64>>();
-    let log_counts = counts.iter().map(|x| x.to_f64().unwrap().ln()).collect::<Vec<f64>>();
-    let alpha0 = prior.iter().map(|x| x.to_f64().unwrap()).collect::<Vec<f64>>();
+) -> Result<(Vec<f32>, Vec<f32>), E> {
+    let logl_flat = log_likelihood.iter().flatten().map(|x| x.to_f32().unwrap()).collect::<Vec<f32>>();
+    let log_counts = counts.iter().map(|x| x.to_f32().unwrap().ln()).collect::<Vec<f32>>();
+    let alpha0 = prior.iter().map(|x| x.to_f32().unwrap()).collect::<Vec<f32>>();
     optimize_flat(&logl_flat, &log_counts, &alpha0, opts)
 }
 
@@ -273,7 +273,7 @@ mod tests {
         let counts: Vec<u32> = vec![2167, 1145, 943, 196, 175, 158, 1041, 957, 1447, 2135];
         let prior_counts: Vec<f32> = vec![1.0, 1.0, 1.0, 1.0];
 
-        let expected: Vec<f64> = vec![0.9990609231670258, 0.0007300890279000023, 9.656363112888921e-5, 0.00011242417394518503];
+        let expected: Vec<f32> = vec![0.9990609231670258, 0.0007300890279000023, 9.656363112888921e-5, 0.00011242417394518503];
 
         let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, device: BurnBackend::NdArray64, algorithm: Algorithm::RCG };
         let (got, _) = optimize(&log_likelihood, &counts, &prior_counts, Some(opts)).unwrap();
@@ -298,7 +298,7 @@ mod tests {
         let counts: Vec<u32> = vec![2167, 1145, 943, 196, 175, 158, 1041, 957, 1447, 2135];
         let prior_counts: Vec<f32> = vec![1.0, 1.0, 1.0, 1.0];
 
-        let expected: Vec<f64> = vec![0.9990609232614853, 0.0007300889486079688, 9.656361438673255e-5, 0.00011242417552052694];
+        let expected: Vec<f32> = vec![0.9990609232614853, 0.0007300889486079688, 9.656361438673255e-5, 0.00011242417552052694];
 
         let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, device: BurnBackend::NdArray32, algorithm: Algorithm::RCG };
         let (got, _) = optimize(&log_likelihood, &counts, &prior_counts, Some(opts)).unwrap();
