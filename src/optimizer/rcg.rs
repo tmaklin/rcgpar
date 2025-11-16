@@ -72,6 +72,23 @@ pub fn elbo_rcg_mat<B: Backend>(
     bound.add(lgamma_n_k_sum)
 }
 
+pub fn revert_step<B: Backend>(
+    mut gamma_z: Tensor::<B, 2>,
+    oldstep: Tensor::<B, 2>,
+    mut oldm: Tensor::<B, 2>,
+    beta_fr_t: Tensor::<B, 1>,
+) -> Tensor::<B, 2> {
+    let beta_fr: f64 = beta_fr_t.into_data().iter().next().unwrap();
+    gamma_z = gamma_z.add(oldm); // revert step
+    if beta_fr > 0_f64 {
+        gamma_z = gamma_z.sub(oldstep);
+    }
+
+    oldm = logsumexp(gamma_z.clone(), 0);
+    gamma_z = gamma_z.sub(oldm);
+    gamma_z
+}
+
 pub fn rcg_optl_mat<B: Backend>(
     logl: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,
@@ -117,18 +134,10 @@ pub fn rcg_optl_mat<B: Backend>(
         let bound: f64 = bound_t.clone().into_data().iter().next().unwrap();
         let oldbound: f64 = oldbound_t.into_data().iter().next().unwrap();
         if bound < oldbound {
-            let beta_fr: f64 = beta_fr_t.into_data().iter().next().unwrap();
-            didreset = true;
-            gamma_z = gamma_z.add(oldm); // revert step
-            if beta_fr > 0_f64 {
-                gamma_z = gamma_z.sub(oldstep.clone());
-            }
-
-            oldm = logsumexp(gamma_z.clone(), 0);
-            gamma_z = gamma_z.sub(oldm);
+            gamma_z = revert_step(gamma_z, oldstep.clone(), oldm, beta_fr_t);
             n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone());
-
             bound_t = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone());
+            didreset = true;
         } else {
             oldstep = step;
         }
@@ -345,6 +354,68 @@ mod tests {
         let expected = -699.064_f64 + 85494_f64;
         let got: f64 = elbo_rcg_mat::<Backend>(logl, gamma_z, log_counts, n_k).into_data().iter().next().unwrap();
         assert_approx_eq!(expected, got, 1e-1);
+    }
+
+    #[test]
+    fn revert_step() {
+        use burn::backend::ndarray::NdArray;
+        use burn_tensor::Tensor;
+
+        use super::revert_step;
+
+        let device = Default::default();
+        type Backend = NdArray<f32>;
+
+        let gamma_z = Tensor::<Backend, 2>::from_data(
+            [
+                [-0.0011119843, -0.0010623932, -0.0009498596, -0.0010662079, -0.0010166168, -0.0009059906, -0.0009651184, -0.00091552734, -0.0008049011, -0.0008678436],
+                [-7.130493, -7.1304436, -7.130331, -7.130451, -7.1303997, -7.130287, -7.1303463, -7.1302986, -7.130188, -7.491913],
+                [-8.822966, -8.822918, -8.8228035, -9.184584, -9.184534, -9.184422, -13.417935, -13.417886, -13.417775, -8.8227215],
+                [-8.722033, -9.083645, -13.316987, -8.721989, -9.083599, -13.316945, -8.721882, -9.083494, -13.316844, -8.721788],
+            ],
+            &device,
+        );
+
+        let oldstep = Tensor::<Backend, 2>::from_data(
+            [
+                [20.177214, 20.177094, 20.176817, 20.177105, 20.176983, 20.176708, 20.176857, 20.176735, 20.17646, 20.17661],
+                [20.171112, 20.17099, 20.170715, 20.171001, 20.17088, 20.170609, 20.170753, 20.170631, 20.170357, 20.170507],
+                [20.177217, 20.177097, 20.176823, 20.17711, 20.176989, 20.176714, 20.176863, 20.17674, 20.176468, 20.176615],
+                [20.177156, 20.177038, 20.176762, 20.177048, 20.176928, 20.176651, 20.1768, 20.17668, 20.176403, 20.176554],
+            ],
+            &device,
+        );
+
+        let oldm = Tensor::<Backend, 2>::from_data(
+            [
+                [28.41345, 28.41328, 28.412891, 28.413298, 28.413126, 28.412739, 28.412945, 28.412773, 28.41239, 28.412603],
+            ],
+            &device,
+        );
+
+        let beta_fr_t = Tensor::<Backend, 1>::from_data(
+            [
+                1.6030141
+            ],
+            &device,
+        );
+
+        let expected = Tensor::<Backend, 2>::from_data(
+            [
+                [-0.001115799, -0.0010662079, -0.000954628, -0.0010719299, -0.0010223389, -0.0009098053, -0.0009698868, -0.0009202957, -0.0008087158, -0.0008716583],
+                [-7.1243954, -7.124344, -7.124234, -7.1243534, -7.124302, -7.1241913, -7.1242476, -7.1242, -7.1240883, -7.485813],
+                [-8.822973, -8.822926, -8.822814, -9.184595, -9.1845455, -9.184431, -13.417946, -13.417896, -13.417787, -8.822729],
+                [-8.721979, -9.083593, -13.3169365, -8.721937, -9.0835495, -13.316892, -8.721829, -9.083444, -13.316791, -8.721735],
+            ],
+                &device,
+        );
+
+        let got = revert_step::<Backend>(gamma_z, oldstep, oldm, beta_fr_t);
+
+        let got_data = got.into_data();
+        let expected_data = expected.into_data();
+
+        got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1_f32) });
     }
 
     #[test]
