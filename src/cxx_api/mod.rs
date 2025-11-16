@@ -21,8 +21,8 @@
 //! C++ API for compatibility with rcgpar v1
 
 use crate::OptimizerOpts;
-use crate::BurnBackend::CPU64;
-use crate::BurnBackend::GPU32;
+use crate::BurnBackend::NdArray64;
+use crate::BurnBackend::Wgpu32;
 use crate::optimize_flat;
 
 use crate::optimizer::Algorithm;
