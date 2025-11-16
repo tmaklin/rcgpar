@@ -57,7 +57,10 @@ pub fn update_n_k<B: Backend>(
     log_counts: Tensor::<B, 1>,
     alpha0: Tensor::<B, 1>,
 ) -> Tensor::<B, 1> {
-    gamma_z.add(log_counts.unsqueeze()).exp().sum_dim(1).squeeze().add(alpha0)
+    let log_counts = log_counts.unsqueeze();
+    let gamma_z = gamma_z.add(log_counts);
+    let n_k = logsumexp(gamma_z, 1).exp().squeeze();
+    n_k.add(alpha0)
 }
 
 pub fn elbo_rcg_mat<B: Backend>(
