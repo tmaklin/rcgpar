@@ -36,74 +36,74 @@ mod ffi {
 
     extern "Rust" {
         fn rcg_optl_cpu(
-            logl: &CxxVector<f64>,
-            log_times_observed: &CxxVector<f64>,
-            alpha0: &CxxVector<f64>,
+            logl: &CxxVector<f32>,
+            log_times_observed: &CxxVector<f32>,
+            alpha0: &CxxVector<f32>,
             tol: f64,
             max_iters: usize,
-        ) -> Vec<f64>;
+        ) -> Vec<f32>;
 
         fn rcg_optl_gpu(
-            logl: &CxxVector<f64>,
-            log_times_observed: &CxxVector<f64>,
-            alpha0: &CxxVector<f64>,
+            logl: &CxxVector<f32>,
+            log_times_observed: &CxxVector<f32>,
+            alpha0: &CxxVector<f32>,
             tol: f64,
             max_iters: usize,
-        ) -> Vec<f64>;
+        ) -> Vec<f32>;
 
         fn em_cpu(
-            logl: &CxxVector<f64>,
-            log_times_observed: &CxxVector<f64>,
-            alpha0: &CxxVector<f64>,
+            logl: &CxxVector<f32>,
+            log_times_observed: &CxxVector<f32>,
+            alpha0: &CxxVector<f32>,
             tol: f64,
             max_iters: usize,
-        ) -> Vec<f64>;
+        ) -> Vec<f32>;
 
         fn em_gpu(
-            logl: &CxxVector<f64>,
-            log_times_observed: &CxxVector<f64>,
-            alpha0: &CxxVector<f64>,
+            logl: &CxxVector<f32>,
+            log_times_observed: &CxxVector<f32>,
+            alpha0: &CxxVector<f32>,
             tol: f64,
             max_iters: usize,
-        ) -> Vec<f64>;
+        ) -> Vec<f32>;
 
         fn mixture_components(
-            probs: &CxxVector<f64>,
-            log_times_observed: &CxxVector<f64>,
-        ) -> Vec<f64>;
+            probs: &CxxVector<f32>,
+            log_times_observed: &CxxVector<f32>,
+        ) -> Vec<f32>;
 
     }
 }
 
 fn run_optimizer(
-    logl: &CxxVector<f64>,
-    log_times_observed: &CxxVector<f64>,
-    alpha0: &CxxVector<f64>,
+    logl: &CxxVector<f32>,
+    log_times_observed: &CxxVector<f32>,
+    alpha0: &CxxVector<f32>,
     options: OptimizerOpts,
-) -> Vec<f64> {
+) -> Vec<f32> {
     let (_, probs) = optimize_flat(logl.as_slice(), log_times_observed.as_slice(), alpha0.as_slice(), Some(options)).unwrap();
     probs
 }
 
 pub fn rcg_optl_cpu(
-    logl: &CxxVector<f64>,
-    log_times_observed: &CxxVector<f64>,
-    alpha0: &CxxVector<f64>,
+    logl: &CxxVector<f32>,
+    log_times_observed: &CxxVector<f32>,
+    alpha0: &CxxVector<f32>,
     tolerance: f64,
     max_iters: usize,
-) -> Vec<f64> {
+) -> Vec<f32> {
     let options = OptimizerOpts { tolerance, max_iters, device: NdArray32, algorithm: Algorithm::RCG };
     run_optimizer(logl, log_times_observed, alpha0, options)
 }
 
 #[allow(unused_variables)]
 pub fn rcg_optl_gpu(
-    logl: &CxxVector<f64>,
-    log_times_observed: &CxxVector<f64>,
-    alpha0: &CxxVector<f64>,
+    logl: &CxxVector<f32>,
+    log_times_observed: &CxxVector<f32>,
+    alpha0: &CxxVector<f32>,
     tolerance: f64,
     max_iters: usize,
-) -> Vec<f64> {
+) -> Vec<f32> {
     let options = OptimizerOpts { tolerance, max_iters, device: Wgpu32, algorithm: Algorithm::RCG };
 
     #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
@@ -114,24 +114,24 @@ pub fn rcg_optl_gpu(
 }
 
 pub fn em_cpu(
-    logl: &CxxVector<f64>,
-    log_times_observed: &CxxVector<f64>,
-    alpha0: &CxxVector<f64>,
+    logl: &CxxVector<f32>,
+    log_times_observed: &CxxVector<f32>,
+    alpha0: &CxxVector<f32>,
     tolerance: f64,
     max_iters: usize,
-) -> Vec<f64> {
+) -> Vec<f32> {
     let options = OptimizerOpts { tolerance, max_iters, device: NdArray32, algorithm: Algorithm::EM };
     run_optimizer(logl, log_times_observed, alpha0, options)
 }
 
 #[allow(unused_variables)]
 pub fn em_gpu(
-    logl: &CxxVector<f64>,
-    log_times_observed: &CxxVector<f64>,
-    alpha0: &CxxVector<f64>,
+    logl: &CxxVector<f32>,
+    log_times_observed: &CxxVector<f32>,
+    alpha0: &CxxVector<f32>,
     tolerance: f64,
     max_iters: usize,
-) -> Vec<f64> {
+) -> Vec<f32> {
     let options = OptimizerOpts { tolerance, max_iters, device: Wgpu32, algorithm: Algorithm::EM };
 
     #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
@@ -142,9 +142,9 @@ pub fn em_gpu(
 }
 
 pub fn mixture_components(
-    probs: &cxx::CxxVector<f64>,
-    log_times_observed: &cxx::CxxVector<f64>,
-) -> Vec<f64> {
+    probs: &cxx::CxxVector<f32>,
+    log_times_observed: &cxx::CxxVector<f32>,
+) -> Vec<f32> {
 
     let n_obs = log_times_observed.len();
     let n_targets = probs.len()/n_obs;
@@ -160,6 +160,6 @@ pub fn mixture_components(
 
     let thetas_t = crate::optimizer::mixture_components(probs_t, log_counts_t);
 
-    let thetas: Vec<f64> = thetas_t.into_data().iter().collect::<Vec<f64>>();
+    let thetas: Vec<f32> = thetas_t.into_data().iter().collect::<Vec<f32>>();
     thetas
 }
