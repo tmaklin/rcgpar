@@ -110,8 +110,9 @@ pub fn rcg_optl_mat<B: Backend>(
         if diff < 0_f64 {
             oldstep = logl.zeros_like();
         } else {
-            let beta_fr_t = newnorm_t.clone().log().sub(oldnorm_t.log()).exp();
-            oldstep = oldstep.mul(beta_fr_t.unsqueeze());
+            let beta_fr_t = newnorm_t.clone().log().sub(oldnorm_t.log());
+            let beta_fr_t = beta_fr_t.unsqueeze();
+            oldstep = oldstep.clone().sign().mul(oldstep.abs().log().add(beta_fr_t).exp());
             step = step.add(oldstep.clone());
         }
         oldnorm_t = newnorm_t;
