@@ -77,8 +77,7 @@ pub fn revert_step<B: Backend>(
     oldstep: Tensor::<B, 2>,
     mut oldm: Tensor::<B, 2>,
 ) -> Tensor::<B, 2> {
-    gamma_z = gamma_z.add(oldm);
-    gamma_z = gamma_z.sub(oldstep);
+    gamma_z = gamma_z.add(oldm).sub(oldstep);
     oldm = logsumexp(gamma_z.clone(), 0);
     gamma_z.sub(oldm)
 }
