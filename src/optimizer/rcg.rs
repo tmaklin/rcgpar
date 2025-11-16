@@ -27,6 +27,7 @@
 use crate::math::digamma_tensor;
 use crate::math::ln_gamma_tensor;
 use crate::math::logsumexp;
+use crate::math::logsumexp_mask;
 
 use burn_tensor::backend::Backend;
 use burn_tensor::Tensor;
@@ -41,7 +42,9 @@ pub fn compute_norm<B: Backend>(
     let colsums = logsumexp(temp.clone(), 0).exp();
     let colsums = colsums.unsqueeze();
     let dl_dphi = dl_dphi.sub(colsums);
-    dl_dphi.clone().sign().mul(temp.add(dl_dphi.abs().log()).exp()).sum()
+    let mask = dl_dphi.clone().sign().equal_elem(1);
+    let temp = temp.add(dl_dphi.abs().log());
+    logsumexp_mask(temp, mask).exp()
 }
 
 pub fn mixt_negnatgrad<B: Backend>(

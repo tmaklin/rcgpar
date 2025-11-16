@@ -158,6 +158,16 @@ pub fn logsumexp<B: Backend>(
     res + max
 }
 
+/// Log of the sum of exponentials over a dimension
+pub fn logsumexp_mask<B: Backend>(
+    input: Tensor::<B, 2>,
+    max_mask: Tensor::<B, 2, burn_tensor::Bool>,
+) -> Tensor<B, 1> {
+    let max = input.clone().mask_where(max_mask, input.clone()).max();
+    let res = (input - max.clone().unsqueeze()).exp().sum().log();
+    res + max
+}
+
 // Tests
 #[cfg(test)]
 mod tests {
