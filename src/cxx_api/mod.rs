@@ -92,7 +92,7 @@ pub fn rcg_optl_cpu(
     tolerance: f64,
     max_iters: usize,
 ) -> Vec<f64> {
-    let options = OptimizerOpts { tolerance, max_iters, device: CPU64, algorithm: Algorithm::RCG };
+    let options = OptimizerOpts { tolerance, max_iters, device: NdArray64, algorithm: Algorithm::RCG };
     run_optimizer(logl, log_times_observed, alpha0, options)
 }
 
@@ -104,7 +104,7 @@ pub fn rcg_optl_gpu(
     tolerance: f64,
     max_iters: usize,
 ) -> Vec<f64> {
-    let options = OptimizerOpts { tolerance, max_iters, device: GPU32, algorithm: Algorithm::RCG };
+    let options = OptimizerOpts { tolerance, max_iters, device: Wgpu32, algorithm: Algorithm::RCG };
 
     #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
     return run_optimizer(logl, log_times_observed, alpha0, options);
@@ -120,7 +120,7 @@ pub fn em_cpu(
     tolerance: f64,
     max_iters: usize,
 ) -> Vec<f64> {
-    let options = OptimizerOpts { tolerance, max_iters, device: CPU64, algorithm: Algorithm::EM };
+    let options = OptimizerOpts { tolerance, max_iters, device: NdArray64, algorithm: Algorithm::EM };
     run_optimizer(logl, log_times_observed, alpha0, options)
 }
 
@@ -132,7 +132,7 @@ pub fn em_gpu(
     tolerance: f64,
     max_iters: usize,
 ) -> Vec<f64> {
-    let options = OptimizerOpts { tolerance, max_iters, device: GPU32, algorithm: Algorithm::EM };
+    let options = OptimizerOpts { tolerance, max_iters, device: Wgpu32, algorithm: Algorithm::EM };
 
     #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
     return run_optimizer(logl, log_times_observed, alpha0, options);
