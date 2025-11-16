@@ -94,12 +94,13 @@ pub fn rcg_optl_mat<B: Backend>(
 
     let mut iter = 0;
 
-    let mut bound_t = Tensor::<B, 1>::from_data([-10000_f64], &logl.device());
+    let mut bound = Tensor::<B, 1>::from_data([-10000_f64], &logl.device());
 
     let mut n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone());
 
     let mut oldnorm_t = Tensor::<B, 1>::from_data([1_f64], &logl.device());
-    let mut didreset = false;
+
+    let mut diff: f64 = 1000_f64;
 
     while iter < max_iters {
         let mut step = mixt_negnatgrad(logl.clone(), gamma_z.clone(), n_k.clone());
@@ -107,13 +108,12 @@ pub fn rcg_optl_mat<B: Backend>(
         let beta_fr_t = (newnorm_t.clone().log() - oldnorm_t.log()).exp();
         oldnorm_t = newnorm_t;
 
-        if didreset {
+        if diff < 0_f64 {
             oldstep = logl.zeros_like();
         } else {
             oldstep = oldstep.mul(beta_fr_t.clone().unsqueeze());
             step = step.add(oldstep.clone());
         }
-        didreset = false;
 
         gamma_z = gamma_z.add(step.clone());
 
@@ -121,16 +121,14 @@ pub fn rcg_optl_mat<B: Backend>(
         gamma_z = gamma_z.sub(oldm.clone());
 
         n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone());
-        let oldbound_t = bound_t;
-        bound_t = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone());
+        let oldbound = bound;
+        bound = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone());
 
-        let bound: f64 = bound_t.clone().into_data().iter().next().unwrap();
-        let oldbound: f64 = oldbound_t.into_data().iter().next().unwrap();
-        if bound < oldbound {
+        diff = bound.clone().sub(oldbound.clone()).into_data().iter().next().unwrap();
+        if diff < 0_f64 {
             gamma_z = revert_step(gamma_z, oldstep.clone(), oldm);
             n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone());
-            bound_t = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone());
-            didreset = true;
+            bound = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone());
         } else {
             oldstep = step;
         }
@@ -139,7 +137,7 @@ pub fn rcg_optl_mat<B: Backend>(
         //     eprintln!("\titer: {iter}, bound: {bound}, |g|: {newnorm}");
         // }
 
-        if (bound - oldbound).abs() < tolerance && !didreset {
+        if diff >= 0_f64 && diff < tolerance {
             oldm = logsumexp(gamma_z.clone(), 0);
             gamma_z = gamma_z.sub(oldm);
             break;
