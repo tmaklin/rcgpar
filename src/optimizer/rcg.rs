@@ -77,7 +77,7 @@ pub fn elbo_rcg_mat<B: Backend>(
 
     let log_counts = log_counts.unsqueeze();
     let logl = logl.sub(gamma_z.clone());
-    let mask = logl.clone().sign().equal_elem(1);
+    let mask = logl.clone().greater_elem(0);
     let gamma_z = gamma_z.add(log_counts).add(logl.abs().log());
     let bound = logsumexp_mask(gamma_z, mask).exp();
     bound.add(lgamma_n_k_sum)
