@@ -62,7 +62,9 @@ fn mixt_negnatgrad_bench(c: &mut Criterion) {
 
     let (log_lls, _) = random_loglls(k, n, &mut rng);
     let (gamma_z, _) = random_loglls(k, n, &mut rng);
+    let (oldstep, _) = random_loglls(k, n, &mut rng);
     let n_k: Vec<f32> = sample_n_gamma(4000_f32, 1_f32, k, &mut rng).iter().map(|x| x.ln()).collect();
+    let oldnorm: Vec<f32> = sample_n_gamma(33_f32, 1_f32, 1, &mut rng).iter().map(|x| *x).collect();
 
     let device = Default::default();
     type Backend = NdArray<f32>;
@@ -71,11 +73,14 @@ fn mixt_negnatgrad_bench(c: &mut Criterion) {
     let logl = logl.reshape([k, n]);
     let gamma_z = Tensor::<Backend, 1>::from_data(gamma_z.as_slice(), &device);
     let gamma_z = gamma_z.reshape([k, n]);
+    let oldstep = Tensor::<Backend, 1>::from_data(oldstep.as_slice(), &device);
+    let oldstep = oldstep.reshape([k, n]);
     let n_k = Tensor::<Backend, 1>::from_data(n_k.as_slice(), &device);
+    let oldnorm = Tensor::<Backend, 1>::from_data(oldnorm.as_slice(), &device);
 
     c.bench_function("mixt_negnatgrad", |b|
                      b.iter(||
-                            mixt_negnatgrad(black_box(logl.clone()), gamma_z.clone(), n_k.clone())
+                            mixt_negnatgrad(black_box(logl.clone()), gamma_z.clone(), n_k.clone(), oldnorm.clone(), oldstep.clone())
                      ));
 }
 
