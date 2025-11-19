@@ -51,9 +51,19 @@ pub fn mixt_negnatgrad<B: Backend>(
     logl: Tensor::<B, 2>,
     gamma_z: Tensor::<B, 2>,
     n_k: Tensor::<B, 1>,
-) -> Tensor::<B, 2> {
+    oldnorm_t: Tensor::<B, 1>,
+    oldstep: Tensor::<B, 2>,
+) -> (Tensor::<B, 2>, Tensor::<B, 1>) {
     let digamma_n_k = digamma_tensor(n_k).sub_scalar(1.0);
-    logl.add(digamma_n_k.unsqueeze().swap_dims(0, 1)).sub(gamma_z)
+    let step = logl.add(digamma_n_k.unsqueeze().swap_dims(0, 1)).sub(gamma_z.clone());
+    let newnorm_t = compute_norm(gamma_z, step.clone()).abs();
+
+    let beta_fr_t = newnorm_t.clone().log().sub(oldnorm_t.log());
+    let beta_fr_t = beta_fr_t.unsqueeze();
+    let oldstep = oldstep.clone().sign().mul(oldstep.abs().log().add(beta_fr_t).exp());
+    let step = step.add(oldstep.clone());
+
+    (step, newnorm_t)
 }
 
 pub fn update_n_k<B: Backend>(
@@ -106,24 +116,18 @@ pub fn rcg_optl_mat<B: Backend>(
 
     // Values from previous iteration that are needed in the next iter
     let mut oldstep = logl.zeros_like();
+    let mut step;
     let mut oldbound = Tensor::<B, 1>::from_data([f64::MIN], &logl.device());
     let mut oldnorm_t = Tensor::<B, 1>::from_data([f64::MAX], &logl.device());
     let mut diff = f64::MAX;
 
     let mut iter = 0;
     while iter < max_iters {
-        let mut step = mixt_negnatgrad(logl.clone(), gamma_z.clone(), n_k.clone());
-        let newnorm_t = compute_norm(gamma_z.clone(), step.clone()).abs();
+        (step, oldnorm_t) = mixt_negnatgrad(logl.clone(), gamma_z.clone(), n_k.clone(), oldnorm_t.clone(), oldstep.clone());
 
         if diff < -tolerance {
             oldstep = logl.zeros_like();
-        } else {
-            let beta_fr_t = newnorm_t.clone().log().sub(oldnorm_t.log());
-            let beta_fr_t = beta_fr_t.unsqueeze();
-            oldstep = oldstep.clone().sign().mul(oldstep.abs().log().add(beta_fr_t).exp());
-            step = step.add(oldstep.clone());
         }
-        oldnorm_t = newnorm_t;
 
         gamma_z = gamma_z.add(step.clone());
 
