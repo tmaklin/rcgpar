@@ -1,12 +1,25 @@
 cmake_minimum_required(VERSION 3.12)
 
+set(CARGO_OPTIONS --features cxxbridge --crate-type=staticlib --lib --verbose)
+set(RUST_FLAGS "")
+
+# Quotes mess up providing flags via CMAKE_CARGO_OPTIONS and CMAKE_RUST_FLAGS
+if(CMAKE_CARGO_OPTIONS)
+    string(REPLACE " " ";" CARGO_OPTIONS_LIST "${CMAKE_CARGO_OPTIONS}")
+    list(APPEND CARGO_OPTIONS ${CARGO_OPTIONS_LIST})
+endif()
+if(CMAKE_RUST_FLAGS)
+    string(REPLACE " " ";" RUST_FLAGS_LIST "${CMAKE_RUST_FLAGS}")
+    list(APPEND RUST_FLAGS ${RUST_FLAGS_LIST})
+endif()
+
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(CARGO_CMD cargo rustc --features cxxbridge --crate-type=staticlib --lib --verbose)
     set(TARGET_DIR "debug")
 else ()
-    set(CARGO_CMD cargo rustc --release --features cxxbridge --crate-type=staticlib --lib --verbose)
+    set(CARGO_OPTIONS ${CARGO_OPTIONS} "--release")
     set(TARGET_DIR "release")
 endif ()
+set(CARGO_CMD cargo rustc ${CARGO_OPTIONS})
 
 # If the user is cross compiling to a different target, update the location of the target directory
 # *Note*: Make sure to install the target with rustup, as well as setting the proper environment variables, such as CC, HOST_CC, CARGO_TARGET_<triple>_LINKER, ...
@@ -16,7 +29,7 @@ if (DEFINED ENV{CARGO_BUILD_TARGET})
 endif()
 
 if(ENABLE_LTO)
-    set(RUST_FLAGS "-Clinker-plugin-lto" "-Clinker=clang-17" "-Clink-arg=-fuse-ld=lld-17")
+    set(RUST_FLAGS ${RUST_FLAGS} "-Clinker-plugin-lto" "-Clinker=clang-17" "-Clink-arg=-fuse-ld=lld-17")
 endif()
 
 set(RCGPAR_LIB "${CMAKE_CURRENT_BINARY_DIR}/librcgpar.a")
