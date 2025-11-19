@@ -115,7 +115,7 @@ pub fn rcg_optl_mat<B: Backend>(
         let mut step = mixt_negnatgrad(logl.clone(), gamma_z.clone(), n_k.clone());
         let newnorm_t = compute_norm(gamma_z.clone(), step.clone()).abs();
 
-        if diff < 0_f64 {
+        if diff < -tolerance {
             oldstep = logl.zeros_like();
         } else {
             let beta_fr_t = newnorm_t.clone().log().sub(oldnorm_t.log());
@@ -134,7 +134,7 @@ pub fn rcg_optl_mat<B: Backend>(
         let bound = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone());
 
         diff = bound.clone().sub(oldbound.clone()).into_data().iter().next().unwrap();
-        if diff < 0_f64 {
+        if diff < -tolerance {
             gamma_z = revert_step(gamma_z, oldstep.clone(), oldm);
             n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone());
             oldbound = elbo_rcg_mat(logl.clone(), gamma_z.clone(), log_counts.clone(), n_k.clone());
@@ -147,7 +147,7 @@ pub fn rcg_optl_mat<B: Backend>(
         //     eprintln!("\titer: {iter}, bound: {bound}, |g|: {newnorm}");
         // }
 
-        if diff >= 0_f64 && diff < tolerance {
+        if diff.abs() < tolerance {
             gamma_z = gamma_z.clone().sub(logsumexp(gamma_z, 0));
             break;
         }
