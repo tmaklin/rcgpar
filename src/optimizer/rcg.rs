@@ -111,7 +111,7 @@ pub fn rcg_optl_mat<B: Backend>(
     max_iters: usize,
 ) -> Result<Tensor::<B, 2>, E> {
     // Optimization target
-    let mut gamma_z = logl.zeros_like() + (1_f64 / (logl.dims()[0] as f64)).ln();
+    let mut gamma_z = logl.zeros_like() + (1_f64.ln() - (logl.dims()[0] as f64).ln());
     let mut n_k = update_n_k(gamma_z.clone(), log_counts.clone(), alpha0.clone());
 
     // Values from previous iteration that are needed in the next iter
