@@ -42,7 +42,7 @@ pub fn compute_norm<B: Backend>(
     let colsums = logsumexp(temp.clone(), 0).exp();
     let colsums = colsums.unsqueeze();
     let dl_dphi = dl_dphi.sub(colsums);
-    let mask = dl_dphi.clone().sign().equal_elem(1);
+    let mask = dl_dphi.clone().greater_elem(0);
     let temp = temp.add(dl_dphi.abs().log());
     logsumexp_mask(temp, mask).exp()
 }
