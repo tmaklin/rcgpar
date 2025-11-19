@@ -206,23 +206,45 @@ mod tests {
             &device,
         );
 
-        // mixt_negnatgrad should return the next value for `step`
-        let expected = Tensor::<Backend, 2>::from_data(
+        let oldstep = Tensor::<Backend, 2>::from_data(
             [
-                [ 8.33935, 8.30241, 8.21529, 8.30921, 8.27113, 8.18111, 8.23897, 8.19806, 8.10087, 8.22076 ],
-                [ 8.27279, 8.23585, 8.14873, 8.24266, 8.20457, 8.11455, 8.17241, 8.1315,  8.03431, 8.1606 ],
-                [ 7.88108, 7.84415, 7.75703, 7.85735, 7.81926, 7.72924, 7.86197, 7.82105, 7.72387, 7.7625 ],
-                [ 7.93521, 7.90467, 7.89242, 7.90508, 7.87339, 7.85823, 7.83484, 7.80032, 7.778,   7.81663 ],
+                [20.177214, 20.177094, 20.176817, 20.177105, 20.176983, 20.176708, 20.176857, 20.176735, 20.17646, 20.17661],
+                [20.171112, 20.17099, 20.170715, 20.171001, 20.17088, 20.170609, 20.170753, 20.170631, 20.170357, 20.170507],
+                [20.177217, 20.177097, 20.176823, 20.17711, 20.176989, 20.176714, 20.176863, 20.17674, 20.176468, 20.176615],
+                [20.177156, 20.177038, 20.176762, 20.177048, 20.176928, 20.176651, 20.1768, 20.17668, 20.176403, 20.176554],
             ],
             &device,
         );
 
-        let got = mixt_negnatgrad::<Backend>(logl, gamma_z, n_k);
+        let oldnorm = Tensor::<Backend, 1>::from_data(
+            [
+                523.7,
+            ],
+            &device,
+        );
+
+        // mixt_negnatgrad should return the next value for `step`
+        let expected = Tensor::<Backend, 2>::from_data(
+            [
+                [8.636083, 8.599144, 8.51202, 8.605948, 8.567857, 8.477837, 8.535704, 8.494783, 8.397596, 8.517491],
+                [8.56944, 8.532496, 8.445373, 8.539301, 8.50121, 8.41119, 8.469056, 8.428136, 8.33095, 8.457237],
+                [8.177816, 8.140885, 8.053761, 8.154082, 8.115991, 8.025967, 8.158702, 8.117781, 8.0205965, 8.059228],
+                [8.231952, 8.201407, 8.189146, 8.20181, 8.170115, 8.154964, 8.131567, 8.097042, 8.074721, 8.113353],
+            ],
+            &device,
+        );
+
+        let expected_norm = Tensor::<Backend, 1>::from_data([7.7018056], &device);
+
+        let (got, newnorm) = mixt_negnatgrad::<Backend>(logl, gamma_z, n_k, oldnorm, oldstep);
 
         let got_data = got.into_data();
+        let newnorm_data = newnorm.into_data();
         let expected_data = expected.into_data();
+        let expected_norm_data = expected_norm.into_data();
 
         got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1e-5) });
+        newnorm_data.iter().zip(expected_norm_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1e-5) });
     }
 
     #[test]
@@ -255,7 +277,7 @@ mod tests {
             &device,
         );
 
-        let expected: f64 = 0.193162;
+        let expected: f64 = 7.701816558837891;
         let got: f64 = compute_norm::<Backend>(gamma_z, dl_dphi).into_data().iter().next().unwrap();
 
         assert_approx_eq!(expected, got, 1e-4);
