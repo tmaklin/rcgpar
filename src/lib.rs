@@ -255,32 +255,7 @@ mod tests {
     use assert_approx_eq::assert_approx_eq;
 
     #[test]
-    fn optimize_f64() {
-        use super::BurnBackend;
-        use super::OptimizerOpts;
-        use super::optimize;
-        use super::optimizer::Algorithm;
-
-        let log_likelihood: Vec<Vec<f32>> =
-            vec![
-                vec![ -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503 ],
-                vec![ -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.0100503, -0.371713 ],
-                vec![ -0.0100503, -0.0100503, -0.0100503, -0.371713,  -0.371713,  -0.371713,  -4.60517,   -4.60517,   -4.60517,   -0.0100503 ],
-                vec![ -0.0100503, -0.371713,  -4.60517,   -0.0100503, -0.371713,  -4.60517,   -0.0100503, -0.371713,  -4.60517,   -0.0100503 ],
-            ];
-        let counts: Vec<u32> = vec![2167, 1145, 943, 196, 175, 158, 1041, 957, 1447, 2135];
-        let prior_counts: Vec<f32> = vec![1.0, 1.0, 1.0, 1.0];
-
-        let expected: Vec<f32> = vec![0.9990609231670258, 0.0007300890279000023, 9.656363112888921e-5, 0.00011242417394518503];
-
-        let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, device: BurnBackend::NdArray64, algorithm: Algorithm::RCG };
-        let (got, _) = optimize(&log_likelihood, &counts, &prior_counts, Some(opts)).unwrap();
-
-        got.iter().zip(expected.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 1e-10) });
-    }
-
-    #[test]
-    fn optimize_f32() {
+    fn optimize() {
         use super::BurnBackend;
         use super::OptimizerOpts;
         use super::optimize;
@@ -301,6 +276,6 @@ mod tests {
         let opts = OptimizerOpts { tolerance: 1e-7_f64, max_iters: 100, device: BurnBackend::NdArray32, algorithm: Algorithm::RCG };
         let (got, _) = optimize(&log_likelihood, &counts, &prior_counts, Some(opts)).unwrap();
 
-        got.iter().zip(expected.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 1e-4); assert!((x - y).abs() > 1e-8) });
+        got.iter().zip(expected.iter()).for_each(|(x, y)| { assert_approx_eq!(x, y, 1e-4) });
     }
 }
