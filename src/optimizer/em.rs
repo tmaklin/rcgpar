@@ -18,11 +18,9 @@
 // USA
 //
 
-//! Implementation of the expectation maximization algorithm used
-//! in Pietiläinen 2024.
+//! Expectation maximization algorithm for a log-likelihood matrix with fixed parameters.
 //!
-//! This implementation is based on the derivation by Jarno and Joel & the gpu
-//! implementation by Joel.
+//! This module is somewhat sparsely documented, this may change in the future.
 //!
 
 use crate::math::logsumexp;

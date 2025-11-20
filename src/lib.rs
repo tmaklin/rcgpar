@@ -70,6 +70,13 @@
 //! Typically, `counts` is the number of times the likelihood vector in each
 //! column was observed but can be any weight vector.
 //!
+//! ### Inputs and outputs
+//! See one of the following functions, in order of suggested preference:
+//! - [optimize_tensor]
+//! - [run_optimizer]
+//! - [optimize_flat]
+//! - [optimize]
+//!
 //! ## C++ API
 //! The C++ API provides four functions to peform inference:
 //! - `rcg_optl_cpu`: run [rcg](optimizer::rcg) with the NdArray backend.
@@ -180,6 +187,10 @@ type E = Box<dyn std::error::Error>;
 /// 64-bit floats may require extra compilation flags for some devices. The
 /// optimizer code is designed to work with 32-bit floats, these should be
 /// preferred.
+///
+/// This struct is
+/// [non_exhaustive](https://doc.rust-lang.org/reference/attributes/type_system.html).
+/// This is unlikely to change.
 ///
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[non_exhaustive]

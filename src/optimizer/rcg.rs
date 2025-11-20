@@ -18,10 +18,9 @@
 // USA
 //
 
-//! Implementation of the Riemannian conjugate gradient descent algorithm used
-//! in Mäklin et al. 2020 in Wellcome Open Research.
+//! Riemannian conjugate gradient descent for a log-likelihood matrix with fixed parameters.
 //!
-//! This implementation is based on the rcg_gpu Torch code written by Joel.
+//! This module is somewhat sparsely documented, this may change in the future.
 //!
 
 use crate::math::digamma_tensor;
@@ -34,6 +33,7 @@ use burn_tensor::Tensor;
 
 type E = Box<dyn std::error::Error>;
 
+/// Compute norm of a gradient |g|.
 pub fn compute_norm<B: Backend>(
     gamma_z: Tensor::<B, 2>,
     dl_dphi: Tensor::<B, 2>,
@@ -47,6 +47,7 @@ pub fn compute_norm<B: Backend>(
     logsumexp_mask(temp, mask).exp()
 }
 
+/// Compute gradient g and its norm |g|.
 pub fn mixt_negnatgrad<B: Backend>(
     logl: Tensor::<B, 2>,
     gamma_z: Tensor::<B, 2>,
@@ -66,6 +67,7 @@ pub fn mixt_negnatgrad<B: Backend>(
     (step, newnorm_t)
 }
 
+/// Update N_k values for all K clusters.
 pub fn update_n_k<B: Backend>(
     gamma_z: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,
@@ -77,6 +79,7 @@ pub fn update_n_k<B: Backend>(
     n_k.add(alpha0)
 }
 
+/// Compute evidence lower bound (ELBO), this is the optimization target.
 pub fn elbo_rcg_mat<B: Backend>(
     logl: Tensor::<B, 2>,
     gamma_z: Tensor::<B, 2>,
@@ -93,6 +96,7 @@ pub fn elbo_rcg_mat<B: Backend>(
     bound.add(lgamma_n_k_sum)
 }
 
+/// Revert previous step if ELBO decreases at iteration i
 pub fn revert_step<B: Backend>(
     mut gamma_z: Tensor::<B, 2>,
     oldstep: Tensor::<B, 2>,
@@ -103,6 +107,7 @@ pub fn revert_step<B: Backend>(
     gamma_z.sub(oldm)
 }
 
+/// Run optimizer on input log-likelihood and observation weights.
 pub fn rcg_optl_mat<B: Backend>(
     logl: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,

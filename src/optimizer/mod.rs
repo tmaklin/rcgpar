@@ -18,7 +18,20 @@
 // USA
 //
 
-//! Algorithm and helper function implementations for rcgpar
+//! Algorithm implementations
+//!
+//! rcgpar currently implements two algorithms:
+//! - [Riemannian conjugate gradient](rcg) descent.
+//! - [Expectation maximization](em).
+//!
+//! Both algorithms assume a likelihood function where the parameters are fixed
+//! but the mixing proportions are unknown.
+//!
+//! Computation is performed using 32-bit floating point numbers by default.
+//! There are several numerical tricks employed to ensure the algorithms remain
+//! stable with the limited precision, this can make the code somewhat
+//! unintuitive at times.
+//!
 
 pub mod em;
 pub mod rcg;
@@ -28,7 +41,11 @@ use crate::math::logsumexp;
 use burn_tensor::Tensor;
 use burn_tensor::backend::Backend;
 
-/// Optimizer algorithms
+/// Supported optimizer algorithms
+///
+/// This struct is
+/// [non_exhaustive](https://doc.rust-lang.org/reference/attributes/type_system.html).
+/// This is not expected to change.
 ///
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[non_exhaustive]
@@ -52,7 +69,13 @@ impl std::str::FromStr for Algorithm {
     }
 }
 
-/// Compute mixture components from a fitted probability matrix
+/// Compute mixture components from fitted values
+///
+/// Weigh the values of each column in `exp(gamma_z)` with `exp(log_counts)` and compute
+/// mixture proportions by dividing the result by `exp(logsumexp(log_counts))`.
+///
+/// Returns a 1D tensor containing the mixture proportions.
+///
 pub fn mixture_components<B: Backend>(
     gamma_z: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,
