@@ -22,6 +22,7 @@
 //! infer the `K` mixture model weights for a `N x K` log-likelihood matrix.
 
 // Backend support
+#[cfg(feature = "ndarray")]
 use burn::backend::ndarray::NdArray;
 #[cfg(any(feature = "wgpu", feature = "webgpu", feature = "vulkan"))]
 use burn::backend::wgpu::Wgpu;
@@ -192,11 +193,13 @@ pub fn optimize_flat(
     let options = opts.unwrap_or_default();
 
     let (proportions, probs_mat) = match options.device {
+        #[cfg(feature = "ndarray")]
         BurnBackend::NdArray32 => {
             let device = burn::backend::ndarray::NdArrayDevice::default();
             type Backend = NdArray<f32>;
             run_optimizer::<Backend>(log_likelihood, log_counts, prior, &options, &device)?
         },
+        #[cfg(feature = "ndarray")]
         BurnBackend::NdArray64 => {
             let device = burn::backend::ndarray::NdArrayDevice::default();
             type Backend = NdArray<f64>;
@@ -217,6 +220,8 @@ pub fn optimize_flat(
         // TODO Return error instead of panic when requesting a backend that is not supported
         #[cfg(not(any(feature = "wgpu", feature = "webgpu", feature = "vulkan")))]
         BurnBackend::Wgpu32 | BurnBackend::Wgpu64 => panic!("rcgpar was not compiled with WGPU support, recompile with `--features wgpu` to enable."),
+        #[cfg(not(feature = "ndarray"))]
+        BurnBackend::NdArray32 | BurnBackend::NdArray64 => panic!("rcgpar was not compiled with NdArray support, recompile with `--features ndarray` to enable."),
     };
 
     Ok((proportions, probs_mat))

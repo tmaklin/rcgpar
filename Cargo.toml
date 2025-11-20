@@ -14,9 +14,10 @@ repository = "https://github.com/tmaklin/rcgpar"
 license = "LGPL-2.1-or-later"
 
 [features]
-default = ["wgpu"]
+default = ["wgpu", "ndarray"]
 cli = []
 cxxbridge = ["dep:cxx", "dep:cxx-build"]
+ndarray = ["burn/ndarray"]
 wgpu = ["burn/wgpu"]
 webgpu = ["burn/webgpu"]
 vulkan = ["burn/vulkan"]
