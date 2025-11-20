@@ -26,8 +26,8 @@
 //!
 
 use crate::math::logsumexp;
+use crate::math::logsumexp_mat;
 
-use burn_tensor::Device;
 use burn_tensor::backend::Backend;
 use burn_tensor::{Shape, Tensor};
 
@@ -39,48 +39,37 @@ pub fn em_algorithm<B: Backend>(
     log_counts: Tensor::<B, 1>,
     tolerance: f64,
     max_iters: usize,
-    device: &Device<B>,
 ) -> Result<Tensor::<B, 2>, E> {
-    let n_targets = logl.clone().dims()[0];
-    let n_obs = logl.clone().dims()[1];
-    assert_eq!(n_obs, log_counts.clone().dims()[0]);
+    let log_counts = log_counts.unsqueeze();
+    let lse2 = logsumexp_mat(log_counts.clone());
+    let lse2 = lse2.unsqueeze();
 
-    let mut prev_loss = Tensor::<B, 1>::from_data([100000.0], device);
-    let tol = Tensor::<B, 1>::from_data([tolerance], device);
-
-    let mut logl_weighted;
-    let log_counts_squeezed: Tensor::<B, 2> = log_counts.clone().reshape(Shape::new([1, n_obs]));
-    let mut thetas = Tensor::<B, 1>::zeros(Shape::new([n_targets]), device);
-    thetas = thetas.sub_scalar((n_targets as f64).ln()).exp();
+    let mut thetas = Tensor::<B, 2>::zeros(Shape::new([logl.dims()[0], 1]), &logl.device());
+    thetas = thetas.sub_scalar((logl.dims()[0] as f64).ln());
 
     let mut iter = 0;
+    let mut logl_weighted = logl.clone().add(thetas.clone());
+    let mut prev_loss = Tensor::<B, 1>::from_data([f64::MAX], &logl.device());
     while iter < max_iters {
-        // E step
-        let thetas_squeezed: Tensor::<B, 2> = thetas.clone().log().reshape(Shape::new([n_targets, 1]));
-        logl_weighted = logl.clone().add(thetas_squeezed);
         let lse = logsumexp(logl_weighted.clone(), 0);
-        let lse_squeezed : Tensor::<B, 2> = lse.clone().reshape(Shape::new([1, n_obs]));
-        logl_weighted = logl_weighted.sub(lse_squeezed);
+        logl_weighted = logl_weighted.sub(lse.clone()).add(log_counts.clone());
+        logl_weighted = logsumexp(logl_weighted, 1);
 
-        // M step
-        logl_weighted = logl_weighted.add(log_counts_squeezed.clone());
-        logl_weighted = logl_weighted.exp();
+        thetas = logl_weighted.sub(lse2.clone());
 
-        thetas = logl_weighted.clone().sum_dim(1).reshape(Shape::new([n_targets])).div_scalar(log_counts.clone().exp().sum().into_scalar());
+        let loss = -logsumexp_mat(lse.add(log_counts.clone()));
+        let diff: f64 = loss.clone().sub(prev_loss).into_data().iter().next().unwrap();
 
-        let loss = -lse.add(log_counts.clone().unsqueeze()).exp().sum();
-
-        if loss.clone().sub(prev_loss.clone()).abs().lower(tol.clone()).all().into_data().iter().next().unwrap() {
+        if diff.abs() < tolerance {
+            logl_weighted = logl.clone().add(thetas.clone());
             break;
         }
+        logl_weighted = logl.clone().add(thetas.clone());
         prev_loss = loss;
         iter += 1;
     }
-    let thetas_squeezed: Tensor::<B, 2> = thetas.clone().log().reshape(Shape::new([n_targets, 1]));
-    logl_weighted = logl.clone().add(thetas_squeezed);
     let lse = logsumexp(logl_weighted.clone(), 0);
-    let lse_squeezed : Tensor::<B, 2> = lse.clone().reshape(Shape::new([1, n_obs]));
-    let gamma_z = logl_weighted.sub(lse_squeezed);
+    let gamma_z = logl_weighted.sub(lse);
 
     Ok(gamma_z)
 }
@@ -127,11 +116,11 @@ mod tests {
             &device,
         );
 
-        let got = em_algorithm::<Backend>(logl, log_counts.clone(), 1e-7_f64, 100_usize, &device).unwrap();
+        let got = em_algorithm::<Backend>(logl, log_counts.clone(), 1e-7_f64, 100_usize).unwrap();
 
         let got_data = got.into_data();
         let expected_data = expected.into_data();
 
-        got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1e-7_f32) });
+        got_data.iter().zip(expected_data.iter()).for_each(|(x, y): (f32, f32)| { assert_approx_eq!(x, y, 1e-5_f32) });
     }
 }

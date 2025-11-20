@@ -326,7 +326,7 @@ pub fn optimize_tensor<B: Backend>(
 
     let probs = match options.algorithm {
         optimizer::Algorithm::RCG => optimizer::rcg::rcg_optl_mat(log_likelihood, log_counts.clone(), alpha0, options.tolerance, options.max_iters)?,
-        optimizer::Algorithm::EM => optimizer::em::em_algorithm(log_likelihood, log_counts.clone(), options.tolerance, options.max_iters, &alpha0.device())?,
+        optimizer::Algorithm::EM => optimizer::em::em_algorithm(log_likelihood, log_counts.clone(), options.tolerance, options.max_iters)?,
     };
 
     let proportions = optimizer::mixture_components(probs.clone(), log_counts);
