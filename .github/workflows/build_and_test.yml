@@ -1,0 +1,31 @@
+name: Build and test
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_and_test_rust:
+    name: Build and test Rust code
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        toolchain:
+        - stable
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup toolchain
+      run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+
+    - name: Build binary
+      run: cargo build --all-features --verbose
+
+    - name: Run unit and integration tests
+      run: cargo test --all-features --no-fail-fast --verbose

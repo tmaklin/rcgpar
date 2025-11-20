@@ -1,0 +1,32 @@
+name: Make new release
+
+on:
+  workflow_run:
+    workflows: ['Version check']
+    types: [completed]
+    branches:
+      - 'main'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  create-release:
+    name: Create and draft release
+    runs-on: ubuntu-latest
+    environment: Make rcgpar release
+
+    steps:
+      - name: Get current date
+        id: date
+        run: echo "::set-output name=date::$(date +'%d %B %Y')"
+
+      - name: Publish
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.MAKE_RELEASE_TOKEN }}
+          name: rcgpar-${{ github.ref_name }} (${{ steps.date.outputs.date }})
+          draft: true
+          prerelease: false
+          fail_on_unmatched_files: true
+          generate_release_notes: true
