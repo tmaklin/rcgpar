@@ -58,6 +58,10 @@ statrs = "0.18"
 criterion = { version = "0.7", features = ["html_reports"] }
 
 [[bench]]
+name = "em_benches"
+harness = false
+
+[[bench]]
 name = "rcg_benches"
 harness = false
 
