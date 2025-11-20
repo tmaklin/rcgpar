@@ -20,6 +20,137 @@
 
 //! rcgpar provides implementations for several optimization algorithms that
 //! infer the `K` mixture model weights for a `N x K` log-likelihood matrix.
+//!
+//! ## Features
+//! - GPU support
+//! - Rust library
+//! - C++ bindings
+//! - Minimal CLI
+//!
+//! ## Installation
+//!
+//! By default, rcgpar is available as a Rust library with support for the Wgpu
+//! and NdArray backends for [burn]. Several other options are available.
+//!
+//! ### Command-line client
+//!
+//! A minimal CLI for testing purposes can be compiled with `--feature cli`.
+//!
+//! ### The burn backend
+//!
+//! The Wgpu backend can be changed to use the alternative vulkan or webgpu
+//! implementations by adding `--feature vulkan` or `--feature webgpu`.
+//!
+//! More backends from burn can be implemented if needed, make a request in the
+//! source repository or implement it yourself in [BurnBackend] and
+//! [optimize_flat], and by adding the appropriate feature to Cargo.toml. The
+//! rest of the code is designed in a backend-agnostic manner.
+//!
+//! ### C++ bindings
+//!
+//! rcgpar provides bindings for running inference with 32-bit floating point
+//! inputs. These can be compiled by adding `--feature cxxbridge`.
+//!
+//! The C++ bindings create the `librcgpar.a`, `rcgpar_cxx.cpp`, and
+//! `rcgpar_cxx.h` files that can be included in a C++ project to call the
+//! rcgpar C++ API.
+//!
+//! A CMake file is provided to configure the flags passed to cargo when
+//! building the bindings. See
+//!
+//! ## API
+//!
+//! The library provides several high-level functions to run on 2D vector
+//! inputs, flattened vectors, or tensor data.
+//!
+//! Low-level functions are available in the [optimizer] module.
+//!
+//! Returns the mixing proportions that best fit the model corresponding to
+//! `log_likelihood` with integer weights for each column given in `counts`.
+//! Typically, `counts` is the number of times the likelihood vector in each
+//! column was observed but can be any weight vector.
+//!
+//! ## C++ API
+//! The C++ API provides four functions to peform inference:
+//! - `rcg_optl_cpu`: run [rcg] with the NdArray backend.
+//! - `rcg_optl_gpu`: run [rcg] with the Wgpu backend.
+//! - `em_optl_cpu`: run [em] with the NdArray backend.
+//! - `em_optl_gpu`: run [em] with the Wgpu backend.
+//!
+//! An additional convenience function `mixture_components` is provided to
+//! convert the inference results to mixing proportions.
+//!
+//! ### Inputs
+//!
+//! The C++ API main functions all take the following inputs:
+//! - `logl`: flattened column-major `n_cols x n_rows` log-likelihood matrix.
+//! - `log_times_observed`: `n_rows` vector of natural logarithm of the weights for `logl_f` rows.
+//! - `alpha0`: `n_cols` vector of prior counts for the Dirichlet model.
+//! - `tol`: optimizer tolerance for convergence checking.
+//! - `max_iters`: maximum number of iterations to run the optimizer for.
+//!
+//! The first 3 arguments expect a `std::vector<float>`, the tolerance is given
+//! as a `double` and maximum iterations as a `size_t`
+//!
+//! ### Outputs
+//!
+//! All four functions return a single Rust vector that contains the flattened
+//! `n_cols x n_rows` column-major matrix containing inferred probabilities that
+//! the row `i` was generated from cluster `j`.
+//!
+//! The output can be converted to a `std::vector` by using for example the following code
+//! ```c++
+//! auto probs_rs = rcgpar::rcg_optl_gpu(loglls, log_counts, alpha0, (double)0.00001, (size_t)1000);
+//! probs_cpp.reserve((uint64_t)((uint64_t)n_groups * (uint64_t)n_obs));
+//! for (auto &val : probs_rs) {
+//!     probs_cpp.push_back(val);
+//! }
+//! ```
+//!
+//! ## Using the optimizers
+//!
+//! The high-level API can be customized with several options and prior counts,
+//! detailed below.
+//!
+//! ### Options
+//!
+//! Use [OptimizerOpts] to change the following:
+//! - Tolerance for convergence checking via `opts.tolerance`.
+//! - Maximum number of iterations via `opts.max_iters`.
+//! - Run on CPU or GPU using `opts.device` (see [BurnBackend] for details).
+//! - Set floating point precision to 32 or 64 bits via `opts.device`.
+//!
+//! See [OptimizerOpts] for more details.
+//!
+//! ### Prior
+//!
+//! Prior for the Dirichlet model mixing proportions is given via `prior`.
+//! Values in `prior` can be interpreted as the observation counts from each
+//! category that were observed before generating the log likelihood matrix
+//! `logl` for the current data.
+//!
+//! Assumes a conjugate Dirichlet model, meaning that the mixing proportions
+//! from a previously fitted model (weighted by the total observation count) can
+//! be used as a prior when estimating a new dataset.
+//!
+//! ## Reading
+//!
+//! The rcgpar variational inference algorithm [rcg](optimizer::rcg) was originally a part of the
+//! [mSWEEP](https://github.com/PROBIC/mSWEEP) software described in:
+//! - M&auml;klin et al. (2020) "High-resolution sweep metagenomics using fast probabilistic
+//!   inference", _Wellcome open research_. doi:
+//!   [10.12688/wellcomeopenres.15639.2](https://doi.org/10.12688/wellcomeopenres.15639.2).
+//! - M&auml;klin (2022) "Probabilistic methods for high-resolution
+//!   metagenomics" chapter 2.3.7, Series of publications A / Department of
+//!   Computer Science, University of Helsinki. ISBN:
+//!   [978-951-51-8695-9](http://urn.fi/URN:ISBN:978-951-51-8695-9).
+//!
+//! The expectation-maximization algorithm [em](optimizer::em) and the original
+//! rcg GPU implementations are described in
+//! - Pietil&auml;inen (2025) "Accelerating mixture model inference for
+//!   bacterial community estimation using GPU computing", University of Helsinki. urn:
+//!   [hulib-202501301212](http://urn.fi/URN:NBN:fi:hulib-202501301212).
+//!
 
 // Backend support
 #[cfg(feature = "ndarray")]
@@ -46,8 +177,9 @@ type E = Box<dyn std::error::Error>;
 ///
 /// Number after enum name denotes floating point width.
 ///
-/// Compile with the following features to enable:
-/// - GPU32 and GPU64: `wgpu`, `webgpu`, or `vulkan`.
+/// 64-bit floats may require extra compilation flags for some devices. The
+/// optimizer code is designed to work with 32-bit floats, these should be
+/// preferred.
 ///
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[non_exhaustive]
@@ -78,14 +210,20 @@ impl std::str::FromStr for BurnBackend {
     }
 }
 
+/// Options for [optimizer] algorithms.
+///
+/// This struct is
+/// [non_exhaustive](https://doc.rust-lang.org/reference/attributes/type_system.html).
+/// The struct is expected to be stabilized at some point.
+///
 #[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub struct OptimizerOpts {
-    /// - Terminate optimization if values change by less than `tolerance`
+    /// - Terminate optimization if values change by less than `tolerance`.
     pub tolerance: f64,
     /// - Maximum number of iterations to run optimizer for.
     pub max_iters: usize,
-    /// - Run on CPU or GPU.
+    /// - Device to run on.
     pub device: BurnBackend,
     /// - Optimizer algorithm to use.
     pub algorithm: Algorithm,
@@ -117,7 +255,29 @@ impl Default for OptimizerOpts {
 }
 
 /// Helper function to run on a generic backend
-fn run_optimizer<B: Backend>(
+///
+/// Allocates the input data on the [BurnBackend] and calls [optimize_tensor] to
+/// run inference.
+///
+/// burn [Backend](https://docs.rs/burn/latest/src/burn/backend.rs.html#1-72)
+/// must be given as the generic <B: Backend>.
+/// Does *not* verify the input dimensions.
+///
+/// ## Inputs
+/// - `logl_f`: flattened column-major `n_cols x n_rows` log-likelihood matrix.
+/// - `log_counts_f`: `n_rows` vector of natural logarithm of the weights for `logl_f` rows.
+/// - `alpha0_f`: `n_cols` vector of prior counts for the Dirichlet model.
+/// - `options`: [OptimizerOpts]
+/// - `device`: burn [Device](https://docs.rs/burn-tensor/0.19.1/src/burn_tensor/tensor/ops/alias.rs.html#7) wrapping the [Backend](https://docs.rs/burn/latest/src/burn/backend.rs.html#1-72).
+///
+/// ## Outputs
+/// - `thetas`: `n_cols` vector of inferred mixing proportions.
+/// - `gamma_Z`: flattened `n_cols x n_rows` column-major matrix containing inferred probabilities that the row `i` was generated from cluster `j`.
+///
+/// ## Errors
+/// Propagates errors, does not error on its own.
+///
+pub fn run_optimizer<B: Backend>(
     logl_f: &[f32],
     log_counts_f: &[f32],
     alpha0_f: &[f32],
@@ -139,7 +299,24 @@ fn run_optimizer<B: Backend>(
     Ok((alpha0.into_data().to_vec().unwrap(), logl.into_data().to_vec().unwrap()))
 }
 
-/// Infer mixing proportions for tensor formatted data
+/// Run on [Tensor] inputs
+///
+/// Preferred function when efficiency is required but you don't want to call
+/// [optimizer] directly.
+///
+/// burn [Backend](https://docs.rs/burn/latest/src/burn/backend.rs.html#1-72)
+/// must be given as the generic <B: Backend>.
+///
+/// ## Inputs
+/// - `log_likelihood`: column-major `n_cols x n_rows` log-likelihood matrix.
+/// - `log_counts`: `n_rows` vector of natural logarithms of the weights for `log_likelihood` rows.
+/// - `alpha0`: `n_cols` vector of prior counts for the Dirichlet model.
+/// - `options`: [OptimizerOpts].
+///
+/// ## Outputs:
+/// - `thetas`: `n_cols` vector of inferred mixing proportions.
+/// - `gamma_Z`: flattened `n_cols x n_rows` column-major matrix containing inferred probabilities that the row `i` was generated from cluster `j`.
+///
 pub fn optimize_tensor<B: Backend>(
     log_likelihood: Tensor::<B, 2>,
     log_counts: Tensor::<B, 1>,
@@ -157,30 +334,21 @@ pub fn optimize_tensor<B: Backend>(
     Ok((proportions, probs))
 }
 
-/// Infer mixing proportions for a weighted log-likelihood matrix
+/// Run on flattened f32 vector inputs
 ///
-/// Returns the mixing proportions that best fit the model corresponding to
-/// `log_likelihood` with integer weights for each column given in `counts`.
-/// Typically, `counts` is the number of times the likelihood vector in each
-/// column was observed but can be any weight vector.
+/// Wrapper around [run_optimizer] & [optimizer_tensor] to run inference.
 ///
-/// ## Options
-/// Use `opts` to change the following:
-/// - Modify optimizer tolerance via `opts.tolerance`.
-/// - Modify maximum number of iterations via `opts.max_iters`.
-/// - Run on CPU or GPU using `opts.device` (see [BurnBackend] for details).
-/// - Set floating point precision to 32 or 64 bits via `opts.device`.
+/// Preferred for running on any backend supported by [BurnBackend] and given via [OptimizerOpts].
 ///
-/// See [OptimizerOpts] for more details.
+/// ## Inputs
+/// - `log_likelihood`: column-major `n_cols x n_rows` log-likelihood matrix.
+/// - `log_counts`: `n_rows` vector of natural logarithms of the weights for `log_likelihood` rows.
+/// - `prior`: `n_cols` vector of prior counts for the Dirichlet model.
+/// - `opts`: [OptimizerOpts].
 ///
-/// ## Prior
-/// Prior for the mixing proportions is given via `prior`. Values in `prior` can
-/// be interpreted as the observation counts from each category that were
-/// observed before generating the log likelihood matrix `logl` for the current data.
-///
-/// Assumes a conjugate Dirichlet model, meaning that the mixing proportions
-/// from a previously fitted model (weighted by the total observation count) can
-/// be used as a prior when estimating a new dataset.
+/// ## Outputs:
+/// - `thetas`: `n_cols` vector of inferred mixing proportions.
+/// - `gamma_Z`: flattened `n_cols x n_rows` column-major matrix containing inferred probabilities that the row `i` was generated from cluster `j`.
 ///
 pub fn optimize_flat(
     log_likelihood: &[f32],
@@ -227,20 +395,32 @@ pub fn optimize_flat(
     Ok((proportions, probs_mat))
 }
 
-/// Run optimizer on 2D log_likelihoods and integer counts
+/// Run optimizer on 2D f32 log-likelihoods and integer weights.
 ///
-/// Wrapper around [optimize_mat] that flattens the input and computes the log
+/// Wrapper around [optimize_flat] that flattens the input and computes the log
 /// counts.
 ///
 /// This function uses extra memory to handle generic floating point and integer
-/// types. [optimize_mat] should be preferred.
+/// types. [optimize_flat] or [optimize_tensor] should be preferred if memory usage is a concern.
 ///
-/// Values will be returned as 64-bit floats regardless of input width.
+/// ## Inputs
+/// - `log_likelihood`: 2D vector with `n_cols x n_rows` log-likelihood matrix.
+/// - `counts`: `n_rows` vector of integer weights for `log_likelihood` rows.
+/// - `prior`: `n_cols` vector of prior counts for the Dirichlet model.
+/// - `opts`: [OptimizerOpts].
 ///
-/// If you want to perform *computation* in 64-bit space, specify a 64-bit device via `opts`.
+/// ## Outputs:
+/// - `thetas`: `n_cols` vector of inferred mixing proportions.
+/// - `gamma_Z`: flattened `n_cols x n_rows` column-major matrix containing inferred probabilities that the row `i` was generated from cluster `j`.
 ///
-/// If you want to supply *log likelihoods* using 32-bit or 16-bit floats, call the
-/// [optimizer] functions directly with the appropriate tensor.
+/// ## Floating point width
+/// Values will be converted to and returned as 32-bit floats regardless of input width.
+///
+/// Computation is performed in 32-bit space by default. If you want to perform
+/// computation in 64-bit space, specify a 64-bit device via `opts`.
+///
+/// If you want to supply *log likelihoods* using non-32-bit floating point
+/// numbers, call [optimize_tensor] with the appropriate tensor data.
 ///
 pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
     log_likelihood: &[Vec<F>],
