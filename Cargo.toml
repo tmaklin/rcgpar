@@ -2,14 +2,9 @@
 name = "rcgpar"
 version = "0.1.0"
 edition = "2024"
-authors = [
-    "Tommi Mäklin <tommi@maklin.fi>",
-    "Jarno N. Alanko <alanko.jarno@gmail.com>",
-    "Joel Pietiläinen <joel.pietilainen@helsinki.fi>",
-]
 description = "Riemannian conjugate gradient descent for estimating mixture model weights."
 readme = "README.md"
-homepage = "https://github.com/tmaklin/rcgpar"
+homepage = "https://docs.rs/rcgpar"
 repository = "https://github.com/tmaklin/rcgpar"
 license = "LGPL-2.1-or-later"
 
