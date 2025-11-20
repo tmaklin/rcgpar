@@ -19,16 +19,19 @@
 //
 
 //! Tensor math used in [optimizer](crate::optimizer) algorithms
-
+//!
+//! Implements functions that [burn_tensor] does not provide.
+//!
 use burn_tensor::Tensor;
 use burn_tensor::backend::Backend;
 
-/// Approximate the derivative of the log gamma function (digamma)
+/// Approximate derivative of the log gamma function (digamma)
 ///
 /// Based on the
 /// [statrs::function::gamma::digamma](https://docs.rs/statrs/0.18.0/src/statrs/function/gamma.rs.html#373-412)
 /// source code which uses "Algorithm AS 103" from Jose Bernardo, Applied
-/// Statistics, Volume 25, Number 3, 1976, pages 315 - 317.
+/// Statistics, Volume 25, Number 3, 1976, pages 315 - 317. doi:
+/// [10.2307/2347257](https://doi.org/10.2307/2347257).
 ///
 /// ## Notes
 ///
@@ -64,12 +67,13 @@ pub fn digamma_tensor<B: Backend>(
         r.clone().mul_scalar(S7).add_scalar(S6).mul(r.clone()).add_scalar(S5).mul(r.clone()).add_scalar(S4).mul(r.clone()).add_scalar(S3).mul(r).mul_scalar(-1.0)))
 }
 
-/// Approximate the log-gamma function
+/// Approximate log-gamma function
 ///
 /// Based on the
 /// [statrs::function::gamma::ln_gamma](https://docs.rs/statrs/0.18.0/src/statrs/function/gamma.rs.html#54-78)
 /// source code which is derived from "An Analysis of the Lanczos Gamma
-/// Approximation", Glendon Ralph Pugh, 2004 p. 116
+/// Approximation", Glendon Ralph Pugh, 2004 p. 116. doi:
+/// [10.14288/1.0080001](https://dx.doi.org/10.14288/1.0080001).
 ///
 /// ## Notes
 ///
@@ -148,7 +152,14 @@ pub fn ln_gamma_tensor<B: Backend>(
     result.mask_where(mask, s2.add(temp))
 }
 
-/// Log of the sum of exponentials over a dimension
+/// LogSumExp over a dimension on a 2D tensor
+///
+/// Implements the [log of the sum of
+/// exponentials](https://en.wikipedia.org/wiki/LogSumExp) trick over single
+/// dimension of a 2D tensor.
+///
+/// Return value retains the same 2D rank as `input` but collapses `dim` to 1.
+///
 pub fn logsumexp<B: Backend>(
     input: Tensor::<B, 2>,
     dim: usize,
@@ -158,7 +169,14 @@ pub fn logsumexp<B: Backend>(
     res + max
 }
 
-/// Log of the sum of exponentials over a dimension
+/// LogSumExp on a 2D tensor
+///
+/// Implements the [log of the sum of
+/// exponentials](https://en.wikipedia.org/wiki/LogSumExp) trick over all values
+/// in a 2D tensor.
+///
+/// Return value has rank 1 and dimension `1x1`.
+///
 pub fn logsumexp_mat<B: Backend>(
     input: Tensor::<B, 2>,
 ) -> Tensor<B, 1> {
@@ -167,7 +185,19 @@ pub fn logsumexp_mat<B: Backend>(
     res + max
 }
 
-/// Log of the sum of exponentials over a dimension
+/// LogSumExp on a masked 2D tensor
+///
+/// Implements the [log of the sum of
+/// exponentials](https://en.wikipedia.org/wiki/LogSumExp) trick over all values
+/// in a 2D tensor, where the maximum value is only computed from elements where
+/// `max_mask` equals true.
+///
+/// This function is useful for computing LogSumExp on the absolute values of a
+/// 2D tensor. In this case, the maximum should be computed on only the positive
+/// values for the result to equal LogSumExp over the non-absolute values.
+///
+/// Return value has rank 1 and dimension `1x1`.
+///
 pub fn logsumexp_mask<B: Backend>(
     input: Tensor::<B, 2>,
     max_mask: Tensor::<B, 2, burn_tensor::Bool>,
