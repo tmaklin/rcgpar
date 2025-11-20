@@ -56,7 +56,7 @@
 //! rcgpar C++ API.
 //!
 //! A CMake file is provided to configure the flags passed to cargo when
-//! building the bindings. See
+//! building the bindings.
 //!
 //! ## API
 //!
@@ -72,10 +72,10 @@
 //!
 //! ## C++ API
 //! The C++ API provides four functions to peform inference:
-//! - `rcg_optl_cpu`: run [rcg] with the NdArray backend.
-//! - `rcg_optl_gpu`: run [rcg] with the Wgpu backend.
-//! - `em_optl_cpu`: run [em] with the NdArray backend.
-//! - `em_optl_gpu`: run [em] with the Wgpu backend.
+//! - `rcg_optl_cpu`: run [rcg](optimizer::rcg) with the NdArray backend.
+//! - `rcg_optl_gpu`: run [rcg](optimizer::rcg) with the Wgpu backend.
+//! - `em_optl_cpu`: run [em](optimizer::em) with the NdArray backend.
+//! - `em_optl_gpu`: run [em](optimizer::em) with the Wgpu backend.
 //!
 //! An additional convenience function `mixture_components` is provided to
 //! convert the inference results to mixing proportions.
@@ -256,7 +256,7 @@ impl Default for OptimizerOpts {
 
 /// Helper function to run on a generic backend
 ///
-/// Allocates the input data on the [BurnBackend] and calls [optimize_tensor] to
+/// Allocates the input data on the [BurnBackend] and calls [optimize_tensor](optimize_tensor<B: Backend>) to
 /// run inference.
 ///
 /// burn [Backend](https://docs.rs/burn/latest/src/burn/backend.rs.html#1-72)
@@ -336,7 +336,8 @@ pub fn optimize_tensor<B: Backend>(
 
 /// Run on flattened f32 vector inputs
 ///
-/// Wrapper around [run_optimizer] & [optimizer_tensor] to run inference.
+/// Wrapper around [run_optimizer] & [optimize_tensor](optimize_tensor<B:
+/// Backend>) to run inference.
 ///
 /// Preferred for running on any backend supported by [BurnBackend] and given via [OptimizerOpts].
 ///
@@ -401,7 +402,8 @@ pub fn optimize_flat(
 /// counts.
 ///
 /// This function uses extra memory to handle generic floating point and integer
-/// types. [optimize_flat] or [optimize_tensor] should be preferred if memory usage is a concern.
+/// types. [optimize_flat] or [optimize_tensor](optimize_tensor<B: Backend>)
+/// should be preferred if memory usage is a concern.
 ///
 /// ## Inputs
 /// - `log_likelihood`: 2D vector with `n_cols x n_rows` log-likelihood matrix.
@@ -420,7 +422,8 @@ pub fn optimize_flat(
 /// computation in 64-bit space, specify a 64-bit device via `opts`.
 ///
 /// If you want to supply *log likelihoods* using non-32-bit floating point
-/// numbers, call [optimize_tensor] with the appropriate tensor data.
+/// numbers, call [optimize_tensor](optimize_tensor<B: Backend>) with the
+/// appropriate tensor data.
 ///
 pub fn optimize<F: Float + FromPrimitive, U: PrimInt>(
     log_likelihood: &[Vec<F>],
