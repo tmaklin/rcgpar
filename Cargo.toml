@@ -14,10 +14,18 @@ repository = "https://github.com/tmaklin/rcgpar"
 license = "LGPL-2.1-or-later"
 
 [features]
+default = ["wgpu"]
+cli = []
 cxxbridge = ["dep:cxx", "dep:cxx-build"]
 wgpu = ["burn/wgpu"]
 webgpu = ["burn/webgpu"]
 vulkan = ["burn/vulkan"]
+
+[[bin]]
+name = "rcgpar"
+required-features = ["cli"]
+test = false
+bench = false
 
 [dependencies]
 ## Core
