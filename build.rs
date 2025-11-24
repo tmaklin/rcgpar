@@ -1,6 +1,6 @@
-// rcgpar: Riemannian conjugate gradient descent for estimating mixture model weights.
+// mixt: Riemannian conjugate gradient descent for estimating mixture model weights.
 //
-// Copyright 2025 rcgpar contributors [https://github.com/tmaklin/rcgpar]
+// Copyright 2025 mixt contributors [https://github.com/tmaklin/mixt]
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -21,5 +21,5 @@
 fn main() {
     #[cfg(feature = "cxxbridge")]
     cxx_build::bridge("src/cxx_api/mod.rs")
-        .compile("rcgpar-cxx");
+        .compile("mixt-cxx");
 }

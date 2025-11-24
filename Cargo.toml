@@ -1,11 +1,11 @@
 [package]
-name = "rcgpar"
+name = "mixt"
 version = "2.0.0"
 edition = "2024"
 description = "Riemannian conjugate gradient descent for estimating mixture model weights."
 readme = "README.md"
-homepage = "https://docs.rs/rcgpar"
-repository = "https://github.com/tmaklin/rcgpar"
+homepage = "https://docs.rs/mixt"
+repository = "https://github.com/tmaklin/mixt"
 license = "LGPL-2.1-or-later"
 
 [features]
@@ -18,7 +18,7 @@ webgpu = ["burn/webgpu"]
 vulkan = ["burn/vulkan"]
 
 [[bin]]
-name = "rcgpar"
+name = "mixt"
 required-features = ["cli"]
 test = false
 bench = false

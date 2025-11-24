@@ -1,4 +1,4 @@
-// rcgpar: Riemannian conjugate gradient descent for estimating mixture model weights.
+// mixt: Riemannian conjugate gradient descent for estimating mixture model weights.
 //
 // Copyright 2025 Tommi Mäklin [tommi@maklin.fi].
 //
@@ -19,10 +19,10 @@
 //
 
 use assert_approx_eq::assert_approx_eq;
-use rcgpar::optimize_flat;
-use rcgpar::BurnBackend;
-use rcgpar::OptimizerOpts;
-use rcgpar::optimizer::Algorithm;
+use mixt::optimize_flat;
+use mixt::BurnBackend;
+use mixt::OptimizerOpts;
+use mixt::optimizer::Algorithm;
 
 use rand::rngs::ThreadRng;
 

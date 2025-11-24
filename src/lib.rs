@@ -1,4 +1,4 @@
-// rcgpar: Riemannian conjugate gradient descent for estimating mixture model weights.
+// mixt: Riemannian conjugate gradient descent for estimating mixture model weights.
 //
 // Copyright 2025 Tommi Mäklin [tommi@maklin.fi].
 //
@@ -18,7 +18,7 @@
 // USA
 //
 
-//! rcgpar provides implementations for several optimization algorithms that
+//! mixt provides implementations for several optimization algorithms that
 //! infer the `K` mixture model weights for a `N x K` log-likelihood matrix.
 //!
 //! ## Features
@@ -29,7 +29,7 @@
 //!
 //! ## Installation
 //!
-//! By default, rcgpar is available as a Rust library with support for the Wgpu
+//! By default, mixt is available as a Rust library with support for the Wgpu
 //! and NdArray backends for [burn]. Several other options are available.
 //!
 //! ### Command-line client
@@ -48,12 +48,12 @@
 //!
 //! ### C++ bindings
 //!
-//! rcgpar provides bindings for running inference with 32-bit floating point
+//! mixt provides bindings for running inference with 32-bit floating point
 //! inputs. These can be compiled by adding `--feature cxxbridge`.
 //!
-//! The C++ bindings create the `librcgpar.a`, `rcgpar_cxx.cpp`, and
-//! `rcgpar_cxx.h` files that can be included in a C++ project to call the
-//! rcgpar C++ API.
+//! The C++ bindings create the `libmixt.a`, `mixt_cxx.cpp`, and
+//! `mixt_cxx.h` files that can be included in a C++ project to call the
+//! mixt C++ API.
 //!
 //! A CMake file is provided to configure the flags passed to cargo when
 //! building the bindings.
@@ -107,7 +107,7 @@
 //!
 //! The output can be converted to a `std::vector` by using for example the following code
 //! ```c++
-//! auto probs_rs = rcgpar::rcg_optl_gpu(loglls, log_counts, alpha0, (double)0.00001, (size_t)1000);
+//! auto probs_rs = mixt::rcg_optl_gpu(loglls, log_counts, alpha0, (double)0.00001, (size_t)1000);
 //! probs_cpp.reserve((uint64_t)((uint64_t)n_groups * (uint64_t)n_obs));
 //! for (auto &val : probs_rs) {
 //!     probs_cpp.push_back(val);
@@ -142,7 +142,7 @@
 //!
 //! ## Reading
 //!
-//! The rcgpar variational inference algorithm [rcg](optimizer::rcg) was originally a part of the
+//! The mixt variational inference algorithm [rcg](optimizer::rcg) was originally a part of the
 //! [mSWEEP](https://github.com/PROBIC/mSWEEP) software described in:
 //! - M&auml;klin et al. (2020) "High-resolution sweep metagenomics using fast probabilistic
 //!   inference", _Wellcome open research_. doi:
@@ -243,12 +243,12 @@ pub struct OptimizerOpts {
 impl Default for OptimizerOpts {
     /// Default to these values:
     /// ```rust
-    /// let mut opts = rcgpar::OptimizerOpts::default();
+    /// let mut opts = mixt::OptimizerOpts::default();
     /// opts.tolerance = 1e-7_f64;
     /// opts.max_iters = 5000_usize;
-    /// opts.device = rcgpar::BurnBackend::NdArray32;
-    /// opts.algorithm = rcgpar::optimizer::Algorithm::RCG;
-    /// # let expected = rcgpar::OptimizerOpts::default();
+    /// opts.device = mixt::BurnBackend::NdArray32;
+    /// opts.algorithm = mixt::optimizer::Algorithm::RCG;
+    /// # let expected = mixt::OptimizerOpts::default();
     /// # assert_eq!(opts.tolerance, expected.tolerance);
     /// # assert_eq!(opts.max_iters, expected.max_iters);
     /// # assert_eq!(opts.device, expected.device);
@@ -399,9 +399,9 @@ pub fn optimize_flat(
         },
         // TODO Return error instead of panic when requesting a backend that is not supported
         #[cfg(not(any(feature = "wgpu", feature = "webgpu", feature = "vulkan")))]
-        BurnBackend::Wgpu32 | BurnBackend::Wgpu64 => panic!("rcgpar was not compiled with WGPU support, recompile with `--features wgpu` to enable."),
+        BurnBackend::Wgpu32 | BurnBackend::Wgpu64 => panic!("mixt was not compiled with WGPU support, recompile with `--features wgpu` to enable."),
         #[cfg(not(feature = "ndarray"))]
-        BurnBackend::NdArray32 | BurnBackend::NdArray64 => panic!("rcgpar was not compiled with NdArray support, recompile with `--features ndarray` to enable."),
+        BurnBackend::NdArray32 | BurnBackend::NdArray64 => panic!("mixt was not compiled with NdArray support, recompile with `--features ndarray` to enable."),
     };
 
     Ok((proportions, probs_mat))

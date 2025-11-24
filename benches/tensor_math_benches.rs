@@ -1,4 +1,4 @@
-// rcgpar: Riemannian conjugate gradient descent for estimating mixture model weights.
+// mixt: Riemannian conjugate gradient descent for estimating mixture model weights.
 //
 // Copyright 2025 Tommi Mäklin [tommi@maklin.fi].
 //
@@ -28,7 +28,7 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
 fn digamma_tensor_bench(c: &mut Criterion) {
-    use rcgpar::math::digamma_tensor;
+    use mixt::math::digamma_tensor;
 
     let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
@@ -48,7 +48,7 @@ fn digamma_tensor_bench(c: &mut Criterion) {
 }
 
 fn ln_gamma_tensor_bench(c: &mut Criterion) {
-    use rcgpar::math::ln_gamma_tensor;
+    use mixt::math::ln_gamma_tensor;
 
     let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 

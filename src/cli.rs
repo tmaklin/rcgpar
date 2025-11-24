@@ -1,4 +1,4 @@
-// rcgpar: Riemannian conjugate gradient descent for estimating mixture model weights.
+// mixt: Riemannian conjugate gradient descent for estimating mixture model weights.
 //
 // Copyright 2025 Tommi Mäklin [tommi@maklin.fi].
 //
@@ -42,11 +42,11 @@ pub enum Commands {
 
         // Device
         #[arg(long = "device", required = false, help = "Which backend to run on (default: NdArray with 64 bit floats on CPU).")]
-        device: Option<rcgpar::BurnBackend>,
+        device: Option<mixt::BurnBackend>,
 
         // Device
         #[arg(long = "algorithm", required = false, help = "Optimizer algorithm to use (default: rcg)")]
-        algorithm: Option<rcgpar::optimizer::Algorithm>,
+        algorithm: Option<mixt::optimizer::Algorithm>,
 
         // RCG parameters
         // // Tolerance when checking for convergence

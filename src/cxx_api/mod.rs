@@ -1,6 +1,6 @@
-// rcgpar: Riemannian conjugate gradient descent for estimating mixture model weights.
+// mixt: Riemannian conjugate gradient descent for estimating mixture model weights.
 //
-// Copyright 2025 rcgpar contributors [https://github.com/tmaklin/rcgpar]
+// Copyright 2025 mixt contributors [https://github.com/tmaklin/mixt]
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public
@@ -18,7 +18,7 @@
 // USA
 //
 
-//! C++ API for compatibility with rcgpar v1
+//! C++ API for compatibility with [rcgpar](https://github.com/tmaklin/rcgpar) v1.
 
 use crate::OptimizerOpts;
 use crate::BurnBackend::NdArray32;
@@ -31,7 +31,7 @@ use burn::backend::ndarray::NdArray;
 use burn_tensor::{Shape, Tensor};
 use cxx::CxxVector;
 
-#[cxx::bridge(namespace = "rcgpar")]
+#[cxx::bridge(namespace = "mixt")]
 mod ffi {
 
     extern "Rust" {
@@ -110,7 +110,7 @@ pub fn rcg_optl_gpu(
     return run_optimizer(logl, log_times_observed, alpha0, options);
 
     #[cfg(not(any(feature = "wgpu", feature = "webgpu", feature = "vulkan")))]
-    panic!("rcgpar: rcgpar was not compiled with GPU support.")
+    panic!("mixt: mixt was not compiled with GPU support.")
 }
 
 pub fn em_cpu(
@@ -138,7 +138,7 @@ pub fn em_gpu(
     return run_optimizer(logl, log_times_observed, alpha0, options);
 
     #[cfg(not(any(feature = "wgpu", feature = "webgpu", feature = "vulkan")))]
-    panic!("rcgpar: rcgpar was not compiled with GPU support.")
+    panic!("mixt: mixt was not compiled with GPU support.")
 }
 
 pub fn mixture_components(

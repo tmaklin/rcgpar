@@ -1,4 +1,4 @@
-// rcgpar: Riemannian conjugate gradient descent for estimating mixture model weights.
+// mixt: Riemannian conjugate gradient descent for estimating mixture model weights.
 //
 // Copyright 2025 Tommi Mäklin [tommi@maklin.fi].
 //
@@ -104,13 +104,13 @@ fn main() {
             let weights = read_counts(weights_path, b'\t');
             let prior: Vec<f32> = vec![1.0; logl.len() / weights.len()];
 
-            let mut options: rcgpar::OptimizerOpts = Default::default();
+            let mut options: mixt::OptimizerOpts = Default::default();
             options.tolerance = *tolerance;
             options.max_iters = *max_iters;
             options.device = device.clone().unwrap_or_default();
             options.algorithm = algorithm.clone().unwrap_or_default();
 
-            let (proportions, _) = rcgpar::optimize_flat(&logl, &weights, &prior, Some(options)).unwrap();
+            let (proportions, _) = mixt::optimize_flat(&logl, &weights, &prior, Some(options)).unwrap();
 
             proportions.iter().enumerate().for_each(|(idx, theta)| {
                 eprintln!("{idx}\t{theta}");

@@ -32,25 +32,25 @@ if(ENABLE_LTO)
     set(RUST_FLAGS ${RUST_FLAGS} "-Clinker-plugin-lto" "-Clinker=clang-17" "-Clink-arg=-fuse-ld=lld-17")
 endif()
 
-set(RCGPAR_LIB "${CMAKE_CURRENT_BINARY_DIR}/librcgpar.a")
-set(RCGPAR_CXX "${CMAKE_CURRENT_BINARY_DIR}/rcgpar_cxx.cpp")
-set(RCGPAR_HEADERS "${CMAKE_CURRENT_BINARY_DIR}/rcgpar_cxx.h")
+set(MIXT_LIB "${CMAKE_CURRENT_BINARY_DIR}/libmixt.a")
+set(MIXT_CXX "${CMAKE_CURRENT_BINARY_DIR}/mixt_cxx.cpp")
+set(MIXT_HEADERS "${CMAKE_CURRENT_BINARY_DIR}/mixt_cxx.h")
 
-add_library(rcgpar_cxx STATIC ${RCGPAR_CXX})
+add_library(mixt_cxx STATIC ${MIXT_CXX})
 
 add_custom_command(
-    OUTPUT ${RCGPAR_LIB}
+    OUTPUT ${MIXT_LIB}
     COMMAND CARGO_TARGET_DIR=${CMAKE_CURRENT_BINARY_DIR} RUSTFLAGS="${RUST_FLAGS}" ${CARGO_CMD}
-    COMMAND cp ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_DIR}/librcgpar.a ${RCGPAR_LIB}
+    COMMAND cp ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_DIR}/libmixt.a ${MIXT_LIB}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 add_custom_command(
-    OUTPUT ${RCGPAR_CXX}
-    DEPENDS ${RCGPAR_LIB}
-    COMMAND cp ${CMAKE_CURRENT_BINARY_DIR}/cxxbridge/rcgpar/src/cxx_api/mod.rs.cc ${RCGPAR_CXX}
-    COMMAND cp ${CMAKE_CURRENT_BINARY_DIR}/cxxbridge/rcgpar/src/cxx_api/mod.rs.h ${RCGPAR_HEADERS}
+    OUTPUT ${MIXT_CXX}
+    DEPENDS ${MIXT_LIB}
+    COMMAND cp ${CMAKE_CURRENT_BINARY_DIR}/cxxbridge/mixt/src/cxx_api/mod.rs.cc ${MIXT_CXX}
+    COMMAND cp ${CMAKE_CURRENT_BINARY_DIR}/cxxbridge/mixt/src/cxx_api/mod.rs.h ${MIXT_HEADERS}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(rcgpar_cxx ${RCGPAR_LIB} pthread dl)
+target_link_libraries(mixt_cxx ${MIXT_LIB} pthread dl)

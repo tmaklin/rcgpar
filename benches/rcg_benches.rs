@@ -1,4 +1,4 @@
-// rcgpar: Riemannian conjugate gradient descent for estimating mixture model weights.
+// mixt: Riemannian conjugate gradient descent for estimating mixture model weights.
 //
 // Copyright 2025 Tommi Mäklin [tommi@maklin.fi].
 //
@@ -28,7 +28,7 @@ use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 
 fn compute_norm_bench(c: &mut Criterion) {
-    use rcgpar::optimizer::rcg::compute_norm;
+    use mixt::optimizer::rcg::compute_norm;
 
     let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
@@ -53,7 +53,7 @@ fn compute_norm_bench(c: &mut Criterion) {
 }
 
 fn mixt_negnatgrad_bench(c: &mut Criterion) {
-    use rcgpar::optimizer::rcg::mixt_negnatgrad;
+    use mixt::optimizer::rcg::mixt_negnatgrad;
 
     let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
@@ -85,7 +85,7 @@ fn mixt_negnatgrad_bench(c: &mut Criterion) {
 }
 
 fn update_n_k_bench(c: &mut Criterion) {
-    use rcgpar::optimizer::rcg::update_n_k;
+    use mixt::optimizer::rcg::update_n_k;
 
     let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
@@ -111,7 +111,7 @@ fn update_n_k_bench(c: &mut Criterion) {
 }
 
 fn elbo_rcg_mat_bench(c: &mut Criterion) {
-    use rcgpar::optimizer::rcg::elbo_rcg_mat;
+    use mixt::optimizer::rcg::elbo_rcg_mat;
 
     let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
@@ -140,7 +140,7 @@ fn elbo_rcg_mat_bench(c: &mut Criterion) {
 }
 
 fn rcg_optl_mat_bench(c: &mut Criterion) {
-    use rcgpar::optimizer::rcg::rcg_optl_mat;
+    use mixt::optimizer::rcg::rcg_optl_mat;
 
     let mut rng = ChaCha8Rng::seed_from_u64(20251115_u64);
 
