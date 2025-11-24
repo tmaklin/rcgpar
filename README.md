@@ -1,3 +1,6 @@
+**Note** rcgpar has been superceded by
+[mixt](https://codeberg.org/themaklin/mixt) as of 24 November 2025.
+
 # rcgpar - Fit mixture models in HPC environments
 rcgpar provides CPU and GPU implementations of a variational
 inference algorithm for estimating mixture model components from a
